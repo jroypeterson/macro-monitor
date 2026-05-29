@@ -133,6 +133,7 @@ def cmd_post_release(args: argparse.Namespace) -> int:
     # === Posts-ledger READ-ONLY diff check (no write yet) ===
     from .posts_ledger import PostDecision, PostsLedger
     from .publishers.slack import SlackPublisher
+    from . import tier_b_gate
 
     family_id = args.family  # caller uses config key
     headline_values = {h.id: h.primary.value for h in result.headline}
@@ -154,6 +155,36 @@ def cmd_post_release(args: argparse.Namespace) -> int:
                 "  No new data since last post; skipping Slack publish.",
                 file=sys.stderr,
             )
+            return 0
+
+        # === Tier B gate — Tier A passes unconditionally; Tier B only
+        # publishes when |z| >= threshold against trailing 5y volatility.
+        # Either way the ledger is updated so we don't re-evaluate the
+        # same data on the next poll.
+        verdict = tier_b_gate.evaluate(family, result)
+        print(f"  gate: {'POST' if verdict.should_post else 'SKIP'} — {verdict.reason}")
+
+        if not verdict.should_post:
+            if not args.dry_run:
+                ledger.record_post(
+                    family_id=family_id,
+                    period=result.period,
+                    headline_values=headline_values,
+                    component_values=component_values,
+                    slack_channel=None,
+                    slack_ts=None,
+                )
+                print(
+                    "  Slack post SKIPPED (Tier B gate); ledger recorded "
+                    "so we don't re-evaluate next poll.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "  [DRY-RUN] Slack post would have been SKIPPED by gate. "
+                    "Ledger NOT updated.",
+                    file=sys.stderr,
+                )
             return 0
 
         # === Slack publish (dry-run by default) ===
@@ -330,9 +361,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument(
         "--tier",
-        default="A",
-        choices=["A", "B"],
-        help="Tier to poll (default A)",
+        default="both",
+        choices=["A", "B", "both"],
+        help=(
+            "Tier(s) to poll. Default 'both' — iterates Tier A (always "
+            "posts on data change) and Tier B (posts only when the gate "
+            "evaluates to a material surprise)."
+        ),
     )
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
@@ -478,11 +513,19 @@ def cmd_poll_all(args: argparse.Namespace) -> int:
     families = load_config(path)
     validate_all_or_raise(families)
 
+    if args.tier == "both":
+        tier_filter = {"A", "B"}
+    else:
+        tier_filter = {args.tier}
+
     targets = {
         fid: f for fid, f in families.items()
-        if f.tier == args.tier and f.family_type == "numeric"
+        if f.tier in tier_filter and f.family_type == "numeric"
     }
-    print(f"Polling {len(targets)} {args.tier}-tier numeric families…", file=sys.stderr)
+    print(
+        f"Polling {len(targets)} numeric families across tier(s) {sorted(tier_filter)}…",
+        file=sys.stderr,
+    )
 
     posted_count = 0
     skipped_unchanged = 0
