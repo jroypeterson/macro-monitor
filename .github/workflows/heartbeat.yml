@@ -1,0 +1,44 @@
+name: Heartbeat
+
+# Daily Tier B heartbeat to #status-reports per HEALTH_REPORTING.md §4.8.
+# Fires at 08:00 ET daily — just after the weekly-preview slot so the
+# preview's "did the Monday post land" question is answered by the
+# heartbeat the same morning.
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # 08:00 EDT (summer) — covers Mon–Sun
+    - cron: "0 13 * * *"   # 08:00 EST (winter)
+  workflow_dispatch: {}
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "08" ]; then
+            echo "Outside 08:00 ET (now $ET_HOUR ET); skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post heartbeat
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+        run: python -m macro_monitor.cli heartbeat --post

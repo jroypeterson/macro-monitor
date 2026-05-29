@@ -1,0 +1,871 @@
+# Curated Tier A release families. Phase 1a populates only CPI;
+# subsequent phases (1b–1e) append the rest.
+#
+# Schema reference: see Appendix A of MACRO_MONITOR_PLAN.md
+#
+# transforms:
+#   raw            — use the series value as-is (only meaningful for stationary series)
+#   yoy_pct        — year-over-year percent change
+#   mom_pct        — month-over-month percent change
+#   annualized_mom — MoM compounded to annual rate (preferred for inflation surprise)
+#   mom_chg        — month-over-month change in level (e.g. payrolls +175K)
+#   qoq_pct_saar   — quarter-over-quarter at seasonally adjusted annual rate
+#
+# z-score / trend / Tier B gate math ALWAYS runs on the primary_transform,
+# never the raw series. This prevents the v3 bug where z-scores on
+# monotonically trending levels read ~+2σ every month.
+
+families:
+  cpi:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 10            # FRED release_id for CPI
+    release_time_et: "08:30"
+    source: fred
+    fallback_source: bls               # used only if FRED ingest lag observed
+
+    # === Display ===
+    display_name: "CPI"
+    period_label_format: "{month_name} {year}"   # e.g. "April 2026"
+
+    # === Series shown in the MAIN Slack message ===
+    # Inflation displays BOTH MoM and YoY; trend/z-score anchor on
+    # annualized_mom because YoY is autocorrelated (~92% mo/mo overlap)
+    # and statistically near-useless as a "is this print unusual" signal.
+    headline:
+      - id: CPIAUCSL
+        label: "Headline"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+      - id: CPILFESL
+        label: "Core"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+
+    # === Series shown only in the THREAD ===
+    components:
+      - id: CUSR0000SAH1
+        label: "Shelter"
+        primary_transform: yoy_pct
+      - id: CUSR0000SAM2
+        label: "Medical care services"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: CPIUFDSL
+        label: "Food"
+        primary_transform: yoy_pct
+      - id: CPIENGSL
+        label: "Energy"
+        primary_transform: yoy_pct
+
+    # === Trend / z-score config for the main post's "Trend:" line ===
+    context:
+      anchor_series: CPIAUCSL
+      anchor_transform: annualized_mom
+      trends:
+        - {window_months: 3, stat: annualized_mom, label: "3mo annualized"}
+        - {window_months: 6, stat: annualized_mom, label: "6mo annualized"}
+      zscore_lookback_years: 5
+      zscore_kind: delta                # delta z-score, not level z-score
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: CPIAUCSL, transform: yoy_pct, label: "Headline YoY"}
+          - {id: CPILFESL, transform: yoy_pct, label: "Core YoY"}
+        reference_lines:
+          - {value: 2.0, label: "2% target", style: dashed}
+        highlight_latest: true
+        filename: "cpi_5y_{period}.png"
+
+      thread:
+        - name: long_history
+          type: line
+          lookback_years: 25
+          series:
+            - {id: CPIAUCSL, transform: yoy_pct, label: "Headline YoY"}
+            - {id: CPILFESL, transform: yoy_pct, label: "Core YoY"}
+          reference_lines:
+            - {value: 2.0, label: "2% target", style: dashed}
+          filename: "cpi_25y_{period}.png"
+
+        - name: component_trends
+          # Renamed from "component_contribution" — stacking YoY rates
+          # without relative-importance weights is NOT contribution.
+          # True contribution requires weighting (deferred to later phase).
+          type: stacked_bar
+          lookback_months: 12
+          series:
+            - {id: CUSR0000SAH1, transform: yoy_pct, label: "Shelter"}
+            - {id: CUSR0000SAM2, transform: yoy_pct, label: "Medical care"}
+            - {id: CPIUFDSL,    transform: yoy_pct, label: "Food"}
+            - {id: CPIENGSL,    transform: yoy_pct, label: "Energy"}
+          filename: "cpi_components_{period}.png"
+
+    # === Posting gate ===
+    tier_b_gate: null   # null = Tier A behavior (always post)
+
+    # === Dedupe two-tier ===
+    # Headline-hash change → REVISED top-level post.
+    # Component-hash change only → thread "notes on revisions" line.
+    # Both change in one fetch → ONE REVISED top-level post (headline subsumes
+    # component). Both hashes + values written transactionally.
+    # Annual-benchmark flood guard: if >=3 periods changed in one fetch,
+    # single "Annual benchmark revision" summary post.
+    dedupe:
+      headline_hash:
+        - CPIAUCSL
+        - CPILFESL
+      component_hash:
+        - CUSR0000SAH1
+        - CUSR0000SAM2
+        - CPIUFDSL
+        - CPIENGSL
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.bls.gov/cpi/"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/cpi.pdf"
+      pdf_url_dated: null              # null = BLS overwrites the static URL
+      archive_path: "pdfs/archive/cpi/{period}.pdf"
+
+  payrolls:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 50            # FRED release_id for Employment Situation
+    release_time_et: "08:30"
+    source: fred
+    fallback_source: bls
+
+    # === Display ===
+    display_name: "Employment Situation"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # PAYEMS displays as mom_chg (the "+175K") — already stationary, so
+    # z-score the change directly. UNRATE is already a rate.
+    headline:
+      - id: PAYEMS
+        label: "Nonfarm payrolls"
+        primary_transform: mom_chg     # the "+175K" people read
+        also_display: [yoy_pct]
+        display_unit: "K"              # FRED gives thousands of persons
+      - id: UNRATE
+        label: "Unemployment rate"
+        primary_transform: raw         # already a percent, stationary
+        also_display: []
+        display_unit: "%"
+
+    # === Components (thread) ===
+    components:
+      - id: CES0500000003
+        label: "Avg hourly earnings (private)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+      - id: CES6562100001
+        label: "Ambulatory health care services"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+        display_unit: "K"
+      - id: CES6562200001
+        label: "Hospitals"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+        display_unit: "K"
+      - id: CES6562300001
+        label: "Nursing & residential care"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+        display_unit: "K"
+
+    # === Computed series ===
+    # Health Care employment = NAICS 621 + 622 + 623, summed in-process.
+    # BLS publishes either the combined NAICS 62 (Health Care AND Social
+    # Assistance — includes childcare/624) or the three sub-cuts. Neither
+    # is "true Health Care," so we sum here.
+    computed:
+      - id: HC_TOTAL
+        label: "Health Care employment (NAICS 621+622+623)"
+        method: sum_of
+        inputs:
+          - CES6562100001
+          - CES6562200001
+          - CES6562300001
+        primary_transform: yoy_pct
+        also_display: [mom_chg]
+        tags: [healthcare]
+        display_unit: "K"
+
+    # === Trend / z-score config ===
+    context:
+      anchor_series: PAYEMS
+      anchor_transform: mom_chg        # change is stationary; level z-score
+      trends:
+        - {window_months: 3, stat: mean, label: "3mo avg change"}
+        - {window_months: 6, stat: mean, label: "6mo avg change"}
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: PAYEMS, transform: yoy_pct, label: "Nonfarm payrolls YoY"}
+        highlight_latest: true
+        filename: "payrolls_5y_{period}.png"
+
+      thread:
+        - name: unemployment_5y
+          type: line
+          lookback_years: 5
+          series:
+            - {id: UNRATE, transform: raw, label: "Unemployment rate"}
+          reference_lines:
+            - {value: 4.0, label: "4% (~NAIRU)", style: dashed}
+          highlight_latest: true
+          filename: "unrate_5y_{period}.png"
+
+        - name: long_history
+          type: line
+          lookback_years: 25
+          series:
+            - {id: PAYEMS, transform: yoy_pct, label: "Nonfarm payrolls YoY"}
+            - {id: UNRATE, transform: raw, label: "Unemployment rate"}
+          filename: "payrolls_25y_{period}.png"
+
+        # The HC employment two-pane chart from the plan §5/§6 —
+        # one PNG, two stacked subplots.
+        - name: hc_employment
+          type: panes
+          layout: vertical
+          lookback_years: 5
+          panes:
+            - title: "Health Care employment YoY (621+622+623)"
+              type: line
+              series:
+                - {id: HC_TOTAL, transform: yoy_pct, label: "Health Care YoY"}
+              highlight_latest: true
+            - title: "Health Care vs total nonfarm growth"
+              type: line
+              series:
+                - {id: HC_TOTAL, transform: yoy_pct, label: "Health Care YoY"}
+                - {id: PAYEMS, transform: yoy_pct, label: "Total nonfarm YoY"}
+              highlight_latest: true
+          filename: "hc_employment_{period}.png"
+
+    # === Posting gate ===
+    tier_b_gate: null
+
+    # === Dedupe two-tier ===
+    # Headline = PAYEMS + UNRATE (the two market-moving numbers).
+    # Average hourly earnings is in component_hash because AHE revisions
+    # are economically meaningful and worth a thread note. HC sub-cuts +
+    # HC_TOTAL also in component_hash.
+    dedupe:
+      headline_hash:
+        - PAYEMS
+        - UNRATE
+      component_hash:
+        - CES0500000003
+        - CES6562100001
+        - CES6562200001
+        - CES6562300001
+        - HC_TOTAL
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.bls.gov/news.release/empsit.toc.htm"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/empsit.pdf"
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/payrolls/{period}.pdf"
+
+  pce:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 54            # FRED release_id for Personal Income & Outlays
+    release_time_et: "08:30"
+    source: fred                       # BEA via FRED
+    fallback_source: bea
+
+    # === Display ===
+    display_name: "PCE / Personal Income & Outlays"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # Same pattern as CPI: display YoY+MoM, anchor on annualized_mom.
+    headline:
+      - id: PCEPI
+        label: "Headline PCE"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+      - id: PCEPILFE
+        label: "Core PCE"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+
+    # === Components (thread) ===
+    # Consumer-capacity context: income, real spending, savings, real DPI.
+    components:
+      - id: PI
+        label: "Personal income"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+      - id: PCEC96
+        label: "Real PCE"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+      - id: PSAVERT
+        label: "Personal saving rate"
+        primary_transform: raw
+        display_unit: "%"
+      - id: DSPIC96
+        label: "Real disposable personal income"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    # === Trend / z-score config ===
+    context:
+      anchor_series: PCEPI
+      anchor_transform: annualized_mom
+      trends:
+        - {window_months: 3, stat: annualized_mom, label: "3mo annualized"}
+        - {window_months: 6, stat: annualized_mom, label: "6mo annualized"}
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: PCEPI, transform: yoy_pct, label: "Headline PCE YoY"}
+          - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE YoY"}
+        reference_lines:
+          - {value: 2.0, label: "2% Fed target", style: dashed}
+        highlight_latest: true
+        filename: "pce_5y_{period}.png"
+
+      thread:
+        - name: long_history
+          type: line
+          lookback_years: 25
+          series:
+            - {id: PCEPI, transform: yoy_pct, label: "Headline PCE YoY"}
+            - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE YoY"}
+          reference_lines:
+            - {value: 2.0, label: "2% Fed target", style: dashed}
+          filename: "pce_25y_{period}.png"
+
+        - name: consumer_capacity
+          # Real DPI is the cleanest "consumer ability to spend" measure;
+          # pairs naturally with the future V/MA/WMT transcript module.
+          type: line
+          lookback_years: 5
+          series:
+            - {id: DSPIC96, transform: yoy_pct, label: "Real DPI YoY"}
+            - {id: PCEC96, transform: yoy_pct, label: "Real PCE YoY"}
+          highlight_latest: true
+          filename: "consumer_capacity_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - PCEPI
+        - PCEPILFE
+      component_hash:
+        - PI
+        - PCEC96
+        - PSAVERT
+        - DSPIC96
+
+    agency:
+      release_page: "https://www.bea.gov/data/income-saving/personal-income"
+      pdf_url_static: null               # BEA distributes HTML release pages, not stable PDFs
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/pce/{period}.pdf"
+
+  claims:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: weekly
+    release_calendar_id: 180           # Unemployment Insurance Weekly Claims Report
+    release_time_et: "08:30"           # Thursdays
+    source: fred
+    fallback_source: bls
+
+    # === Display ===
+    display_name: "Initial Jobless Claims"
+    period_label_format: "week ending {month_short} {day}, {year}"
+
+    # === Headline ===
+    headline:
+      - id: ICSA
+        label: "Initial claims"
+        primary_transform: raw        # already a count; already stationary
+        also_display: []
+
+    # === Components (thread) ===
+    components:
+      - id: CCSA
+        label: "Continued claims (insured unemployment)"
+        primary_transform: raw
+
+    # === Context ===
+    # No trend lines for claims — the weekly cadence + 4wk moving avg in
+    # the thread chart tells the story better than a trend table.
+    context:
+      anchor_series: ICSA
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 2
+        series:
+          - {id: ICSA, transform: raw, label: "Initial claims"}
+        highlight_latest: true
+        filename: "claims_2y_{period}.png"
+
+      thread:
+        - name: claims_5y
+          type: line
+          lookback_years: 5
+          series:
+            - {id: ICSA, transform: raw, label: "Initial claims"}
+            - {id: CCSA, transform: raw, label: "Continued claims"}
+          highlight_latest: true
+          filename: "claims_5y_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - ICSA
+      component_hash:
+        - CCSA
+
+    agency:
+      release_page: "https://www.dol.gov/ui/data.pdf"
+      pdf_url_static: null               # DOL releases as HTML; PDF is the data file
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/claims/{period}.pdf"
+
+  gdp:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: quarterly
+    release_calendar_id: 53            # FRED release_id for GDP
+    release_time_et: "08:30"
+    source: fred
+    fallback_source: bea
+
+    # === Display ===
+    display_name: "GDP"
+    period_label_format: "Q{quarter} {year}"
+
+    # === Headline ===
+    # Use the official BEA-published %-change SAAR series DIRECTLY, never
+    # recompute from GDPC1 levels (avoids rounding/annualization mismatch
+    # with what the market quotes).
+    headline:
+      - id: A191RL1Q225SBEA
+        label: "Real GDP"
+        primary_transform: raw         # the series IS the QoQ SAAR percent
+        also_display: []
+        display_unit: "%"
+
+    # === Components (thread) ===
+    # GDPC1 is included so the long-history chart can show GDP YoY against
+    # the level series (the headline A191 is QoQ SAAR, not directly chartable
+    # for a 25y trend). Real PCE health services lives here as the HC angle
+    # since no monthly FRED series exists.
+    components:
+      - id: GDPC1
+        label: "Real GDP (level)"
+        primary_transform: yoy_pct
+        also_display: []
+      - id: DHLCRC1Q027SBEA
+        label: "PCE Health Services"
+        primary_transform: yoy_pct
+        also_display: [qoq_pct_saar]
+        tags: [healthcare]
+
+    # === Context ===
+    context:
+      anchor_series: A191RL1Q225SBEA
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: A191RL1Q225SBEA, transform: raw, label: "Real GDP QoQ SAAR"}
+        reference_lines:
+          - {value: 2.0, label: "2% long-run trend", style: dashed}
+        highlight_latest: true
+        filename: "gdp_5y_{period}.png"
+
+      thread:
+        - name: gdp_long_history
+          type: line
+          lookback_years: 25
+          series:
+            - {id: GDPC1, transform: yoy_pct, label: "Real GDP YoY (level → YoY)"}
+          filename: "gdp_25y_{period}.png"
+
+        - name: hc_pce_services
+          type: line
+          lookback_years: 5
+          series:
+            - {id: DHLCRC1Q027SBEA, transform: yoy_pct, label: "PCE Health Services YoY"}
+          highlight_latest: true
+          filename: "hc_pce_services_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - A191RL1Q225SBEA
+      component_hash:
+        - GDPC1
+        - DHLCRC1Q027SBEA
+
+    agency:
+      release_page: "https://www.bea.gov/data/gdp/gross-domestic-product"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/gdp/{period}.pdf"
+
+  jolts:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 192           # Job Openings and Labor Turnover Survey
+    release_time_et: "10:00"
+    source: fred
+    fallback_source: bls
+
+    # === Display ===
+    # JOLTS data lags ~2 months. Latest in early June 2026 is March 2026.
+    display_name: "JOLTS"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # KEY DESIGN: display the openings LEVEL (JTSJOL) but the z-score
+    # anchor is the openings RATE (JTSJOR) — the level has a secular
+    # labor-force-growth trend, so a level z-score would always read +σ
+    # in tight markets. The rate is what's stationary.
+    headline:
+      - id: JTSJOL
+        label: "Job openings"
+        primary_transform: raw
+        also_display: []
+      - id: JTSQUR
+        label: "Quits rate"
+        primary_transform: raw
+        display_unit: "%"
+
+    # === Components (thread) ===
+    components:
+      - id: JTSJOR
+        label: "Job openings rate (z-score anchor)"
+        primary_transform: raw
+        display_unit: "%"
+      - id: JTSHIR
+        label: "Hires"
+        primary_transform: raw
+      - id: JTSLDL
+        label: "Layoffs & discharges"
+        primary_transform: raw
+
+    # === Context ===
+    # Z-score on JTSJOR (the rate) per the v5 design correction.
+    context:
+      anchor_series: JTSJOR
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: JTSJOL, transform: raw, label: "Job openings (level)"}
+        highlight_latest: true
+        filename: "jolts_5y_{period}.png"
+
+      thread:
+        - name: openings_rate_5y
+          type: line
+          lookback_years: 5
+          series:
+            - {id: JTSJOR, transform: raw, label: "Job openings rate"}
+            - {id: JTSQUR, transform: raw, label: "Quits rate"}
+          highlight_latest: true
+          filename: "jolts_rates_5y_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - JTSJOL
+        - JTSQUR
+      component_hash:
+        - JTSJOR
+        - JTSHIR
+        - JTSLDL
+
+    agency:
+      release_page: "https://www.bls.gov/jlt/"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/jolts.pdf"
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/jolts/{period}.pdf"
+
+  ppi:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 46            # Producer Price Index
+    release_time_et: "08:30"
+    source: fred
+    fallback_source: bls
+
+    # === Display ===
+    display_name: "PPI"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # Same inflation pattern as CPI / PCE: display YoY+MoM, anchor on annualized_mom.
+    headline:
+      - id: PPIFIS
+        label: "Headline (Final Demand)"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+      - id: PPIFES
+        label: "Core (Final Demand less Food & Energy)"
+        primary_transform: annualized_mom
+        also_display: [yoy_pct, mom_pct]
+
+    # === Components ===
+    # HC PPI sub-components (hospital PPI, physician offices PPI) deferred
+    # to Phase 2. v1 PPI is headline-only.
+    components: []
+
+    context:
+      anchor_series: PPIFIS
+      anchor_transform: annualized_mom
+      trends:
+        - {window_months: 3, stat: annualized_mom, label: "3mo annualized"}
+        - {window_months: 6, stat: annualized_mom, label: "6mo annualized"}
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: PPIFIS, transform: yoy_pct, label: "Headline YoY"}
+          - {id: PPIFES, transform: yoy_pct, label: "Core YoY"}
+        highlight_latest: true
+        filename: "ppi_5y_{period}.png"
+
+      thread:
+        - name: long_history
+          type: line
+          lookback_years: 25
+          series:
+            - {id: PPIFIS, transform: yoy_pct, label: "Headline YoY"}
+            - {id: PPIFES, transform: yoy_pct, label: "Core YoY"}
+          filename: "ppi_25y_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - PPIFIS
+        - PPIFES
+      component_hash: []
+
+    agency:
+      release_page: "https://www.bls.gov/ppi/"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/ppi.pdf"
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/ppi/{period}.pdf"
+
+  retail_sales:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 9             # Advance Monthly Sales for Retail and Food Services
+    release_time_et: "08:30"
+    source: fred
+
+    # === Display ===
+    display_name: "Retail Sales"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # Retail sales is MoM-led in how it's reported; YoY for context.
+    headline:
+      - id: RSAFS
+        label: "Headline (Retail trade + food services)"
+        primary_transform: mom_pct
+        also_display: [yoy_pct]
+
+    # === Components ===
+    components:
+      - id: RRSFS
+        label: "Real retail sales (inflation-adjusted)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    context:
+      anchor_series: RSAFS
+      anchor_transform: mom_pct
+      trends:
+        - {window_months: 3, stat: annualized_mom, label: "3mo annualized"}
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: RSAFS, transform: yoy_pct, label: "Retail sales YoY"}
+          - {id: RRSFS, transform: yoy_pct, label: "Real retail sales YoY"}
+        highlight_latest: true
+        filename: "retail_5y_{period}.png"
+
+      thread:
+        - name: long_history
+          type: line
+          lookback_years: 15
+          series:
+            - {id: RSAFS, transform: yoy_pct, label: "Retail sales YoY"}
+            - {id: RRSFS, transform: yoy_pct, label: "Real retail sales YoY"}
+          filename: "retail_15y_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - RSAFS
+      component_hash:
+        - RRSFS
+
+    agency:
+      release_page: "https://www.census.gov/retail/marts/www/marts_current.pdf"
+      pdf_url_static: null              # Census uses dated PDFs
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/retail_sales/{period}.pdf"
+
+  eci:
+    # === Metadata ===
+    tier: A
+    family_type: numeric
+    cadence: quarterly
+    release_calendar_id: 11            # Employment Cost Index
+    release_time_et: "08:30"
+    source: fred
+    fallback_source: bls
+
+    # === Display ===
+    display_name: "Employment Cost Index"
+    period_label_format: "Q{quarter} {year}"
+
+    # === Headline ===
+    # Lead with total compensation (the headline ECI figure markets quote),
+    # NOT the wages+benefits split. Split goes in thread per v5 plan.
+    headline:
+      - id: ECIALLCIV
+        label: "Total compensation (All Civilian)"
+        primary_transform: yoy_pct
+        also_display: [qoq_pct_saar]
+
+    # === Components (thread split) ===
+    components:
+      - id: ECIWAG
+        label: "Wages & salaries (Private Industry)"
+        primary_transform: yoy_pct
+      - id: ECIBEN
+        label: "Benefits (Private Industry)"
+        primary_transform: yoy_pct
+
+    context:
+      anchor_series: ECIALLCIV
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: ECIALLCIV, transform: yoy_pct, label: "Total comp YoY"}
+        reference_lines:
+          - {value: 3.0, label: "3% (rough wage growth baseline)", style: dashed}
+        highlight_latest: true
+        filename: "eci_10y_{period}.png"
+
+      thread:
+        - name: wages_vs_benefits
+          type: line
+          lookback_years: 10
+          series:
+            - {id: ECIWAG, transform: yoy_pct, label: "Wages YoY"}
+            - {id: ECIBEN, transform: yoy_pct, label: "Benefits YoY"}
+          highlight_latest: true
+          filename: "eci_split_{period}.png"
+
+    tier_b_gate: null
+
+    dedupe:
+      headline_hash:
+        - ECIALLCIV
+      component_hash:
+        - ECIWAG
+        - ECIBEN
+
+    agency:
+      release_page: "https://www.bls.gov/eci/"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/eci.pdf"
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/eci/{period}.pdf"
+
+# === Families to add in later Phase 1 sub-phases ===
+# fomc_decision:   (1e — family_type: event)
+# fomc_minutes:    (1e — family_type: event)

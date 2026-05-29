@@ -1,0 +1,53 @@
+name: Annual macro calendar
+
+# Jan 1 generation + Apr/Jul/Oct 1 quarterly refresh. Renders the
+# year's Tier A release schedule to outputs/calendar/<year>.html and
+# uploads it to #macro as a file attachment.
+
+on:
+  schedule:
+    # Each at 06:00 ET on the 1st of the relevant month (pre-market so
+    # the calendar lands before the trading day).
+    - cron: "0 10 1 1,4,7,10 *"   # 06:00 EDT (Apr/Jul/Oct will be EDT)
+    - cron: "0 11 1 1 *"          # 06:00 EST (Jan is winter)
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Year to render (default: current)"
+        required: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Render annual calendar
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          PYTHONUTF8: "1"
+        run: |
+          python -m macro_monitor.cli annual-calendar --post \
+            ${{ github.event.inputs.year && format('--year {0}', github.event.inputs.year) || '' }}
+
+      - name: Commit calendar HTML
+        if: success()
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add outputs/calendar/
+          if ! git diff --staged --quiet; then
+            git commit -m "annual-calendar refresh: $(date -u +%FT%TZ)"
+            git pull --rebase
+            git push
+          fi

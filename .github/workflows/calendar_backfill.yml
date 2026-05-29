@@ -1,0 +1,51 @@
+name: Google Calendar backfill
+
+# Refresh the next 90 days of Tier A release events on the dedicated
+# "Macro Calendar" in floridabusinessman@gmail.com. Idempotent via
+# stable client-generated event IDs — re-runs upsert, never duplicate.
+#
+# Runs weekly (Sunday evening) to keep the rolling 90-day window fresh
+# without too many calendar API calls.
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"   # 21:00 ET Sunday (EDT)
+    - cron: "0 2 * * 1"   # 21:00 ET Sunday (EST)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Lookahead window in days (default 90)"
+        required: false
+        default: "90"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Write service-account credentials
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          mkdir -p .secrets
+          echo "$GOOGLE_CREDENTIALS_JSON" > .secrets/credentials.json
+
+      - name: Backfill events
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          GOOGLE_CREDENTIALS_PATH: ".secrets/credentials.json"
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+        run: |
+          python -m macro_monitor.cli backfill-calendar --post \
+            --days ${{ github.event.inputs.days || 90 }}

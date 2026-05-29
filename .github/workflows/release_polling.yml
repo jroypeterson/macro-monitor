@@ -1,0 +1,65 @@
+name: Release polling
+
+# Fires every 15 minutes during a UTC window that covers ET morning
+# releases under BOTH EDT (UTC-4) and EST (UTC-5). The Python script
+# gates by the actual ET window (8:25–11:00 ET + 13:55–14:35 ET for FOMC)
+# and exits cleanly outside that — so most of these runs are no-ops.
+#
+# Idempotency comes from state/posts.db: a release that has already been
+# posted for a given period won't double-post on the next fire.
+
+on:
+  schedule:
+    # */15 across 11:00–18:59 UTC, Mon–Fri.
+    # That covers:
+    #   EDT (UTC-4): 7:00–14:59 ET → catches 8:30 BLS/BEA + 10:00 JOLTS + 14:00 FOMC
+    #   EST (UTC-5): 6:00–13:59 ET → same coverage
+    - cron: "*/15 11-18 * * 1-5"
+  workflow_dispatch:
+    # Manual trigger for one-off polls (e.g., post-hours catch-up)
+    inputs:
+      skip_window_check:
+        description: "Skip the ET-window guard (force polling)"
+        required: false
+        default: "false"
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Poll Tier A families
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+        run: |
+          python -m macro_monitor.cli poll-all --post \
+            ${{ github.event.inputs.skip_window_check == 'true' && '--skip-window-check' || '' }}
+
+      - name: Persist posts ledger and outputs
+        # Commit changes back to the repo so the state survives across runs.
+        # The ledger is what makes polling idempotent — without persistence
+        # every run would think it was the first time and re-post everything.
+        if: success()
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add state/posts.db outputs/ 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "poll-all: $(date -u +%FT%TZ)"
+            git pull --rebase
+            git push
+          fi

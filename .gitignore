@@ -1,0 +1,38 @@
+# Secrets
+.env
+.google_calendar_token.json
+.google_calendar_credentials.json
+
+# State (rebuildable from FRED via cli.py db-backfill)
+data/macro.db
+data/macro.db-journal
+data/macro.db-wal
+data/macro.db-shm
+state/*.json
+!state/.gitkeep
+
+# Agency PDFs — non-blocking convenience mirror; gitignored per design.
+pdfs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Dropbox + Edit-tool atomic-write leftovers (per feedback_dropbox_atomic_write_tmp)
+*.tmp.*
+
+# OS
+.DS_Store
+Thumbs.db

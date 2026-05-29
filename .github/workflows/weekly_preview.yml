@@ -1,0 +1,51 @@
+name: Weekly preview
+
+# Monday 07:00 ET preview to #macro (this week + next 4 weeks).
+# 07:00 EDT = 11:00 UTC, 07:00 EST = 12:00 UTC. We list both so the post
+# fires reliably across DST without per-season tuning.
+
+on:
+  schedule:
+    - cron: "0 11 * * 1"   # 07:00 EDT (summer)
+    - cron: "0 12 * * 1"   # 07:00 EST (winter)
+  workflow_dispatch: {}
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      # Only one of the two cron lines should actually post; the other
+      # will fire an hour off relative to ET. The Python preview itself
+      # is idempotent within a Slack day (posts a NEW message each time),
+      # so we add a coarse hour guard here.
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          echo "et_hour=$ET_HOUR" >> $GITHUB_OUTPUT
+          if [ "$ET_HOUR" != "07" ]; then
+            echo "Outside 07:00 ET (now $ET_HOUR ET); skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post weekly preview
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+        run: python -m macro_monitor.cli weekly-preview --post

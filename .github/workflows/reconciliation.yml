@@ -1,0 +1,59 @@
+name: Reconciliation
+
+# 17:00 ET daily reconciliation pass — catches anything the */15
+# release_polling missed during the day, surfaces stale-data warnings
+# to #status-reports. Skips the window guard so it runs even though
+# 17:00 is outside the morning polling window.
+
+on:
+  schedule:
+    - cron: "0 21 * * 1-5"   # 17:00 EDT, Mon–Fri
+    - cron: "0 22 * * 1-5"   # 17:00 EST, Mon–Fri
+  workflow_dispatch: {}
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "17" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Catch-up poll (skips window guard)
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+        run: |
+          python -m macro_monitor.cli poll-all --post --skip-window-check
+
+      - name: Persist ledger updates
+        if: success() && steps.dst_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add state/posts.db outputs/ 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "reconciliation: $(date -u +%FT%TZ)"
+            git pull --rebase
+            git push
+          fi

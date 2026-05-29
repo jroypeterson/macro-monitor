@@ -1,0 +1,316 @@
+"""Matplotlib chart factory. Renders ChartSpec objects to PNG files.
+
+The factory takes pre-fetched FRED data (a dict series_id -> pd.Series) so
+it doesn't need to know about the FREDClient — keeps it pure and testable.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from ..config import ChartSpec
+from ..transforms import TRANSFORMS, apply_transform
+from .style import (
+    COLOR_REFERENCE,
+    CYCLE,
+    DEFAULT_DPI,
+    DEFAULT_FIGSIZE,
+)
+
+
+def render_chart(
+    spec: ChartSpec,
+    fetched_series: dict[str, pd.Series],
+    target_period: pd.Timestamp,
+    output_path: Path,
+    title: str | None = None,
+) -> Path:
+    """Render a single ChartSpec to a PNG file.
+
+    `fetched_series` is a {series_id: pd.Series} dict already pulled from
+    FRED. Each series in `spec.series` must be present.
+    `target_period` is the latest point on the chart (the release period).
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=DEFAULT_FIGSIZE, dpi=DEFAULT_DPI)
+
+    # Determine lookback start
+    if spec.lookback_years is not None:
+        start = target_period - pd.DateOffset(years=spec.lookback_years)
+    elif spec.lookback_months is not None:
+        start = target_period - pd.DateOffset(months=spec.lookback_months)
+    else:
+        raise ValueError("ChartSpec must declare lookback_years or lookback_months")
+
+    if spec.type == "panes":
+        # Discard the single-axes figure we created; panes builds its own.
+        plt.close(fig)
+        return _render_panes(spec, fetched_series, start, target_period, output_path, title)
+
+    if spec.type == "line":
+        _render_line_into(spec.series, spec.highlight_latest, fetched_series, start, target_period, ax)
+    elif spec.type == "stacked_bar":
+        _render_stacked_bar_into(spec.series, fetched_series, start, target_period, ax)
+    else:
+        raise ValueError(f"Unsupported chart type: {spec.type}")
+
+    # Reference lines (e.g. 2% inflation target)
+    for ref in spec.reference_lines:
+        linestyle = {"solid": "-", "dashed": "--", "dotted": ":"}.get(ref.style, "--")
+        ax.axhline(
+            y=ref.value,
+            color=COLOR_REFERENCE,
+            linestyle=linestyle,
+            linewidth=1,
+            label=ref.label,
+            zorder=1,
+        )
+
+    if title:
+        ax.set_title(title)
+
+    # Y-axis as percent (we mostly chart % transforms; harmless if raw values)
+    # Only format as % if all displayed series are percent-style transforms
+    pct_transforms = {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}
+    if all(s.transform in pct_transforms for s in spec.series):
+        ax.yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda v, _pos: f"{v:.1f}%")
+        )
+
+    ax.legend(loc="best")
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(output_path, bbox_inches="tight")
+    plt.close(fig)
+
+    return output_path
+
+
+def _transform_series_to_window(
+    series: pd.Series,
+    transform: str,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> pd.Series:
+    """Apply a transform pointwise across the [start, end] window of the
+    series. Returns a new Series of transformed values indexed by date.
+    """
+    fn = TRANSFORMS[transform]
+    rows: list[tuple[pd.Timestamp, float]] = []
+    for d in series.index:
+        if start <= d <= end:
+            v = fn(series, d)
+            if v is not None:
+                rows.append((d, v))
+    if not rows:
+        return pd.Series(dtype=float)
+    idx = pd.DatetimeIndex([r[0] for r in rows])
+    return pd.Series([r[1] for r in rows], index=idx, dtype=float)
+
+
+def _render_line_into(
+    series_refs,
+    highlight_latest: bool,
+    fetched_series: dict[str, pd.Series],
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    ax,
+) -> None:
+    for idx, s in enumerate(series_refs):
+        if s.id not in fetched_series:
+            raise KeyError(f"Chart series {s.id!r} not in fetched data")
+        transformed = _transform_series_to_window(fetched_series[s.id], s.transform, start, end)
+        if transformed.empty:
+            continue
+        color = CYCLE[idx % len(CYCLE)]
+        ax.plot(transformed.index, transformed.values, label=s.label, color=color, linewidth=2.0)
+
+        if highlight_latest and not transformed.empty:
+            last_date = transformed.index.max()
+            last_val = transformed.loc[last_date]
+            ax.scatter(
+                [last_date],
+                [last_val],
+                color=color,
+                s=60,
+                zorder=5,
+                edgecolor="white",
+                linewidth=1.5,
+            )
+            # Annotate using a format that respects whether we're showing
+            # percents or raw levels.
+            is_pct = s.transform in {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}
+            label_text = f"{last_val:.1f}%" if is_pct else f"{last_val:,.0f}"
+            ax.annotate(
+                label_text,
+                xy=(last_date, last_val),
+                xytext=(8, 0),
+                textcoords="offset points",
+                fontsize=9,
+                color=color,
+                weight="bold",
+                va="center",
+            )
+
+
+def _render_stacked_bar_into(
+    series_refs,
+    fetched_series: dict[str, pd.Series],
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    ax,
+) -> None:
+    # Build a DataFrame of transformed monthly values across the window
+    transformed_cols: dict[str, pd.Series] = {}
+    for s in series_refs:
+        if s.id not in fetched_series:
+            raise KeyError(f"Chart series {s.id!r} not in fetched data")
+        transformed_cols[s.label] = _transform_series_to_window(
+            fetched_series[s.id], s.transform, start, end
+        )
+
+    if not transformed_cols:
+        return
+
+    df = pd.DataFrame(transformed_cols)
+    df = df.dropna(how="all")
+    if df.empty:
+        return
+
+    # Stack
+    bottoms_pos = pd.Series(0.0, index=df.index)
+    bottoms_neg = pd.Series(0.0, index=df.index)
+    width = 22  # days; one bar per month, roughly
+
+    for i, (col, color) in enumerate(zip(df.columns, CYCLE)):
+        vals = df[col].fillna(0.0)
+        pos_mask = vals >= 0
+        neg_mask = vals < 0
+        ax.bar(
+            df.index[pos_mask],
+            vals[pos_mask].values,
+            bottom=bottoms_pos[pos_mask].values,
+            width=width,
+            color=color,
+            label=col,
+            edgecolor="white",
+            linewidth=0.5,
+        )
+        ax.bar(
+            df.index[neg_mask],
+            vals[neg_mask].values,
+            bottom=bottoms_neg[neg_mask].values,
+            width=width,
+            color=color,
+            edgecolor="white",
+            linewidth=0.5,
+        )
+        bottoms_pos = bottoms_pos.add(vals.where(pos_mask, 0.0), fill_value=0.0)
+        bottoms_neg = bottoms_neg.add(vals.where(neg_mask, 0.0), fill_value=0.0)
+
+
+def _render_panes(
+    spec: ChartSpec,
+    fetched_series: dict[str, pd.Series],
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    output_path: Path,
+    title: str | None,
+) -> Path:
+    """Multi-pane chart — one PNG, N matplotlib subplots stacked vertically
+    (or horizontally). Used for HC employment (absolute + 12mo change in
+    one pane, HC vs total nonfarm normalized in the other)."""
+    n = len(spec.panes)
+    if spec.layout == "horizontal":
+        figsize = (DEFAULT_FIGSIZE[0] * n / 1.5, DEFAULT_FIGSIZE[1])
+        fig, axes = plt.subplots(1, n, figsize=figsize, dpi=DEFAULT_DPI)
+    else:
+        figsize = (DEFAULT_FIGSIZE[0], DEFAULT_FIGSIZE[1] * n / 1.5)
+        fig, axes = plt.subplots(n, 1, figsize=figsize, dpi=DEFAULT_DPI)
+
+    if n == 1:
+        axes = [axes]  # ensure iterable
+
+    pct_transforms = {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}
+
+    for pane, ax in zip(spec.panes, axes):
+        if pane.type == "line":
+            _render_line_into(pane.series, pane.highlight_latest, fetched_series, start, end, ax)
+        elif pane.type == "stacked_bar":
+            _render_stacked_bar_into(pane.series, fetched_series, start, end, ax)
+        else:
+            raise ValueError(f"Unsupported pane type: {pane.type}")
+
+        for ref in pane.reference_lines:
+            linestyle = {"solid": "-", "dashed": "--", "dotted": ":"}.get(ref.style, "--")
+            ax.axhline(
+                y=ref.value,
+                color="#666666",
+                linestyle=linestyle,
+                linewidth=1,
+                label=ref.label,
+                zorder=1,
+            )
+
+        ax.set_title(pane.title, fontsize=11, weight="bold")
+
+        if all(s.transform in pct_transforms for s in pane.series):
+            ax.yaxis.set_major_formatter(
+                plt.FuncFormatter(lambda v, _pos: f"{v:.1f}%")
+            )
+
+        ax.legend(loc="best", fontsize=9)
+
+    if title:
+        fig.suptitle(title, fontsize=13, weight="bold")
+
+    fig.autofmt_xdate()
+    fig.tight_layout(rect=[0, 0, 1, 0.97] if title else None)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, bbox_inches="tight")
+    plt.close(fig)
+
+    return output_path
+
+
+def render_family_charts(
+    family_charts,  # ChartsBundle (Pydantic model)
+    fetched_series: dict[str, pd.Series],
+    target_period: pd.Timestamp,
+    period_key: str,
+    output_dir: Path,
+    family_display_name: str,
+    period_label: str,
+) -> dict[str, Path]:
+    """Render every chart declared by a family. Returns {chart_name: path}
+    keyed by `'main'` for the main chart and chart `.name` for each thread chart.
+    """
+    rendered: dict[str, Path] = {}
+
+    # Main chart
+    main_path = output_dir / family_charts.main.filename.format(period=period_key)
+    rendered["main"] = render_chart(
+        spec=family_charts.main,
+        fetched_series=fetched_series,
+        target_period=target_period,
+        output_path=main_path,
+        title=f"{family_display_name} — {period_label}",
+    )
+
+    # Thread charts
+    for chart in family_charts.thread:
+        path = output_dir / chart.filename.format(period=period_key)
+        name = chart.name or chart.filename
+        rendered[name] = render_chart(
+            spec=chart,
+            fetched_series=fetched_series,
+            target_period=target_period,
+            output_path=path,
+            title=f"{family_display_name} — {chart.name or ''} — {period_label}".strip(" —"),
+        )
+
+    return rendered
