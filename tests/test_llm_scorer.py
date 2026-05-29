@@ -276,8 +276,12 @@ def test_render_no_badge_when_verdicts_missing():
     assert "10" not in text  # no score badge
 
     blocks = _render_blocks(posts, [], None)
-    section_text = blocks[1]["text"]["text"]
-    assert "Some title" in section_text
+    section_texts = [
+        b["text"]["text"]
+        for b in blocks
+        if b.get("type") == "section"
+    ]
+    assert any("Some title" in t for t in section_texts)
 
 
 # ---------------------------------------------------------------------------
@@ -404,3 +408,48 @@ def test_render_blocks_includes_top_picks_section():
     ]
     assert any("TOP PICKS" in t for t in section_texts)
     assert any(b.get("type") == "divider" for b in blocks)
+
+
+def test_render_text_includes_toc_with_counts():
+    from macro_monitor.schedulers.research_digest import _render_text
+
+    # Mix of sources so TOC has multiple entries with counts
+    nber_1 = ResearchPost(
+        source_id="nber", source_display="NBER", title="paper a",
+        url="https://x/a", summary="", published_at_iso="",
+    )
+    nber_2 = ResearchPost(
+        source_id="nber", source_display="NBER", title="paper b",
+        url="https://x/b", summary="", published_at_iso="",
+    )
+    fed = ResearchPost(
+        source_id="fed", source_display="Liberty Street",
+        title="post", url="https://x/c", summary="", published_at_iso="",
+    )
+    text = _render_text([nber_1, nber_2, fed], [], None)
+    assert "TABLE OF CONTENTS" in text
+    assert "NBER (2)" in text
+    assert "Liberty Street (1)" in text
+
+
+def test_render_blocks_includes_toc_section():
+    from macro_monitor.schedulers.research_digest import _render_blocks
+
+    nber_1 = ResearchPost(
+        source_id="nber", source_display="NBER", title="paper a",
+        url="https://x/a", summary="", published_at_iso="",
+    )
+    fed = ResearchPost(
+        source_id="fed", source_display="Liberty Street",
+        title="post", url="https://x/c", summary="", published_at_iso="",
+    )
+    blocks = _render_blocks([nber_1, fed], [], None)
+    section_texts = [
+        b["text"]["text"]
+        for b in blocks
+        if b.get("type") == "section"
+    ]
+    toc_text = next((t for t in section_texts if "TABLE OF CONTENTS" in t), None)
+    assert toc_text is not None
+    assert "NBER (1)" in toc_text
+    assert "Liberty Street (1)" in toc_text

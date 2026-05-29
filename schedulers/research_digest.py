@@ -218,6 +218,8 @@ def _render_text(
         return "macro-monitor: no new Fed/macro research today."
     lines = [f"🏛️ NEW MACRO RESEARCH ({len(new_posts)})"]
 
+    grouped = _group_by_source(new_posts, verdicts)
+
     # Curated top picks (cross-source, by score)
     picks = _top_picks(new_posts, verdicts or {})
     if picks:
@@ -226,9 +228,16 @@ def _render_text(
             v = verdicts.get(p.url) if verdicts else None
             badge = f"[{_score_badge(v.score)}] " if v else ""
             lines.append(f"  • {badge}{p.title}  —  {p.source_display}")
-        lines.append("\n— FULL DIGEST —")
 
-    for source_name, posts in _group_by_source(new_posts, verdicts).items():
+    # Table of contents — sources + counts
+    lines.append(f"\n📋 TABLE OF CONTENTS:")
+    for source_name, posts in grouped.items():
+        is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
+        suffix = " 📧" if is_gmail else ""
+        lines.append(f"  • {source_name} ({len(posts)}){suffix}")
+    lines.append("\n— FULL DIGEST —")
+
+    for source_name, posts in grouped.items():
         is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
         label = source_name + (" (Gmail)" if is_gmail else "")
         lines.append(f"\n{label}:")
@@ -276,6 +285,8 @@ def _render_blocks(
         }
     )
 
+    grouped = _group_by_source(new_posts, verdicts)
+
     # Curated top picks (cross-source, by score) — block right under the header
     picks = _top_picks(new_posts, verdicts or {})
     if picks:
@@ -299,9 +310,22 @@ def _render_blocks(
                 "text": {"type": "mrkdwn", "text": "\n".join(pick_lines)},
             }
         )
-        blocks.append({"type": "divider"})
 
-    for source_name, posts in _group_by_source(new_posts, verdicts).items():
+    # Table of contents — sources + item counts
+    toc_lines = ["*📋 TABLE OF CONTENTS:*"]
+    for source_name, posts in grouped.items():
+        is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
+        suffix = " 📧" if is_gmail else ""
+        toc_lines.append(f"• {_md_escape(source_name)} ({len(posts)}){suffix}")
+    blocks.append(
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "\n".join(toc_lines)},
+        }
+    )
+    blocks.append({"type": "divider"})
+
+    for source_name, posts in grouped.items():
         # Source subhead + bulleted entries
         is_gmail_source = any(p.url.startswith("gmail-msg:") for p in posts)
         source_label = source_name + (" 📧" if is_gmail_source else "")
