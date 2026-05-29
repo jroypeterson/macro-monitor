@@ -1,0 +1,50 @@
+name: Deploy outputs/ to GitHub Pages
+
+# Deploys outputs/ to GitHub Pages so the dashboard, annual calendar,
+# and per-release HTML reports all have permanent URLs:
+#   https://jroypeterson.github.io/macro-monitor/dashboard/
+#   https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html
+#   https://jroypeterson.github.io/macro-monitor/archive/<family>/<period>.html
+#
+# Fires on every push that touches outputs/** — which includes the
+# auto-commits from release_polling, reconciliation, and annual_calendar
+# crons. So the public dashboard is always fresh-as-of the last release.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "outputs/**"
+  workflow_dispatch: {}
+
+# Only one Pages deploy at a time; cancel in-progress runs if a new
+# commit lands while the previous deploy is still running.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload outputs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: outputs
+
+      - id: deployment
+        name: Deploy
+        uses: actions/deploy-pages@v4
