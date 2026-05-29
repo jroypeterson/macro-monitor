@@ -36,3 +36,70 @@ sources:
     display_name: "Federal Reserve Board — FEDS Working Papers"
     url: "https://www.federalreserve.gov/feeds/feds.xml"
     max_items_per_run: 5
+
+  # === Macro commentary / market context ===
+  # Lower-academic, higher-frequency. Mixed signal but each is well-curated.
+
+  - id: calculated_risk
+    display_name: "Calculated Risk (Bill McBride)"
+    url: "https://www.calculatedriskblog.com/feeds/posts/default"
+    max_items_per_run: 5
+
+  - id: conversable_economist
+    display_name: "Conversable Economist (Tim Taylor)"
+    url: "https://conversableeconomist.com/feed/"
+    max_items_per_run: 3
+
+  # === Mainstream macro / business news (headlines + dek; full text gated) ===
+
+  - id: nyt_business
+    display_name: "NYT — Business"
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+    max_items_per_run: 5
+
+  - id: ft_economics
+    display_name: "FT — Global Economy"
+    url: "https://www.ft.com/economics?format=rss"
+    max_items_per_run: 5
+
+  - id: wsj_markets
+    display_name: "WSJ — Markets"
+    url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+    max_items_per_run: 4
+
+  - id: wsj_us_business
+    display_name: "WSJ — US Business"
+    url: "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml"
+    max_items_per_run: 3
+
+# Gmail-delivered research from senders without a public RSS feed.
+# Uses jroypeterson@gmail.com OAuth token (shared with portfolio_daily +
+# earnings_agent). Dedupes by Gmail message-id in research_posted.db.
+#
+# Query syntax: standard Gmail search. Common patterns:
+#   from:<address>         — exact sender
+#   from:<domain>          — any sender at a domain
+#   from:"Display Name"    — match the From-line display name
+#   subject:<word>         — narrow by subject line
+#
+# `newer_than_days` bounds the lookback window per run (defaults to 7).
+# `max_items_per_run` caps the digest from any single sender.
+gmail_senders:
+  - id: torsten_slok
+    display_name: "Torsten Slok / Apollo"
+    query: "from:agm@apollo.com"
+    max_items_per_run: 3
+    newer_than_days: 7
+
+  - id: yardeni
+    display_name: "Yardeni Research QuickTakes"
+    query: "from:yardeni-research@ghost.io"
+    max_items_per_run: 3
+    newer_than_days: 7
+
+  - id: economist_today
+    display_name: "The Economist Today"
+    query: "from:newsletters@e.economist.com"
+    max_items_per_run: 2
+    newer_than_days: 5
+

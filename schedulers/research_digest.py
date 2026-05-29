@@ -18,6 +18,12 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 
+from ..collectors.gmail import (
+    GmailSender,
+    fetch_all_senders,
+    gmail_url_from_dedupe_key,
+    load_gmail_senders,
+)
 from ..collectors.rss import (
     ResearchLedger,
     ResearchPost,
@@ -39,12 +45,26 @@ class DigestPayload:
 
 def build_digest(
     sources: list[ResearchSource] | None = None,
+    gmail_senders: list[GmailSender] | None = None,
     ledger: ResearchLedger | None = None,
+    skip_gmail: bool = False,
 ) -> DigestPayload:
-    """Pull all sources, dedupe, render. Caller owns the Slack post."""
+    """Pull RSS + Gmail sources, dedupe, render. Caller owns the Slack
+    post. `skip_gmail=True` is useful for unit tests that don't want to
+    open the network."""
     if sources is None:
         sources = load_sources()
-    posts, errors = fetch_all(sources)
+
+    rss_posts, errors = fetch_all(sources)
+    posts: list[ResearchPost] = list(rss_posts)
+
+    if not skip_gmail:
+        if gmail_senders is None:
+            gmail_senders = load_gmail_senders()
+        if gmail_senders:
+            gmail_posts, gmail_errors = fetch_all_senders(gmail_senders)
+            posts.extend(gmail_posts)
+            errors.extend(gmail_errors)
 
     own_ledger = ledger is None
     if own_ledger:
@@ -82,6 +102,36 @@ def _group_by_source(posts: list[ResearchPost]) -> dict[str, list[ResearchPost]]
     return {name: grouped[name] for name in seen_order}
 
 
+def _fmt_pub_date(iso: str) -> str:
+    """Render an ISO8601 timestamp as 'May 28' (or '' if missing/invalid)."""
+    if not iso:
+        return ""
+    from datetime import datetime
+
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return dt.strftime("%b %-d") if hasattr(dt, "strftime") else ""
+
+
+def _fmt_pub_date_portable(iso: str) -> str:
+    """Windows strftime doesn't accept %-d. Build the format manually."""
+    if not iso:
+        return ""
+    from datetime import datetime
+
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ]
+    return f"{months[dt.month - 1]} {dt.day}"
+
+
 def _render_text(
     new_posts: list[ResearchPost], errors: list[tuple[str, str]]
 ) -> str:
@@ -90,10 +140,19 @@ def _render_text(
         return "macro-monitor: no new Fed/macro research today."
     lines = [f"🏛️ NEW MACRO RESEARCH ({len(new_posts)})"]
     for source_name, posts in _group_by_source(new_posts).items():
-        lines.append(f"\n{source_name}:")
+        is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
+        label = source_name + (" (Gmail)" if is_gmail else "")
+        lines.append(f"\n{label}:")
         for p in posts:
-            lines.append(f"  • {p.title}")
-            lines.append(f"    {p.url}")
+            pub = _fmt_pub_date_portable(p.published_at_iso)
+            date_suffix = f" ({pub})" if pub else ""
+            display_url = (
+                gmail_url_from_dedupe_key(p.url)
+                if p.url.startswith("gmail-msg:")
+                else p.url
+            )
+            lines.append(f"  • {p.title}{date_suffix}")
+            lines.append(f"    {display_url}")
     if errors:
         lines.append(f"\n⚠️ {len(errors)} source(s) failed to fetch (see #status-reports)")
     return "\n".join(lines)
@@ -126,12 +185,22 @@ def _render_blocks(
 
     for source_name, posts in _group_by_source(new_posts).items():
         # Source subhead + bulleted entries
-        lines = [f"*{_md_escape(source_name)}*"]
+        is_gmail_source = any(p.url.startswith("gmail-msg:") for p in posts)
+        source_label = source_name + (" 📧" if is_gmail_source else "")
+        lines = [f"*{_md_escape(source_label)}*"]
         for p in posts:
-            # <url|title> renders as a Slack hyperlink
             title_md = _md_escape(p.title)
-            url_md = p.url  # Slack handles raw URL inside <…|…>
+            # Gmail posts carry "gmail-msg:<id>" as the dedupe key; swap
+            # in the browser URL for the click-through.
+            url_md = (
+                gmail_url_from_dedupe_key(p.url)
+                if p.url.startswith("gmail-msg:")
+                else p.url
+            )
             entry = f"• <{url_md}|{title_md}>"
+            pub = _fmt_pub_date_portable(p.published_at_iso)
+            if pub:
+                entry += f" _{pub}_"
             if p.summary:
                 excerpt = _md_escape(p.summary[:140].rstrip())
                 if len(p.summary) > 140:
