@@ -866,6 +866,395 @@ families:
       pdf_url_dated: null
       archive_path: "pdfs/archive/eci/{period}.pdf"
 
+  # === Tier B families ===
+  # Tier B preview every Monday alongside Tier A, but only POSTS on a
+  # release when |delta z-score| >= 1.0σ against trailing 5y volatility
+  # of the anchor's transform. Threshold tunable per family.
+
+  industrial_production:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 14            # G.17 Industrial Production and Capacity Utilization
+    release_time_et: "09:15"
+    source: fred
+    display_name: "Industrial Production"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: INDPRO
+        label: "Industrial Production Index"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+      - id: TCU
+        label: "Capacity Utilization"
+        primary_transform: raw
+        display_unit: "%"
+
+    components: []
+
+    context:
+      anchor_series: INDPRO
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: INDPRO, transform: yoy_pct, label: "Industrial Production YoY"}
+        highlight_latest: true
+        filename: "indpro_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - INDPRO
+        - TCU
+      component_hash: []
+
+    agency:
+      release_page: "https://www.federalreserve.gov/releases/g17/Current/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/industrial_production/{period}.pdf"
+
+  housing:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 17            # New Residential Construction (Census)
+    release_time_et: "08:30"
+    source: fred
+    display_name: "Housing Starts & Permits"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: HOUST
+        label: "Housing starts (annualized rate)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+      - id: PERMIT
+        label: "Building permits (annualized rate)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    components: []
+
+    context:
+      anchor_series: HOUST
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: HOUST,  transform: yoy_pct, label: "Housing starts YoY"}
+          - {id: PERMIT, transform: yoy_pct, label: "Permits YoY"}
+        highlight_latest: true
+        filename: "housing_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - HOUST
+        - PERMIT
+      component_hash: []
+
+    agency:
+      release_page: "https://www.census.gov/construction/nrc/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/housing/{period}.pdf"
+
+  durable_goods:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 31            # Advance Durable Goods (M3 Manufacturers' Shipments, Inventories, Orders)
+    release_time_et: "08:30"
+    source: fred
+    display_name: "Durable Goods Orders"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: DGORDER
+        label: "New orders: durable goods"
+        primary_transform: mom_pct
+        also_display: [yoy_pct]
+
+    components:
+      - id: NEWORDER
+        label: "Core capex (ex-defense, ex-aircraft)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    context:
+      anchor_series: DGORDER
+      anchor_transform: mom_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: DGORDER,  transform: yoy_pct, label: "Durable goods YoY"}
+          - {id: NEWORDER, transform: yoy_pct, label: "Core capex YoY"}
+        highlight_latest: true
+        filename: "durable_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - DGORDER
+      component_hash:
+        - NEWORDER
+
+    agency:
+      release_page: "https://www.census.gov/manufacturing/m3/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/durable_goods/{period}.pdf"
+
+  trade_balance:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 13            # International Trade in Goods and Services
+    release_time_et: "08:30"
+    source: fred
+    display_name: "Trade Balance"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: BOPGSTB
+        label: "Trade balance (goods & services, $M)"
+        primary_transform: raw
+
+    components: []
+
+    context:
+      anchor_series: BOPGSTB
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: BOPGSTB, transform: raw, label: "Trade balance ($M)"}
+        highlight_latest: true
+        filename: "trade_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - BOPGSTB
+      component_hash: []
+
+    agency:
+      release_page: "https://www.bea.gov/data/intl-trade-investment/international-trade-goods-and-services"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/trade_balance/{period}.pdf"
+
+  consumer_credit:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 26            # G.19 Consumer Credit
+    release_time_et: "15:00"           # 3:00 PM ET — unusual, evening release
+    source: fred
+    display_name: "Consumer Credit"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: TOTALSL
+        label: "Total consumer credit"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    components:
+      - id: REVOLSL
+        label: "Revolving credit (credit cards)"
+        primary_transform: yoy_pct
+
+    context:
+      anchor_series: TOTALSL
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: TOTALSL, transform: yoy_pct, label: "Total credit YoY"}
+          - {id: REVOLSL, transform: yoy_pct, label: "Revolving (cards) YoY"}
+        highlight_latest: true
+        filename: "credit_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - TOTALSL
+      component_hash:
+        - REVOLSL
+
+    agency:
+      release_page: "https://www.federalreserve.gov/releases/g19/Current/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/consumer_credit/{period}.pdf"
+
+  productivity:
+    tier: B
+    family_type: numeric
+    cadence: quarterly
+    release_calendar_id: 35            # Productivity and Costs (BLS)
+    release_time_et: "08:30"
+    source: fred
+    display_name: "Productivity & Unit Labor Costs"
+    period_label_format: "Q{quarter} {year}"
+
+    headline:
+      - id: OPHNFB
+        label: "Output per hour (nonfarm business)"
+        primary_transform: yoy_pct
+        also_display: [qoq_pct_saar]
+      - id: ULCNFB
+        label: "Unit labor costs"
+        primary_transform: yoy_pct
+        also_display: [qoq_pct_saar]
+
+    components: []
+
+    context:
+      anchor_series: OPHNFB
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 15
+        series:
+          - {id: OPHNFB, transform: yoy_pct, label: "Productivity YoY"}
+          - {id: ULCNFB, transform: yoy_pct, label: "Unit labor costs YoY"}
+        highlight_latest: true
+        filename: "productivity_15y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - OPHNFB
+        - ULCNFB
+      component_hash: []
+
+    agency:
+      release_page: "https://www.bls.gov/lpc/"
+      pdf_url_static: "https://www.bls.gov/news.release/pdf/prod2.pdf"
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/productivity/{period}.pdf"
+
+  umich:
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 175           # University of Michigan: Consumer Sentiment
+    release_time_et: "10:00"
+    source: fred
+    display_name: "UMich Consumer Sentiment"
+    period_label_format: "{month_name} {year}"
+
+    headline:
+      - id: UMCSENT
+        label: "Consumer Sentiment Index"
+        primary_transform: raw
+
+    components:
+      - id: MICH
+        label: "1y inflation expectations"
+        primary_transform: raw
+        display_unit: "%"
+
+    context:
+      anchor_series: UMCSENT
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: UMCSENT, transform: raw, label: "UMich Sentiment"}
+        reference_lines:
+          - {value: 75.0, label: "Long-run avg", style: dashed}
+        highlight_latest: true
+        filename: "umich_10y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - UMCSENT
+      component_hash:
+        - MICH
+
+    agency:
+      release_page: "http://www.sca.isr.umich.edu/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/umich/{period}.pdf"
+
 # === Families to add in later Phase 1 sub-phases ===
 # fomc_decision:   (1e — family_type: event)
 # fomc_minutes:    (1e — family_type: event)
+# Conference Board Consumer Confidence — licensed (like ISM), skip for v1
