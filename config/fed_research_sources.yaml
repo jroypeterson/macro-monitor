@@ -1,0 +1,38 @@
+# Fed / macro research RSS source allowlist.
+#
+# Daily scan polls each source, dedupes against state/research_posted.db
+# (URL-keyed), and posts a single "🏛️ NEW MACRO RESEARCH (N)" digest to
+# #macro when N >= 1.
+#
+# Sources are intentionally narrow at v1 — high-signal, low-volume feeds
+# where editorial curation has already filtered out the noise. URLs
+# verified against live feeds on 2026-05-29. The plan (§8 Phase 2)
+# considers adding Brookings/Hutchins and PIIE later if the digest reads
+# thin; for now their feeds carry too much non-macro content. BIS
+# doesn't publish a public RSS feed (404s on every candidate URL).
+
+sources:
+  - id: nber
+    display_name: "NBER Working Papers"
+    url: "https://www.nber.org/rss/new.xml"
+    max_items_per_run: 8
+
+  - id: ny_fed_liberty_street
+    display_name: "NY Fed — Liberty Street Economics"
+    url: "https://libertystreeteconomics.newyorkfed.org/feed/"
+    max_items_per_run: 5
+
+  - id: sf_fed_econ_letter
+    display_name: "SF Fed — Economic Letter"
+    url: "https://www.frbsf.org/feed/?post_type=economic-letter"
+    max_items_per_run: 3
+
+  - id: stlouis_fed_on_economy
+    display_name: "St. Louis Fed — On the Economy"
+    url: "https://www.stlouisfed.org/on-the-economy/rss.xml"
+    max_items_per_run: 5
+
+  - id: federal_reserve_board_feds
+    display_name: "Federal Reserve Board — FEDS Working Papers"
+    url: "https://www.federalreserve.gov/feeds/feds.xml"
+    max_items_per_run: 5
