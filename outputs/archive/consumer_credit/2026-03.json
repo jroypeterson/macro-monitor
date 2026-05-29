@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "family_id": "consumer_credit",
+  "family_display_name": "Consumer Credit",
+  "period": "2026-03",
+  "period_label": "March 2026",
+  "posted_at": "2026-05-29T13:59:55.064433+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:54.551981+00:00",
+  "latest_observation_period": "2026-03",
+  "expected_observation_period": "2026-03",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "TOTALSL",
+      "label": "Total consumer credit",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.347517686991263,
+        "raw_value": 5140540.72
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.4858586191647474
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 3.16987018676409
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "REVOLSL",
+      "label": "Revolving credit (credit cards)",
+      "transform": "yoy_pct",
+      "value": 3.4177585741921535,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "TOTALSL",
+    "anchor_transform": "yoy_pct",
+    "zscore": -0.9335054011225983,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "credit_10y_2026-03.png"
+  },
+  "agency_pdf_url": null
+}

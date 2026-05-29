@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "family_id": "ppi",
+  "family_display_name": "PPI",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:47.007603+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:46.450561+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "PPIFIS",
+      "label": "Headline (Final Demand)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 17.819324720350128,
+        "raw_value": 156.496
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 5.98760624428567
+        },
+        {
+          "transform": "mom_pct",
+          "value": 1.3758971834270328
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 8.721769275012115
+      }
+    },
+    {
+      "id": "PPIFES",
+      "label": "Core (Final Demand less Food & Energy)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 13.123968150929667,
+        "raw_value": 154.056
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 5.240291013423515
+        },
+        {
+          "transform": "mom_pct",
+          "value": 1.0329155763669107
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 2.7635531383314538
+      }
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "PPIFIS",
+    "anchor_transform": "annualized_mom",
+    "zscore": 1.5852387131563253,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 11.089800246628378,
+        "window_months": 3,
+        "stat": "annualized_mom"
+      },
+      {
+        "label": "6mo annualized",
+        "value": 8.214537413722155,
+        "window_months": 6,
+        "stat": "annualized_mom"
+      }
+    ]
+  },
+  "charts": {
+    "main": "ppi_5y_2026-04.png",
+    "long_history": "ppi_25y_2026-04.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/ppi.pdf"
+}

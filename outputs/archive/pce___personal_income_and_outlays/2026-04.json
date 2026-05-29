@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "family_id": "pce___personal_income_and_outlays",
+  "family_display_name": "PCE / Personal Income & Outlays",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:38.605995+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:36.784952+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "PCEPI",
+      "label": "Headline PCE",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 4.901981577738623,
+        "raw_value": 130.902
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.7669441141498172
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.3995981009502714
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 8.27536669717006
+      }
+    },
+    {
+      "id": "PCEPILFE",
+      "label": "Core PCE",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 2.905266504498072,
+        "raw_value": 129.63
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.289190610508208
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.23894031131834748
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 3.6040326641939346
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "PI",
+      "label": "Personal income",
+      "transform": "yoy_pct",
+      "value": 2.537882130838698,
+      "tags": []
+    },
+    {
+      "id": "PCEC96",
+      "label": "Real PCE",
+      "transform": "yoy_pct",
+      "value": 2.0988757759820897,
+      "tags": []
+    },
+    {
+      "id": "PSAVERT",
+      "label": "Personal saving rate",
+      "transform": "raw",
+      "value": 2.6,
+      "tags": []
+    },
+    {
+      "id": "DSPIC96",
+      "label": "Real disposable personal income",
+      "transform": "yoy_pct",
+      "value": -1.1046219854518702,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "PCEPI",
+    "anchor_transform": "annualized_mom",
+    "zscore": -1.1794324454267597,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 6.022820647710336,
+        "window_months": 3,
+        "stat": "annualized_mom"
+      },
+      {
+        "label": "6mo annualized",
+        "value": 4.796901204843462,
+        "window_months": 6,
+        "stat": "annualized_mom"
+      }
+    ]
+  },
+  "charts": {
+    "main": "pce_5y_2026-04.png",
+    "long_history": "pce_25y_2026-04.png",
+    "consumer_capacity": "consumer_capacity_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

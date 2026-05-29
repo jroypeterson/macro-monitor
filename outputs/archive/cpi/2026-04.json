@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "family_id": "cpi",
+  "family_display_name": "CPI",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:30.749372+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:29.643799+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "CPIAUCSL",
+      "label": "Headline",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 7.956673450393792,
+        "raw_value": 332.407
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.7792458367415627
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.6400377846336402
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 10.890245765015827
+      }
+    },
+    {
+      "id": "CPILFESL",
+      "label": "Core",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 4.612249504495458,
+        "raw_value": 335.423
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 2.7433094309685213
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.376460730477457
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 2.3750080707203525
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "CUSR0000SAH1",
+      "label": "Shelter",
+      "transform": "yoy_pct",
+      "value": 3.293143521208597,
+      "tags": []
+    },
+    {
+      "id": "CUSR0000SAM2",
+      "label": "Medical care services",
+      "transform": "yoy_pct",
+      "value": 3.212404905848243,
+      "tags": [
+        "healthcare"
+      ]
+    },
+    {
+      "id": "CPIUFDSL",
+      "label": "Food",
+      "transform": "yoy_pct",
+      "value": 3.2166593084893558,
+      "tags": []
+    },
+    {
+      "id": "CPIENGSL",
+      "label": "Energy",
+      "transform": "yoy_pct",
+      "value": 17.536047421424005,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "CPIAUCSL",
+    "anchor_transform": "annualized_mom",
+    "zscore": -0.763249105910131,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 7.3197742690397805,
+        "window_months": 3,
+        "stat": "annualized_mom"
+      },
+      {
+        "label": "6mo annualized",
+        "value": null,
+        "window_months": 6,
+        "stat": "annualized_mom"
+      }
+    ]
+  },
+  "charts": {
+    "main": "cpi_5y_2026-04.png",
+    "long_history": "cpi_25y_2026-04.png",
+    "component_trends": "cpi_components_2026-04.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/cpi.pdf"
+}

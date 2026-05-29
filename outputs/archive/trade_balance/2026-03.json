@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "family_id": "trade_balance",
+  "family_display_name": "Trade Balance",
+  "period": "2026-03",
+  "period_label": "March 2026",
+  "posted_at": "2026-05-29T13:59:54.182357+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:53.914766+00:00",
+  "latest_observation_period": "2026-03",
+  "expected_observation_period": "2026-03",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "BOPGSTB",
+      "label": "Trade balance (goods & services, $M)",
+      "primary": {
+        "transform": "raw",
+        "value": -60307.0,
+        "raw_value": -60307.0
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": -57777.0
+      }
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "BOPGSTB",
+    "anchor_transform": "raw",
+    "zscore": -0.1793324044030296,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "trade_10y_2026-03.png"
+  },
+  "agency_pdf_url": null
+}

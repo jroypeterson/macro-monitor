@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "family_id": "initial_jobless_claims",
+  "family_display_name": "Initial Jobless Claims",
+  "period": "2026-05-23",
+  "period_label": "Week ending May 23, 2026",
+  "posted_at": "2026-05-29T13:59:40.523869+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:39.983316+00:00",
+  "latest_observation_period": "2026-05-23",
+  "expected_observation_period": "2026-05-23",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ICSA",
+      "label": "Initial claims",
+      "primary": {
+        "transform": "raw",
+        "value": 215000.0,
+        "raw_value": 215000.0
+      },
+      "also_display": [],
+      "prior_primary": null
+    }
+  ],
+  "components": [
+    {
+      "id": "CCSA",
+      "label": "Continued claims (insured unemployment)",
+      "transform": "raw",
+      "value": null,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "ICSA",
+    "anchor_transform": "raw",
+    "zscore": 0.41146392787920616,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "claims_2y_2026-05-23.png",
+    "claims_5y": "claims_5y_2026-05-23.png"
+  },
+  "agency_pdf_url": null
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "family_id": "employment_cost_index",
+  "family_display_name": "Employment Cost Index",
+  "period": "2026-Q1",
+  "period_label": "Q1 2026",
+  "posted_at": "2026-05-29T13:59:50.295359+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:49.699444+00:00",
+  "latest_observation_period": "2026-Q1",
+  "expected_observation_period": "2026-Q1",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ECIALLCIV",
+      "label": "Total compensation (All Civilian)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 3.4263839811542907,
+        "raw_value": 175.618
+      },
+      "also_display": [
+        {
+          "transform": "qoq_pct_saar",
+          "value": 3.6596982530104905
+        }
+      ],
+      "prior_primary": null
+    }
+  ],
+  "components": [
+    {
+      "id": "ECIWAG",
+      "label": "Wages & salaries (Private Industry)",
+      "transform": "yoy_pct",
+      "value": 3.3166472642607525,
+      "tags": []
+    },
+    {
+      "id": "ECIBEN",
+      "label": "Benefits (Private Industry)",
+      "transform": "yoy_pct",
+      "value": 3.560661764705886,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "ECIALLCIV",
+    "anchor_transform": "yoy_pct",
+    "zscore": 0.03849619189869819,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "eci_10y_2026-Q1.png",
+    "wages_vs_benefits": "eci_split_2026-Q1.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/eci.pdf"
+}

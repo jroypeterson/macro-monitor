@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "family_id": "jolts",
+  "family_display_name": "JOLTS",
+  "period": "2026-03",
+  "period_label": "March 2026",
+  "posted_at": "2026-05-29T13:59:45.327844+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:44.371326+00:00",
+  "latest_observation_period": "2026-03",
+  "expected_observation_period": "2026-03",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "JTSJOL",
+      "label": "Job openings",
+      "primary": {
+        "transform": "raw",
+        "value": 6866.0,
+        "raw_value": 6866.0
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 6922.0
+      }
+    },
+    {
+      "id": "JTSQUR",
+      "label": "Quits rate",
+      "primary": {
+        "transform": "raw",
+        "value": 2.0,
+        "raw_value": 2.0
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 1.9
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "JTSJOR",
+      "label": "Job openings rate (z-score anchor)",
+      "transform": "raw",
+      "value": 4.1,
+      "tags": []
+    },
+    {
+      "id": "JTSHIR",
+      "label": "Hires",
+      "transform": "raw",
+      "value": 3.5,
+      "tags": []
+    },
+    {
+      "id": "JTSLDL",
+      "label": "Layoffs & discharges",
+      "transform": "raw",
+      "value": 1867.0,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "JTSJOR",
+    "anchor_transform": "raw",
+    "zscore": -0.4233144699520309,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "jolts_5y_2026-03.png",
+    "openings_rate_5y": "jolts_rates_5y_2026-03.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/jolts.pdf"
+}

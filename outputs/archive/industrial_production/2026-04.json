@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "family_id": "industrial_production",
+  "family_display_name": "Industrial Production",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:51.611275+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:51.253358+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "INDPRO",
+      "label": "Industrial Production Index",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 1.353137956983197,
+        "raw_value": 102.4963
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.6780543386440963
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 0.7577167152940767
+      }
+    },
+    {
+      "id": "TCU",
+      "label": "Capacity Utilization",
+      "primary": {
+        "transform": "raw",
+        "value": 76.1194,
+        "raw_value": 76.1194
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 75.6716
+      }
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "INDPRO",
+    "anchor_transform": "yoy_pct",
+    "zscore": 0.42916856639962636,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "indpro_10y_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

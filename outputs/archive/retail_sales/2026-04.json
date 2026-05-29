@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "family_id": "retail_sales",
+  "family_display_name": "Retail Sales",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:48.505729+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:47.994650+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "RSAFS",
+      "label": "Headline (Retail trade + food services)",
+      "primary": {
+        "transform": "mom_pct",
+        "value": 0.49311759162165014,
+        "raw_value": 757085.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 4.873507936661858
+        }
+      ],
+      "prior_primary": {
+        "transform": "mom_pct",
+        "value": 1.6312368639026076
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "RRSFS",
+      "label": "Real retail sales (inflation-adjusted)",
+      "transform": "yoy_pct",
+      "value": 1.0542101853741714,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "RSAFS",
+    "anchor_transform": "mom_pct",
+    "zscore": -0.7352073370055345,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 12.876691339238121,
+        "window_months": 3,
+        "stat": "annualized_mom"
+      }
+    ]
+  },
+  "charts": {
+    "main": "retail_5y_2026-04.png",
+    "long_history": "retail_15y_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

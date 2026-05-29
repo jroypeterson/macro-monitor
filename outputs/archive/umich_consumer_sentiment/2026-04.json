@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "family_id": "umich_consumer_sentiment",
+  "family_display_name": "UMich Consumer Sentiment",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:56.660437+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:56.180175+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "UMCSENT",
+      "label": "Consumer Sentiment Index",
+      "primary": {
+        "transform": "raw",
+        "value": 49.8,
+        "raw_value": 49.8
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 53.3
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "MICH",
+      "label": "1y inflation expectations",
+      "transform": "raw",
+      "value": 4.7,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "UMCSENT",
+    "anchor_transform": "raw",
+    "zscore": -0.7856974086640289,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "umich_10y_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

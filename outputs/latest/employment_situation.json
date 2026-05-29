@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0",
+  "family_id": "employment_situation",
+  "family_display_name": "Employment Situation",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-05-29T13:59:34.609299+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-05-29T13:59:33.001140+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "PAYEMS",
+      "label": "Nonfarm payrolls",
+      "primary": {
+        "transform": "mom_chg",
+        "value": 115.0,
+        "raw_value": 158736.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 0.15837460958449956
+        }
+      ],
+      "prior_primary": {
+        "transform": "mom_chg",
+        "value": 185.0
+      }
+    },
+    {
+      "id": "UNRATE",
+      "label": "Unemployment rate",
+      "primary": {
+        "transform": "raw",
+        "value": 4.3,
+        "raw_value": 4.3
+      },
+      "also_display": [],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 4.3
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "CES0500000003",
+      "label": "Avg hourly earnings (private)",
+      "transform": "yoy_pct",
+      "value": 3.5714285714285587,
+      "tags": []
+    },
+    {
+      "id": "CES6562100001",
+      "label": "Ambulatory health care services",
+      "transform": "yoy_pct",
+      "value": 2.6771161274476984,
+      "tags": [
+        "healthcare"
+      ]
+    },
+    {
+      "id": "CES6562200001",
+      "label": "Hospitals",
+      "transform": "yoy_pct",
+      "value": 2.431870300250649,
+      "tags": [
+        "healthcare"
+      ]
+    },
+    {
+      "id": "CES6562300001",
+      "label": "Nursing & residential care",
+      "transform": "yoy_pct",
+      "value": 2.342099084292082,
+      "tags": [
+        "healthcare"
+      ]
+    }
+  ],
+  "context": {
+    "anchor_series": "PAYEMS",
+    "anchor_transform": "mom_chg",
+    "zscore": -0.356918214664995,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo avg change",
+        "value": 0.030300210731907622,
+        "window_months": 3,
+        "stat": "mean"
+      },
+      {
+        "label": "6mo avg change",
+        "value": 0.03450730969107122,
+        "window_months": 6,
+        "stat": "mean"
+      }
+    ]
+  },
+  "charts": {
+    "main": "payrolls_5y_2026-04.png",
+    "unemployment_5y": "unrate_5y_2026-04.png",
+    "long_history": "payrolls_25y_2026-04.png",
+    "hc_employment": "hc_employment_2026-04.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/empsit.pdf"
+}
