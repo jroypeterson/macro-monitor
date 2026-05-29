@@ -23,6 +23,9 @@ on:
         required: false
         default: "false"
 
+permissions:
+  contents: write   # needed for the git push step
+
 jobs:
   poll:
     runs-on: ubuntu-latest

@@ -16,6 +16,9 @@ on:
         description: "Year to render (default: current)"
         required: false
 
+permissions:
+  contents: write   # needed for the git push step
+
 jobs:
   render:
     runs-on: ubuntu-latest

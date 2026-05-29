@@ -11,6 +11,9 @@ on:
     - cron: "0 22 * * 1-5"   # 17:00 EST, Mon–Fri
   workflow_dispatch: {}
 
+permissions:
+  contents: write   # needed for the git push step
+
 jobs:
   reconcile:
     runs-on: ubuntu-latest
