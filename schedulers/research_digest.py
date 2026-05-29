@@ -150,6 +150,34 @@ def _score_badge(score: int) -> str:
     return f"○ {score}/10"
 
 
+TOP_PICKS_THRESHOLD = 7
+TOP_PICKS_CAP = 7
+TOP_PICKS_FALLBACK_FLOOR = 3  # if NOTHING hits the threshold, take top-3 by score
+
+
+def _top_picks(
+    posts: list[ResearchPost],
+    verdicts: dict[str, ScoreVerdict],
+) -> list[ResearchPost]:
+    """Curated top-N across all sources, sorted by score desc.
+    Default: every item with score >= TOP_PICKS_THRESHOLD, capped at
+    TOP_PICKS_CAP. If a thin day produces zero items >= threshold, fall
+    back to the top TOP_PICKS_FALLBACK_FLOOR by score so the section
+    isn't blank."""
+    if not posts or not verdicts:
+        return []
+    scored = [
+        (verdicts[p.url].score if p.url in verdicts else 0, p)
+        for p in posts
+    ]
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    picks = [p for s, p in scored if s >= TOP_PICKS_THRESHOLD][:TOP_PICKS_CAP]
+    if not picks:
+        picks = [p for s, p in scored[:TOP_PICKS_FALLBACK_FLOOR]]
+    return picks
+
+
 def _fmt_pub_date(iso: str) -> str:
     """Render an ISO8601 timestamp as 'May 28' (or '' if missing/invalid)."""
     if not iso:
@@ -189,6 +217,17 @@ def _render_text(
     if not new_posts:
         return "macro-monitor: no new Fed/macro research today."
     lines = [f"🏛️ NEW MACRO RESEARCH ({len(new_posts)})"]
+
+    # Curated top picks (cross-source, by score)
+    picks = _top_picks(new_posts, verdicts or {})
+    if picks:
+        lines.append(f"\n🔥 TOP PICKS (curated, top {len(picks)}):")
+        for p in picks:
+            v = verdicts.get(p.url) if verdicts else None
+            badge = f"[{_score_badge(v.score)}] " if v else ""
+            lines.append(f"  • {badge}{p.title}  —  {p.source_display}")
+        lines.append("\n— FULL DIGEST —")
+
     for source_name, posts in _group_by_source(new_posts, verdicts).items():
         is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
         label = source_name + (" (Gmail)" if is_gmail else "")
@@ -236,6 +275,31 @@ def _render_blocks(
             },
         }
     )
+
+    # Curated top picks (cross-source, by score) — block right under the header
+    picks = _top_picks(new_posts, verdicts or {})
+    if picks:
+        pick_lines = [f"*🔥 TOP PICKS (curated, top {len(picks)}):*"]
+        for p in picks:
+            v = verdicts.get(p.url) if verdicts else None
+            badge = f"`{_score_badge(v.score)}` " if v else ""
+            title_md = _md_escape(p.title)
+            url_md = (
+                gmail_url_from_dedupe_key(p.url)
+                if p.url.startswith("gmail-msg:")
+                else p.url
+            )
+            source_md = _md_escape(p.source_display)
+            pick_lines.append(
+                f"{badge}<{url_md}|{title_md}>  —  _{source_md}_"
+            )
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "\n".join(pick_lines)},
+            }
+        )
+        blocks.append({"type": "divider"})
 
     for source_name, posts in _group_by_source(new_posts, verdicts).items():
         # Source subhead + bulleted entries

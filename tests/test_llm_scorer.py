@@ -293,3 +293,114 @@ def test_fallback_verdicts_permissive():
         assert v.is_macro is True
         assert v.score == 5
         assert "test reason" in v.why
+
+
+# ---------------------------------------------------------------------------
+# Top picks (curated header section)
+# ---------------------------------------------------------------------------
+
+
+def test_top_picks_returns_high_scorers_first():
+    from macro_monitor.schedulers.research_digest import _top_picks
+
+    posts = [_post(1, "low"), _post(2, "high"), _post(3, "mid")]
+    verdicts = {
+        posts[0].url: ScoreVerdict(posts[0].url, True, 4, ""),
+        posts[1].url: ScoreVerdict(posts[1].url, True, 9, ""),
+        posts[2].url: ScoreVerdict(posts[2].url, True, 7, ""),
+    }
+    picks = _top_picks(posts, verdicts)
+    assert [p.title for p in picks] == ["high", "mid"]
+
+
+def test_top_picks_threshold_drops_below_7():
+    """Items below the score threshold should NOT appear when at least
+    one item passes the threshold."""
+    from macro_monitor.schedulers.research_digest import _top_picks
+
+    posts = [_post(1), _post(2), _post(3)]
+    verdicts = {
+        posts[0].url: ScoreVerdict(posts[0].url, True, 6, ""),
+        posts[1].url: ScoreVerdict(posts[1].url, True, 7, ""),
+        posts[2].url: ScoreVerdict(posts[2].url, True, 8, ""),
+    }
+    picks = _top_picks(posts, verdicts)
+    # Only 8 and 7 should appear; 6 is below threshold and >= 1 item passed
+    assert len(picks) == 2
+    scores = [verdicts[p.url].score for p in picks]
+    assert scores == [8, 7]
+
+
+def test_top_picks_fallback_floor_when_nothing_hits_threshold():
+    """If ZERO items hit the >=7 threshold, fall back to top-3 by score
+    so the section isn't blank."""
+    from macro_monitor.schedulers.research_digest import _top_picks
+
+    posts = [_post(1), _post(2), _post(3), _post(4)]
+    verdicts = {
+        posts[0].url: ScoreVerdict(posts[0].url, True, 6, ""),
+        posts[1].url: ScoreVerdict(posts[1].url, True, 5, ""),
+        posts[2].url: ScoreVerdict(posts[2].url, True, 4, ""),
+        posts[3].url: ScoreVerdict(posts[3].url, True, 3, ""),
+    }
+    picks = _top_picks(posts, verdicts)
+    assert len(picks) == 3
+    scores = [verdicts[p.url].score for p in picks]
+    assert scores == [6, 5, 4]
+
+
+def test_top_picks_caps_at_max():
+    """Even on a heavy day with many high-scorers, cap at TOP_PICKS_CAP."""
+    from macro_monitor.schedulers.research_digest import (
+        TOP_PICKS_CAP,
+        _top_picks,
+    )
+
+    posts = [_post(i) for i in range(15)]
+    verdicts = {
+        p.url: ScoreVerdict(p.url, True, 8, "")
+        for p in posts
+    }
+    picks = _top_picks(posts, verdicts)
+    assert len(picks) == TOP_PICKS_CAP
+
+
+def test_top_picks_empty_when_no_verdicts():
+    from macro_monitor.schedulers.research_digest import _top_picks
+
+    posts = [_post(1)]
+    assert _top_picks(posts, {}) == []
+
+
+def test_render_text_includes_top_picks_section():
+    from macro_monitor.schedulers.research_digest import _render_text
+
+    posts = [_post(1, "Mid item"), _post(2, "Hot item")]
+    verdicts = {
+        posts[0].url: ScoreVerdict(posts[0].url, True, 6, ""),
+        posts[1].url: ScoreVerdict(posts[1].url, True, 9, ""),
+    }
+    text = _render_text(posts, [], verdicts)
+    assert "TOP PICKS" in text
+    assert "FULL DIGEST" in text
+    # Hot item should appear in top picks BEFORE the full digest section
+    top_idx = text.index("TOP PICKS")
+    full_idx = text.index("FULL DIGEST")
+    hot_first_idx = text.index("Hot item")
+    assert top_idx < hot_first_idx < full_idx
+
+
+def test_render_blocks_includes_top_picks_section():
+    from macro_monitor.schedulers.research_digest import _render_blocks
+
+    posts = [_post(1, "Hot item")]
+    verdicts = {posts[0].url: ScoreVerdict(posts[0].url, True, 9, "great")}
+    blocks = _render_blocks(posts, [], verdicts)
+    # header + top-picks section + divider + source section
+    section_texts = [
+        b["text"]["text"]
+        for b in blocks
+        if b.get("type") == "section"
+    ]
+    assert any("TOP PICKS" in t for t in section_texts)
+    assert any(b.get("type") == "divider" for b in blocks)
