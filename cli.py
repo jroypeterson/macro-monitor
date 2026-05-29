@@ -411,7 +411,40 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_research_digest)
 
+    sp = sub.add_parser(
+        "suggest-research-senders",
+        help="Scan inbox for senders that look like macro/strategy/economist newsletters",
+    )
+    sp.add_argument(
+        "--days", type=int, default=90, help="Days of history to scan (default 90)"
+    )
+    sp.add_argument(
+        "--max-messages",
+        type=int,
+        default=2000,
+        help="Max messages to scan (cap for inbox-size protection)",
+    )
+    sp.add_argument(
+        "--limit", type=int, default=30, help="Top-N candidates to show"
+    )
+    sp.set_defaults(func=cmd_suggest_senders)
+
     return p
+
+
+def cmd_suggest_senders(args: argparse.Namespace) -> int:
+    """Scan inbox and print ranked sender candidates."""
+    from .schedulers.suggest_senders import format_candidates, scan_inbox
+
+    print(
+        f"Scanning last {args.days} days of inbox "
+        f"(up to {args.max_messages} messages)...",
+        file=sys.stderr,
+    )
+    candidates = scan_inbox(days=args.days, max_messages_to_scan=args.max_messages)
+    print()
+    print(format_candidates(candidates, limit=args.limit))
+    return 0
 
 
 def cmd_research_digest(args: argparse.Namespace) -> int:
