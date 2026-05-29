@@ -30,12 +30,22 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - name: Set up package import path
+        # Repo root IS the macro_monitor package (contains __init__.py).
+        # python -m macro_monitor.cli needs a directory NAMED macro_monitor
+        # findable on sys.path — symlink the repo into /tmp under that name.
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+
       - name: Render annual calendar
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
           PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
         run: |
           python -m macro_monitor.cli annual-calendar --post \
             ${{ github.event.inputs.year && format('--year {0}', github.event.inputs.year) || '' }}
