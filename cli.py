@@ -115,6 +115,21 @@ def cmd_post_release(args: argparse.Namespace) -> int:
     print(f"  json: {json_path.relative_to(Path(__file__).parent)}")
     print(f"  html: {html_path.relative_to(Path(__file__).parent)}")
 
+    # === Refresh the static current-state dashboard ===
+    # Reads outputs/latest/*.json (which we just wrote) and regenerates
+    # outputs/dashboard/index.html. ~1 second of HTML rendering — runs on
+    # every post (including dry-runs) so the dashboard always reflects the
+    # most recent artifacts on disk.
+    try:
+        from .charts.dashboard import render_dashboard
+
+        dashboard_path = render_dashboard(families)
+        print(
+            f"  dashboard: {dashboard_path.relative_to(Path(__file__).parent)}"
+        )
+    except Exception as e:  # noqa: BLE001 — dashboard failure must not kill the release post
+        print(f"  ⚠️ dashboard refresh failed: {e}", file=sys.stderr)
+
     # === Posts-ledger READ-ONLY diff check (no write yet) ===
     from .posts_ledger import PostDecision, PostsLedger
     from .publishers.slack import SlackPublisher
