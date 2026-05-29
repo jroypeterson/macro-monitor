@@ -10,14 +10,18 @@ References:
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import requests
+
+from ..fred_cache import FREDCache, reconstruct_observations
 
 FRED_BASE = "https://api.stlouisfed.org/fred"
 DEFAULT_TIMEOUT = 30  # seconds
@@ -48,7 +52,20 @@ class ReleaseDate:
 
 
 class FREDClient:
-    def __init__(self, api_key: str | None = None, session: requests.Session | None = None):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        session: requests.Session | None = None,
+        cache: FREDCache | None = None,
+        use_cache: bool = True,
+    ):
+        """FRED API client with defensive fallback cache.
+
+        cache: explicit FREDCache instance. If None and use_cache is
+               True, opens the default cache at data/fred_cache.db.
+        use_cache: set False to disable caching entirely (for tests that
+               want pure online behavior).
+        """
         self.api_key = api_key or os.environ.get("FRED_API_KEY")
         if not self.api_key:
             raise FREDError(
@@ -56,6 +73,12 @@ class FREDClient:
                 "https://fredaccount.stlouisfed.org/apikeys"
             )
         self.session = session or requests.Session()
+        if cache is not None:
+            self.cache = cache
+        elif use_cache:
+            self.cache = FREDCache()
+        else:
+            self.cache = None
 
     def _get(
         self,
@@ -90,6 +113,13 @@ class FREDClient:
     ) -> pd.Series:
         """Fetch observations for a series. Returns a pandas Series indexed
         by date with float values (NaN for missing).
+
+        Defensive cache behavior:
+          - On successful fetch: write through to cache (latest-wins per series).
+          - On FREDError (504, timeout, etc.): consult cache, return the
+            most-recent successful fetch with attrs['from_cache']=True
+            and attrs['cache_age_hours']=N. If no prior cache exists,
+            re-raise the original error.
         """
         params: dict[str, Any] = {"series_id": series_id}
         if observation_start:
@@ -97,14 +127,47 @@ class FREDClient:
         if observation_end:
             params["observation_end"] = observation_end
 
-        data = self._get("/series/observations", params)
-        observations = data.get("observations", [])
+        try:
+            data = self._get("/series/observations", params)
+        except FREDError as exc:
+            # Defensive fallback to cache.
+            if self.cache is not None:
+                cached = self.cache.get(series_id)
+                if cached is not None:
+                    data = reconstruct_observations(cached)
+                    series = self._observations_to_series(series_id, data)
+                    series.attrs["from_cache"] = True
+                    series.attrs["cache_age_hours"] = cached.age_hours()
+                    series.attrs["cache_fetched_at"] = cached.fetched_at_utc
+                    return series
+            raise
 
+        # Live fetch succeeded — write through to cache and return.
+        if self.cache is not None:
+            try:
+                self.cache.put(
+                    series_id=series_id,
+                    observations_json=json.dumps(data),
+                    observation_start=observation_start,
+                    observation_end=observation_end,
+                )
+            except Exception:
+                # Cache write failure must not break the live path.
+                pass
+
+        series = self._observations_to_series(series_id, data)
+        series.attrs["from_cache"] = False
+        return series
+
+    def _observations_to_series(
+        self, series_id: str, data: dict[str, Any]
+    ) -> pd.Series:
+        """Decode a FRED /series/observations response into a pd.Series."""
+        observations = data.get("observations", [])
         rows = []
         for obs in observations:
             d = pd.Timestamp(obs["date"])
             v = obs["value"]
-            # FRED uses "." to signal missing
             if v == "." or v is None or v == "":
                 val: float | None = None
             else:
