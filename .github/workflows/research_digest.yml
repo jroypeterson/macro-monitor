@@ -51,12 +51,21 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Write Gmail OAuth token
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
+        run: |
+          mkdir -p .secrets
+          echo "$GMAIL_TOKEN_JSON" > .secrets/gmail_token.json
+
       - name: Post research digest
         if: steps.dst_guard.outputs.skip != 'true'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
           SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          GMAIL_TOKEN_PATH: ".secrets/gmail_token.json"
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
         run: python -m macro_monitor.cli research-digest --post
