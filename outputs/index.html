@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>macro-monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         max-width: 720px; margin: 3em auto; padding: 0 1em; color: #222; background: #fafafa; }
+  h1 { font-size: 1.8em; margin-bottom: 0.2em; }
+  .subtitle { color: #666; margin-bottom: 2em; font-size: 0.95em; }
+  .card { background: white; border-radius: 6px; padding: 1.2em 1.5em;
+          border: 1px solid #e0e0e0; margin-bottom: 0.8em; }
+  .card a { color: #1F4E79; text-decoration: none; font-weight: 600; font-size: 1.05em; }
+  .card a:hover { text-decoration: underline; }
+  .card .desc { font-size: 0.9em; color: #666; margin-top: 0.3em; }
+  .footer { font-size: 0.8em; color: #888; margin-top: 2em; }
+  code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<h1>📊 macro-monitor</h1>
+<p class="subtitle">Disciplined US macro feed for the <code>#macro</code> Slack channel.
+Posts release headlines + charts for 9 Tier A families (CPI, payrolls,
+PCE, claims, GDP, JOLTS, PPI, retail sales, ECI).</p>
+
+<div class="card">
+  <a href="dashboard/">📈 Current state dashboard</a>
+  <div class="desc">Latest value per Tier A family with mini-chart and links to each release report. Refreshed after every release post.</div>
+</div>
+
+<div class="card">
+  <a href="calendar/2026_macro_calendar.html">📅 2026 annual macro calendar</a>
+  <div class="desc">Year-long Tier A release schedule, month-by-month grid. Refreshed quarterly.</div>
+</div>
+
+<div class="card">
+  <a href="https://github.com/jroypeterson/macro-monitor">🔧 Source on GitHub</a>
+  <div class="desc">Code, workflows, and design plan.</div>
+</div>
+
+<div class="footer">
+  Per-release HTML reports live under <code>archive/&lt;family&gt;/&lt;period&gt;.html</code>
+  but are linked from the dashboard above. Static-site deploy from the repo's
+  <code>outputs/</code> directory via GitHub Actions.
+</div>
+
+</body>
+</html>
