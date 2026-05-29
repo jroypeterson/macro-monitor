@@ -403,7 +403,65 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_overview)
 
+    sp = sub.add_parser(
+        "research-digest",
+        help="Pull Fed/macro research RSS feeds and post a digest of new items to #macro",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.set_defaults(func=cmd_research_digest)
+
     return p
+
+
+def cmd_research_digest(args: argparse.Namespace) -> int:
+    """Pull all RSS sources, dedupe against the ledger, render + post."""
+    from .schedulers.research_digest import (
+        build_digest,
+        post_to_macro,
+        record_posted,
+    )
+
+    payload = build_digest()
+
+    print(f"  Found {len(payload.new_posts)} new research item(s)")
+    if payload.errors:
+        print(f"  ⚠️ {len(payload.errors)} source(s) failed to fetch:")
+        for src_id, err in payload.errors:
+            print(f"      {src_id}: {err[:80]}")
+
+    if not payload.new_posts:
+        print("  Nothing new since last run; no Slack post.", file=sys.stderr)
+        return 0
+
+    if args.dry_run:
+        print("\n=== RESEARCH DIGEST (DRY-RUN) ===", file=sys.stderr)
+        print("\n--- TEXT FALLBACK ---", file=sys.stderr)
+        print(payload.text, file=sys.stderr)
+        print(f"\n--- {len(payload.blocks)} BLOCK KIT BLOCKS ---", file=sys.stderr)
+        for b in payload.blocks:
+            t = b.get("type")
+            if t == "header":
+                print(f"  header:  {b['text']['text']}", file=sys.stderr)
+            elif t == "section":
+                snippet = b["text"]["text"].split("\n")[0][:80]
+                print(f"  section: {snippet}…", file=sys.stderr)
+            elif t == "context":
+                print(f"  context: {b['elements'][0]['text'][:60]}…", file=sys.stderr)
+        print("\n  Use --post to publish.", file=sys.stderr)
+        return 0
+
+    ok, msg = post_to_macro(payload)
+    if ok:
+        print(f"  {msg}", file=sys.stderr)
+        record_posted(payload)
+        print(
+            f"  Ledger updated with {len(payload.new_posts)} URLs; next run won't repost.",
+            file=sys.stderr,
+        )
+        return 0
+    print(f"  ⚠️ {msg}", file=sys.stderr)
+    return 1
 
 
 def cmd_overview(args: argparse.Namespace) -> int:
