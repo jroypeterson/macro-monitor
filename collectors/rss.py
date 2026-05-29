@@ -26,6 +26,9 @@ DEFAULT_SOURCES_PATH = (
 )
 
 
+DEFAULT_STALE_AFTER_DAYS = 30
+
+
 @dataclass(frozen=True)
 class ResearchSource:
     id: str
@@ -38,6 +41,11 @@ class ResearchSource:
     # Both matches are case-insensitive substring matches.
     include_keywords: tuple[str, ...] = ()
     exclude_keywords: tuple[str, ...] = ()
+    # Per-source freshness override. Source is considered stale (skipped
+    # this run + surfaced to #status-reports) if its newest item is older
+    # than this many days. Use a larger value for monthly/quarterly feeds
+    # (SF Fed Econ Letter, BIS quarterly review) so we don't false-alarm.
+    stale_after_days: int = DEFAULT_STALE_AFTER_DAYS
 
 
 @dataclass(frozen=True)
@@ -62,6 +70,7 @@ def load_sources(path: Path | str = DEFAULT_SOURCES_PATH) -> list[ResearchSource
             max_items_per_run=s.get("max_items_per_run", 5),
             include_keywords=tuple(s.get("include_keywords") or ()),
             exclude_keywords=tuple(s.get("exclude_keywords") or ()),
+            stale_after_days=int(s.get("stale_after_days", DEFAULT_STALE_AFTER_DAYS)),
         )
         for s in raw.get("sources", [])
     ]
@@ -102,6 +111,19 @@ def fetch_source(source: ResearchSource) -> tuple[list[ResearchPost], str | None
         # Hard parse error AND empty result → real failure
         msg = str(feed.bozo_exception) if feed.bozo_exception else "parse error"
         return [], f"feed parse error: {msg}"
+
+    # Staleness check — protects against publisher-killed feeds (e.g.
+    # Calculated Risk) and silently-migrated feeds (e.g. WSJ's domain
+    # change that left feeds.a.dj.com frozen at Jan 2025). If every
+    # parseable item is older than stale_after_days, surface as error
+    # so the digest skips this source and #status-reports gets alerted.
+    age_days = _newest_entry_age_days(feed.entries)
+    if age_days is not None and age_days > source.stale_after_days:
+        return (
+            [],
+            f"stale: newest item is {age_days} days old "
+            f"(threshold {source.stale_after_days}d)",
+        )
 
     posts: list[ResearchPost] = []
     # Iterate the whole feed (not just first N) so the keyword filter
@@ -245,3 +267,26 @@ def _normalize_published(entry: dict) -> str:
         return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
     except (OSError, ValueError, OverflowError):
         return ""
+
+
+def _newest_entry_age_days(entries: list) -> int | None:
+    """Return the age (in whole days) of the most-recently-published
+    entry in the feed, computed against now-UTC. Returns None if no
+    entry has a parseable date — in that case we can't make a staleness
+    judgement, so callers should treat as "unknown" rather than stale."""
+    newest_ts: float | None = None
+    for entry in entries:
+        pp = entry.get("published_parsed") or entry.get("updated_parsed")
+        if pp is None:
+            continue
+        try:
+            ts = time.mktime(pp)
+        except (OSError, ValueError, OverflowError):
+            continue
+        if newest_ts is None or ts > newest_ts:
+            newest_ts = ts
+    if newest_ts is None:
+        return None
+    now_ts = time.time()
+    age_seconds = max(0, now_ts - newest_ts)
+    return int(age_seconds // 86400)

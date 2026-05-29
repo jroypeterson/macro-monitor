@@ -246,6 +246,131 @@ def test_matches_filters_checks_both_title_and_summary():
     ) is True
 
 
+def test_newest_entry_age_days_with_no_dates_returns_none():
+    """Feeds with no parseable dates should yield None (unknown) — not
+    zero, which would silently mean 'fresh'."""
+    from macro_monitor.collectors.rss import _newest_entry_age_days
+
+    entries = [{"title": "no dates"}, {"title": "still no dates"}]
+    assert _newest_entry_age_days(entries) is None
+
+
+def test_newest_entry_age_days_picks_max_across_entries():
+    """The newest entry is what gates staleness; old archived items
+    next to one fresh post should keep the source alive."""
+    from time import gmtime, mktime
+    from datetime import datetime, timedelta, timezone
+
+    from macro_monitor.collectors.rss import _newest_entry_age_days
+
+    one_year_ago = datetime.now(timezone.utc) - timedelta(days=365)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    entries = [
+        {"published_parsed": gmtime(one_year_ago.timestamp())},
+        {"published_parsed": gmtime(yesterday.timestamp())},
+        {"published_parsed": gmtime(one_year_ago.timestamp())},
+    ]
+    age = _newest_entry_age_days(entries)
+    assert age is not None
+    assert age <= 2  # yesterday-ish
+
+
+def test_fetch_source_flags_stale_feed():
+    """If every entry is older than stale_after_days, fetch_source
+    should drop the source and return a 'stale: ...' error rather than
+    posting zombie content."""
+    from time import gmtime
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+    from macro_monitor.collectors.rss import ResearchSource, fetch_source
+
+    old_ts = datetime.now(timezone.utc) - timedelta(days=200)
+    fake_feed_entries = [
+        {
+            "link": "https://x/1",
+            "title": "Frozen item",
+            "summary": "",
+            "published_parsed": gmtime(old_ts.timestamp()),
+        },
+    ]
+    fake_feed = type("Feed", (), {
+        "entries": fake_feed_entries, "bozo": False,
+        "feed": {"title": "Stale"}, "bozo_exception": None,
+    })()
+
+    src = ResearchSource(
+        id="stale", display_name="Stale", url="x",
+        max_items_per_run=5, stale_after_days=30,
+    )
+
+    with patch("macro_monitor.collectors.rss.feedparser.parse", return_value=fake_feed):
+        posts, err = fetch_source(src)
+
+    assert posts == []
+    assert err is not None
+    assert "stale" in err.lower()
+
+
+def test_fetch_source_respects_per_source_stale_threshold():
+    """A source with stale_after_days=365 should accept content
+    that's 200 days old (e.g. monthly publications)."""
+    from time import gmtime
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+    from macro_monitor.collectors.rss import ResearchSource, fetch_source
+
+    old_ts = datetime.now(timezone.utc) - timedelta(days=200)
+    fake_feed_entries = [
+        {
+            "link": "https://x/1",
+            "title": "Monthly publication",
+            "summary": "",
+            "published_parsed": gmtime(old_ts.timestamp()),
+        },
+    ]
+    fake_feed = type("Feed", (), {
+        "entries": fake_feed_entries, "bozo": False,
+        "feed": {"title": "Monthly"}, "bozo_exception": None,
+    })()
+
+    src = ResearchSource(
+        id="monthly", display_name="Monthly", url="x",
+        max_items_per_run=5, stale_after_days=365,
+    )
+
+    with patch("macro_monitor.collectors.rss.feedparser.parse", return_value=fake_feed):
+        posts, err = fetch_source(src)
+
+    assert err is None
+    assert len(posts) == 1
+
+
+def test_fetch_source_skips_staleness_when_no_dates_parseable():
+    """A feed with no parseable dates can't be judged stale — let the
+    items through. Otherwise feeds that don't expose dates would always
+    be filtered out, which is too aggressive."""
+    from unittest.mock import patch
+    from macro_monitor.collectors.rss import ResearchSource, fetch_source
+
+    fake_feed_entries = [
+        {"link": "https://x/1", "title": "Undated item", "summary": ""},
+    ]
+    fake_feed = type("Feed", (), {
+        "entries": fake_feed_entries, "bozo": False,
+        "feed": {"title": "Undated"}, "bozo_exception": None,
+    })()
+
+    src = ResearchSource(
+        id="undated", display_name="Undated", url="x", max_items_per_run=5,
+    )
+
+    with patch("macro_monitor.collectors.rss.feedparser.parse", return_value=fake_feed):
+        posts, err = fetch_source(src)
+
+    assert err is None
+    assert len(posts) == 1
+
+
 def test_fetch_source_applies_keyword_filter():
     """fetch_source should drop items that don't match include_keywords
     BEFORE counting against max_items_per_run. Otherwise a filter on a

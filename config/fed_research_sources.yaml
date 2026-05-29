@@ -26,6 +26,8 @@ sources:
     display_name: "SF Fed — Economic Letter"
     url: "https://www.frbsf.org/feed/?post_type=economic-letter"
     max_items_per_run: 3
+    # Published monthly. Allow up to 90d of silence before flagging stale.
+    stale_after_days: 90
 
   - id: stlouis_fed_on_economy
     display_name: "St. Louis Fed — On the Economy"
@@ -40,10 +42,10 @@ sources:
   # === Macro commentary / market context ===
   # Lower-academic, higher-frequency. Mixed signal but each is well-curated.
 
-  - id: calculated_risk
-    display_name: "Calculated Risk (Bill McBride)"
-    url: "https://www.calculatedriskblog.com/feeds/posts/default"
-    max_items_per_run: 5
+  # 2026-05-29: Calculated Risk removed. Bill McBride announced the end of
+  # the blog on 2026-01-12 ("This is the End and a New Beginning"). Feed
+  # still resolves but only returns frozen January 2026 archive. Restore
+  # if McBride launches a successor.
 
   - id: conversable_economist
     display_name: "Conversable Economist (Tim Taylor)"
@@ -186,7 +188,10 @@ sources:
 
   - id: wsj_markets
     display_name: "WSJ — Markets"
-    url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+    # 2026-05-29: migrated from feeds.a.dj.com (frozen at Jan 2025) to
+    # feeds.content.dowjones.io. WSJ never posted a deprecation notice;
+    # symptom is exactly one year of stale items on the old URL.
+    url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain"
     max_items_per_run: 4
     # WSJ Markets includes a lot of corporate finance / IPO / individual
     # stocks — keep only macro-shaped items.
@@ -225,7 +230,8 @@ sources:
 
   - id: wsj_us_business
     display_name: "WSJ — US Business"
-    url: "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml"
+    # 2026-05-29: same migration as WSJ Markets — feeds.a.dj.com is dead.
+    url: "https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness"
     max_items_per_run: 3
     # Same filter as WSJ Markets.
     include_keywords:

@@ -505,6 +505,43 @@ def cmd_suggest_senders(args: argparse.Namespace) -> int:
     return 0
 
 
+def _alert_status_reports_about_errors(
+    errors: list[tuple[str, str]],
+) -> None:
+    """Post a one-line health alert to #status-reports webhook. Best-effort —
+    a failure here must not kill the digest run."""
+    import os
+    webhook = os.environ.get("SLACK_WEBHOOK_STATUS_REPORTS")
+    if not webhook:
+        return
+    stale = [(sid, err) for sid, err in errors if "stale" in err.lower()]
+    other = [(sid, err) for sid, err in errors if "stale" not in err.lower()]
+    lines = ["⚠️ *macro_monitor research-digest: source health*"]
+    if stale:
+        lines.append(f"  • {len(stale)} stale feed(s) skipped this run:")
+        for sid, err in stale:
+            lines.append(f"      • `{sid}` — {err}")
+    if other:
+        lines.append(f"  • {len(other)} other fetch failure(s):")
+        for sid, err in other:
+            lines.append(f"      • `{sid}` — {err[:100]}")
+    blocks = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "\n".join(lines)},
+        }
+    ]
+    try:
+        import requests
+        requests.post(
+            webhook,
+            json={"text": "macro_monitor source health", "blocks": blocks},
+            timeout=10,
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"  status-reports alert failed: {e}", file=sys.stderr)
+
+
 def cmd_research_digest(args: argparse.Namespace) -> int:
     """Pull all RSS sources, dedupe against the ledger, render + post."""
     from .schedulers.research_digest import (
@@ -528,6 +565,11 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
         print(f"  ⚠️ {len(payload.errors)} source(s) failed to fetch:")
         for src_id, err in payload.errors:
             print(f"      {src_id}: {err[:80]}")
+        # Live runs only: forward errors to #status-reports so feed health
+        # issues (stale, parse failures, network) surface without us
+        # noticing the digest got thin.
+        if not args.dry_run:
+            _alert_status_reports_about_errors(payload.errors)
 
     if not payload.new_posts:
         print("  Nothing new since last run; no Slack post.", file=sys.stderr)
