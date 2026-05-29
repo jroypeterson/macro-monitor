@@ -32,6 +32,12 @@ class ResearchSource:
     display_name: str
     url: str
     max_items_per_run: int = 5
+    # Optional keyword filtering applied to title + summary.
+    # include_keywords: if non-empty, item must contain at least one (any-match)
+    # exclude_keywords: if non-empty, item dropped if it contains any
+    # Both matches are case-insensitive substring matches.
+    include_keywords: tuple[str, ...] = ()
+    exclude_keywords: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -54,9 +60,32 @@ def load_sources(path: Path | str = DEFAULT_SOURCES_PATH) -> list[ResearchSource
             display_name=s["display_name"],
             url=s["url"],
             max_items_per_run=s.get("max_items_per_run", 5),
+            include_keywords=tuple(s.get("include_keywords") or ()),
+            exclude_keywords=tuple(s.get("exclude_keywords") or ()),
         )
         for s in raw.get("sources", [])
     ]
+
+
+def _matches_filters(
+    title: str,
+    summary: str,
+    include: tuple[str, ...],
+    exclude: tuple[str, ...],
+) -> bool:
+    """Apply optional keyword filters. Returns True if the item should be
+    kept. Empty include list = no allowlist; empty exclude list = no
+    blocklist. All matches are case-insensitive substring matches against
+    title + summary combined."""
+    haystack = f"{title} {summary}".lower()
+
+    if exclude and any(kw.lower() in haystack for kw in exclude):
+        return False
+
+    if include and not any(kw.lower() in haystack for kw in include):
+        return False
+
+    return True
 
 
 def fetch_source(source: ResearchSource) -> tuple[list[ResearchPost], str | None]:
@@ -75,7 +104,11 @@ def fetch_source(source: ResearchSource) -> tuple[list[ResearchPost], str | None
         return [], f"feed parse error: {msg}"
 
     posts: list[ResearchPost] = []
-    for entry in feed.entries[: source.max_items_per_run]:
+    # Iterate the whole feed (not just first N) so the keyword filter
+    # picks the first N MATCHING items, not the first N items overall.
+    for entry in feed.entries:
+        if len(posts) >= source.max_items_per_run:
+            break
         url = entry.get("link") or ""
         if not url:
             continue
@@ -83,6 +116,10 @@ def fetch_source(source: ResearchSource) -> tuple[list[ResearchPost], str | None
         if not title:
             continue
         summary = _normalize_summary(entry)
+        if not _matches_filters(
+            title, summary, source.include_keywords, source.exclude_keywords
+        ):
+            continue
         published = _normalize_published(entry)
         posts.append(
             ResearchPost(

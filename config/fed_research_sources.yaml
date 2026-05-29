@@ -50,27 +50,211 @@ sources:
     url: "https://conversableeconomist.com/feed/"
     max_items_per_run: 3
 
-  # === Mainstream macro / business news (headlines + dek; full text gated) ===
+  # === Mainstream macro / business (headlines + dek; full text often gated) ===
+  # Macro-specific feeds when the publication offers one; broader feeds
+  # (WSJ) get tight include_keywords filters to drop non-macro items.
 
-  - id: nyt_business
-    display_name: "NYT — Business"
-    url: "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+  - id: nyt_economy
+    display_name: "NYT — Economy"
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml"
     max_items_per_run: 5
+
+  - id: nyt_upshot
+    display_name: "NYT — The Upshot"
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/Upshot.xml"
+    max_items_per_run: 3
+    # Upshot is heavy on politics polling — keep only macro-shaped analysis
+    include_keywords:
+      - inflation
+      - economy
+      - economic
+      - jobs
+      - labor
+      - wages
+      - housing
+      - growth
+      - recession
+      - fed
+      - interest rate
+      - monetary
+      - gdp
+      - trade
+      - tariff
+      - mortgage
+      - consumer
+      - household
 
   - id: ft_economics
     display_name: "FT — Global Economy"
     url: "https://www.ft.com/economics?format=rss"
     max_items_per_run: 5
 
+  - id: ft_markets
+    display_name: "FT — Markets"
+    url: "https://www.ft.com/markets?format=rss"
+    max_items_per_run: 4
+    # FT Markets covers individual stocks too — filter to macro/rates/Fed
+    include_keywords:
+      - fed
+      - rate
+      - rates
+      - inflation
+      - cpi
+      - pce
+      - gdp
+      - growth
+      - recession
+      - yield
+      - treasury
+      - bond
+      - currency
+      - dollar
+      - economy
+      - economic
+      - central bank
+      - ecb
+      - boj
+      - bank of england
+      - bank of japan
+      - pboc
+      - monetary
+      - fiscal
+      - labor market
+      - unemployment
+      - employment
+      - wages
+      - housing
+
+  - id: economist_finance_economics
+    display_name: "The Economist — Finance & Economics"
+    url: "https://www.economist.com/finance-and-economics/rss.xml"
+    max_items_per_run: 5
+
+  - id: bloomberg_economics
+    display_name: "Bloomberg — Economics"
+    url: "https://feeds.bloomberg.com/economics/news.rss"
+    max_items_per_run: 5
+    # Bloomberg Economics RSS includes some geopolitics/military framed
+    # as econ stories — drop those.
+    exclude_keywords:
+      - war
+      - missile
+      - military
+      - admiral
+      - troops
+      - sanctions on
+      - airstrike
+      - drone strike
+
+  - id: bloomberg_markets
+    display_name: "Bloomberg — Markets"
+    url: "https://feeds.bloomberg.com/markets/news.rss"
+    max_items_per_run: 4
+    # Bloomberg Markets covers credit, IPOs, M&A — drop non-macro coverage
+    include_keywords:
+      - fed
+      - rate
+      - rates
+      - inflation
+      - cpi
+      - pce
+      - gdp
+      - growth
+      - recession
+      - yield
+      - treasury
+      - bond
+      - currency
+      - dollar
+      - euro
+      - yen
+      - economy
+      - economic
+      - central bank
+      - ecb
+      - boj
+      - pboc
+      - monetary
+      - fiscal
+      - labor market
+      - unemployment
+      - employment
+      - wages
+      - housing
+      - jobs
+      - powell
+
   - id: wsj_markets
     display_name: "WSJ — Markets"
     url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
     max_items_per_run: 4
+    # WSJ Markets includes a lot of corporate finance / IPO / individual
+    # stocks — keep only macro-shaped items.
+    include_keywords:
+      - fed
+      - rate
+      - rates
+      - inflation
+      - cpi
+      - pce
+      - gdp
+      - growth
+      - recession
+      - yield
+      - treasury
+      - treasuries
+      - bond
+      - currency
+      - dollar
+      - economy
+      - economic
+      - central bank
+      - ecb
+      - boj
+      - pboc
+      - monetary
+      - fiscal
+      - labor market
+      - unemployment
+      - employment
+      - wages
+      - housing
+      - jobs
+      - powell
+      - mortgage
 
   - id: wsj_us_business
     display_name: "WSJ — US Business"
     url: "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml"
     max_items_per_run: 3
+    # Same filter as WSJ Markets.
+    include_keywords:
+      - fed
+      - rate
+      - rates
+      - inflation
+      - cpi
+      - pce
+      - gdp
+      - growth
+      - recession
+      - yield
+      - treasury
+      - bond
+      - currency
+      - dollar
+      - economy
+      - economic
+      - central bank
+      - monetary
+      - fiscal
+      - labor market
+      - unemployment
+      - employment
+      - wages
+      - housing
+      - jobs
+      - powell
 
 # Gmail-delivered research from senders without a public RSS feed.
 # Uses jroypeterson@gmail.com OAuth token (shared with portfolio_daily +
