@@ -31,6 +31,12 @@ jobs:
       - name: Skip if not the active DST cron line
         id: dst_guard
         run: |
+          # Manual workflow_dispatch runs always post.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger — bypassing DST guard."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           ET_HOUR=$(TZ=America/New_York date +%H)
           echo "et_hour=$ET_HOUR" >> $GITHUB_OUTPUT
           if [ "$ET_HOUR" != "07" ]; then
