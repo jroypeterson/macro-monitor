@@ -112,6 +112,13 @@ class ReleaseResult:
     is_stale: bool
     source_lag_minutes: int | None
 
+    # Defensive-cache fallback fields (see fred_cache.py).
+    # Set to True if ANY series in this release came from the cache
+    # instead of a live FRED fetch. cache_age_hours is the age of the
+    # OLDEST cached series in the release (worst-case staleness).
+    from_fallback_cache: bool = False
+    cache_age_hours: float | None = None
+
     def to_dict(self) -> dict[str, Any]:
         return _to_dict(self)
 
@@ -209,8 +216,21 @@ def compute_release(
     real_ids = [s.id for s in family.headline] + [
         s.id for s in family.components
     ]
+
+    # Track if any series in this release came from the defensive cache.
+    # Stale-fallback warning surfaces in the Slack post + dashboard +
+    # archive JSON so the user knows the data isn't live.
+    from_fallback_cache = False
+    max_cache_age_hours: float | None = None
+
     for sid in real_ids:
-        series_cache[sid] = _fetch_series(client, sid, lookback_years=history_years)
+        s = _fetch_series(client, sid, lookback_years=history_years)
+        series_cache[sid] = s
+        if s.attrs.get("from_cache"):
+            from_fallback_cache = True
+            age = s.attrs.get("cache_age_hours")
+            if age is not None and (max_cache_age_hours is None or age > max_cache_age_hours):
+                max_cache_age_hours = age
 
     fetch_end = datetime.now(timezone.utc)
 
@@ -402,6 +422,8 @@ def compute_release(
         expected_observation_period=period_key(expected_period, family.cadence),
         is_stale=is_stale,
         source_lag_minutes=source_lag_minutes,
+        from_fallback_cache=from_fallback_cache,
+        cache_age_hours=max_cache_age_hours,
     )
 
 

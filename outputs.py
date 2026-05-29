@@ -70,6 +70,10 @@ def write_release_artifacts(
         "expected_observation_period": result.expected_observation_period,
         "is_stale": result.is_stale,
         "source_lag_minutes": result.source_lag_minutes,
+        # Defensive-cache fallback (true if FRED was unreachable and we
+        # served last-known-good from data/fred_cache.db).
+        "from_fallback_cache": result.from_fallback_cache,
+        "cache_age_hours": result.cache_age_hours,
 
         # Data
         "headline": [_serialize_headline(h) for h in result.headline],

@@ -198,6 +198,14 @@ def render_release_text(
             f"< expected {result.expected_observation_period}"
         )
 
+    if result.from_fallback_cache:
+        age = result.cache_age_hours
+        age_str = f"{age:.1f}h ago" if age is not None else "unknown age"
+        lines.append(
+            f"⚠️ FRED unreachable — served from defensive cache "
+            f"(last live fetch: {age_str})"
+        )
+
     return "\n".join(lines)
 
 
@@ -281,6 +289,23 @@ def build_release_blocks(
                     "text": (
                         f"⚠️ *STALE*: latest observation `{result.latest_observation_period}` "
                         f"< expected `{result.expected_observation_period}`"
+                    ),
+                },
+            }
+        )
+
+    # Fallback-cache warning (FRED was unreachable)
+    if result.from_fallback_cache:
+        age = result.cache_age_hours
+        age_str = f"{age:.1f} hours ago" if age is not None else "unknown age"
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"⚠️ *FRED unreachable* — served from defensive cache "
+                        f"(last live fetch: _{age_str}_). Values may be from a prior period."
                     ),
                 },
             }

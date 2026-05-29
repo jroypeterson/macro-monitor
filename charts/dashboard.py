@@ -180,7 +180,8 @@ def _fmt_value(value: float | None, transform: str) -> str:
 
 def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     stale = payload.get("is_stale", False)
-    card_class = "card stale" if stale else "card"
+    from_cache = payload.get("from_fallback_cache", False)
+    card_class = "card stale" if (stale or from_cache) else "card"
     period_label = payload.get("period_label", payload.get("period", "?"))
 
     # Headline rows
@@ -241,10 +242,18 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     links_html = "<div class='links'>" + " ".join(links) + "</div>"
 
     stale_badge = "<span class='stale-badge'>STALE</span>" if stale else ""
+    cache_badge = ""
+    if from_cache:
+        age = payload.get("cache_age_hours")
+        age_str = f"{age:.0f}h old" if age is not None else "from cache"
+        cache_badge = (
+            f"<span class='stale-badge' style='background:#FEF3C7;color:#92400E'>"
+            f"CACHE {html.escape(age_str)}</span>"
+        )
 
     return (
         f"<div class='{card_class}'>"
-        f"<h2>{html.escape(family.display_name)}{stale_badge}</h2>"
+        f"<h2>{html.escape(family.display_name)}{stale_badge}{cache_badge}</h2>"
         f"<div class='period'>{html.escape(period_label)}</div>"
         + "".join(headline_rows)
         + "".join(hc_lines)
