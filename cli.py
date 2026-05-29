@@ -427,9 +427,63 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument(
         "--limit", type=int, default=30, help="Top-N candidates to show"
     )
+    sp.add_argument(
+        "--account",
+        default="default",
+        help="Which Gmail account to scan (default = jroypeterson; "
+        "use 'floridabusinessman' for the business inbox).",
+    )
     sp.set_defaults(func=cmd_suggest_senders)
 
+    sp = sub.add_parser(
+        "authorize-gmail",
+        help=(
+            "Run the OAuth dance to add a new Gmail account. Opens your "
+            "browser to Google's consent screen — sign in as the target "
+            "account and grant gmail.readonly access. Token saves to "
+            "Dropbox/API Keys/gmail_token_<account>.json."
+        ),
+    )
+    sp.add_argument(
+        "--account",
+        required=True,
+        help="Short name for this account (e.g., 'floridabusinessman'). "
+        "Used as the token filename suffix.",
+    )
+    sp.add_argument(
+        "--client-credentials",
+        help="Path to OAuth client credentials JSON. Defaults to "
+        "earnings_agent/gmail_client_credentials.json.",
+    )
+    sp.set_defaults(func=cmd_authorize_gmail)
+
     return p
+
+
+def cmd_authorize_gmail(args: argparse.Namespace) -> int:
+    """Initiate the OAuth dance for a new Gmail account."""
+    from .oauth_helper import authorize_account
+
+    creds_path = (
+        Path(args.client_credentials) if args.client_credentials else None
+    )
+    try:
+        token_path = authorize_account(
+            account=args.account, client_creds=creds_path
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"  ⚠️ {type(e).__name__}: {e}", file=sys.stderr)
+        return 1
+    print(
+        f"\nNext steps:"
+        f"\n  1. Add 'account: {args.account}' to gmail_senders entries you "
+        f"want to read from this inbox"
+        f"\n  2. Run `cli research-digest --dry-run` to verify"
+        f"\n  3. Push the token to GH Actions: "
+        f"`gh secret set GMAIL_TOKEN_{args.account.upper()} < {token_path}`",
+        file=sys.stderr,
+    )
+    return 0
 
 
 def cmd_suggest_senders(args: argparse.Namespace) -> int:
@@ -437,11 +491,15 @@ def cmd_suggest_senders(args: argparse.Namespace) -> int:
     from .schedulers.suggest_senders import format_candidates, scan_inbox
 
     print(
-        f"Scanning last {args.days} days of inbox "
+        f"Scanning last {args.days} days of {args.account!r} inbox "
         f"(up to {args.max_messages} messages)...",
         file=sys.stderr,
     )
-    candidates = scan_inbox(days=args.days, max_messages_to_scan=args.max_messages)
+    candidates = scan_inbox(
+        days=args.days,
+        max_messages_to_scan=args.max_messages,
+        account=args.account,
+    )
     print()
     print(format_candidates(candidates, limit=args.limit))
     return 0

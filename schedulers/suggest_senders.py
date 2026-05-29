@@ -60,9 +60,13 @@ class SenderCandidate:
     research_score: int       # crude relevance heuristic 0-3
 
 
-def scan_inbox(days: int = 90, max_messages_to_scan: int = 2000) -> list[SenderCandidate]:
+def scan_inbox(
+    days: int = 90,
+    max_messages_to_scan: int = 2000,
+    account: str = "default",
+) -> list[SenderCandidate]:
     """Scan recent inbox for recurring senders that look like research."""
-    svc = build_service()
+    svc = build_service(account=account)
 
     # Pull the From + Subject + Date headers via metadata format —
     # cheaper than full message bodies.

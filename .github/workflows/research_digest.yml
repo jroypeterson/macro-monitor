@@ -51,13 +51,22 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Write Gmail OAuth token
+      - name: Write Gmail OAuth tokens (multi-account)
         if: steps.dst_guard.outputs.skip != 'true'
         env:
           GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
+          GMAIL_TOKEN_FLORIDABUSINESSMAN: ${{ secrets.GMAIL_TOKEN_FLORIDABUSINESSMAN }}
         run: |
           mkdir -p .secrets
+          # Default account (jroypeterson) — historical path; collectors/gmail.py
+          # looks for it via GMAIL_TOKEN_PATH env var.
           echo "$GMAIL_TOKEN_JSON" > .secrets/gmail_token.json
+          # Per-account tokens land at .secrets/gmail_token_<account>.json so
+          # find_gmail_token(account=...) can pick them up via the
+          # GMAIL_TOKEN_PATH_<ACCOUNT> env var.
+          if [ -n "$GMAIL_TOKEN_FLORIDABUSINESSMAN" ]; then
+            echo "$GMAIL_TOKEN_FLORIDABUSINESSMAN" > .secrets/gmail_token_floridabusinessman.json
+          fi
 
       - name: Post research digest
         if: steps.dst_guard.outputs.skip != 'true'
@@ -66,6 +75,7 @@ jobs:
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
           SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
           GMAIL_TOKEN_PATH: ".secrets/gmail_token.json"
+          GMAIL_TOKEN_PATH_FLORIDABUSINESSMAN: ".secrets/gmail_token_floridabusinessman.json"
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
         run: python -m macro_monitor.cli research-digest --post

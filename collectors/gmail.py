@@ -34,11 +34,19 @@ from .rss import ResearchPost
 # Allow standard Gmail readonly OR modify scope; we only need to read.
 GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 
-# Default token search locations.
+# Default token search locations for the "default" account
+# (jroypeterson@gmail.com — historical compatibility).
 _TOKEN_CANDIDATES = [
     Path(__file__).parent.parent.parent / "portfolio_daily" / "gmail_token.json",
     Path(__file__).parent.parent.parent / "earnings_agent" / "gmail_token.json",
 ]
+
+# Shared OAuth-token directory used by all accounts. Matches the
+# convention in oauth_helper.py.
+_TOKEN_DIR = Path("C:/Users/jroyp/Dropbox/API Keys")
+
+# When a gmail_sender doesn't specify `account:`, use this label
+DEFAULT_ACCOUNT = "default"
 
 
 @dataclass(frozen=True)
@@ -50,36 +58,63 @@ class GmailSender:
     query: str             # Gmail search syntax (e.g., "from:agm@apollo.com")
     max_items_per_run: int = 3
     newer_than_days: int = 7
+    account: str = DEFAULT_ACCOUNT   # which Gmail account to read from
 
 
-def find_gmail_token() -> Path | None:
-    """Resolve the path to gmail_token.json. Returns None if not found."""
-    override = os.environ.get("GMAIL_TOKEN_PATH")
+def find_gmail_token(account: str = DEFAULT_ACCOUNT) -> Path | None:
+    """Resolve the path to a gmail token for the given account.
+
+    Lookup order:
+      1. GMAIL_TOKEN_PATH env var (for the default account, used by GH Actions)
+      2. GMAIL_TOKEN_PATH_<ACCOUNT> env var (per-account override for GH Actions)
+      3. Dropbox/API Keys/gmail_token_<account>.json (canonical location
+         for accounts added via cli authorize-gmail)
+      4. portfolio_daily/gmail_token.json or earnings_agent/gmail_token.json
+         (default account historical compatibility)
+    """
+    # Per-account env override
+    per_account_env = f"GMAIL_TOKEN_PATH_{account.upper()}"
+    override = os.environ.get(per_account_env)
     if override:
         p = Path(override.strip().strip('"').strip("'"))
         if p.exists():
             return p
-    for cand in _TOKEN_CANDIDATES:
-        if cand.exists():
-            return cand
+
+    # Default-account env override
+    if account == DEFAULT_ACCOUNT:
+        override = os.environ.get("GMAIL_TOKEN_PATH")
+        if override:
+            p = Path(override.strip().strip('"').strip("'"))
+            if p.exists():
+                return p
+
+    # Canonical Dropbox location for named accounts
+    canonical = _TOKEN_DIR / f"gmail_token_{account}.json"
+    if canonical.exists():
+        return canonical
+
+    # Default-account legacy fallback
+    if account == DEFAULT_ACCOUNT:
+        for cand in _TOKEN_CANDIDATES:
+            if cand.exists():
+                return cand
+
     return None
 
 
-def build_service(token_path: Path | None = None):
-    """Construct an authenticated Gmail service. Imports the google libs
-    lazily so collectors can be imported even when the libs aren't
-    installed (e.g., on a stripped-down test environment).
-    """
+def build_service(token_path: Path | None = None, account: str = DEFAULT_ACCOUNT):
+    """Construct an authenticated Gmail service for the given account."""
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
 
     if token_path is None:
-        token_path = find_gmail_token()
+        token_path = find_gmail_token(account)
     if token_path is None:
         raise RuntimeError(
-            "No gmail_token.json found. Set GMAIL_TOKEN_PATH env var or "
-            "ensure portfolio_daily/gmail_token.json exists."
+            f"No gmail token found for account {account!r}. "
+            f"Run `cli authorize-gmail --account {account}` to create one, "
+            "or set GMAIL_TOKEN_PATH_<ACCOUNT> env var to point at it."
         )
 
     creds = Credentials.from_authorized_user_file(str(token_path))
@@ -107,6 +142,7 @@ def load_gmail_senders(cfg: dict | None = None) -> list[GmailSender]:
                 query=s["query"],
                 max_items_per_run=s.get("max_items_per_run", 3),
                 newer_than_days=s.get("newer_than_days", 7),
+                account=s.get("account", DEFAULT_ACCOUNT),
             )
         )
     return out
@@ -143,22 +179,40 @@ def fetch_sender(service, sender: GmailSender) -> tuple[list[ResearchPost], str 
 
 
 def fetch_all_senders(
-    senders: list[GmailSender], service=None
+    senders: list[GmailSender], services: dict[str, object] | None = None
 ) -> tuple[list[ResearchPost], list[tuple[str, str]]]:
-    """Iterate senders with per-sender graceful degradation."""
+    """Iterate senders with per-sender graceful degradation.
+
+    Builds one Gmail service per unique account in `senders`, then runs
+    each sender's query against its associated service. A single failed
+    auth for one account doesn't kill the others.
+
+    `services`: optional pre-built {account_name: service} dict — used
+    by tests to inject mocks.
+    """
     posts: list[ResearchPost] = []
     errors: list[tuple[str, str]] = []
 
     if not senders:
         return posts, errors
 
-    if service is None:
-        try:
-            service = build_service()
-        except Exception as e:  # noqa: BLE001
-            return [], [("gmail_auth", f"{type(e).__name__}: {e}")]
+    # Group senders by account; build one service per account.
+    accounts_needed = {s.account for s in senders}
+    if services is None:
+        services = {}
+        for account in accounts_needed:
+            try:
+                services[account] = build_service(account=account)
+            except Exception as e:  # noqa: BLE001
+                errors.append(
+                    (f"gmail_auth:{account}", f"{type(e).__name__}: {e}")
+                )
 
     for sender in senders:
+        service = services.get(sender.account)
+        if service is None:
+            # Auth failed for this sender's account; skip but continue
+            continue
         items, err = fetch_sender(service, sender)
         posts.extend(items)
         if err:
