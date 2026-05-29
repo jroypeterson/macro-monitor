@@ -88,11 +88,15 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "type": "mrkdwn",
                 "text": (
                     "*Where else to look*\n"
+                    "• 📊 <https://jroypeterson.github.io/macro-monitor/dashboard/|Current state dashboard> — "
+                    "latest value per family, mini-charts, links into release reports. Auto-refreshes after every release post.\n"
+                    "• 📅 <https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html|2026 Annual Macro Calendar> — "
+                    "year-long Tier A schedule, refreshed quarterly\n"
                     "• `#status-reports` — daily 08:00 ET heartbeat + operator alerts\n"
                     "• *Google Calendar* (floridabusinessman@gmail.com) — "
                     "\"Macro Calendar\" with rolling 90-day Tier A events\n"
-                    "• Local artifacts — per-release JSON + HTML reports + "
-                    "static current-state dashboard"
+                    "• 🔧 <https://github.com/jroypeterson/macro-monitor|Source on GitHub> — "
+                    "code, workflows, design plan"
                 ),
             },
         },
