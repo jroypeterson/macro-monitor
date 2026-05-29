@@ -103,6 +103,8 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                     "HC-employment two-pane chart\n"
                     "• 🔁 *Revisions* — new REVISED post with diff; "
                     "annual benchmarks collapse into one summary\n"
+                    "• 🏛️ *Daily 08:30 ET* — Fed research digest (NBER, NY Fed, "
+                    "SF Fed, St. Louis Fed, FRB FEDS — only when new papers land)\n"
                     "• 📆 *Jan + quarterly* — year-long Macro Calendar HTML uploaded\n"
                     "• 🏥 *Healthcare context* surfaced in every release where applicable"
                 ),

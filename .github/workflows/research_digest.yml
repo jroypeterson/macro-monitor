@@ -1,0 +1,74 @@
+name: Fed research digest
+
+# Daily 08:00 ET digest of NEW research from NBER, NY Fed Liberty Street,
+# SF Fed Econ Letter, St. Louis Fed On the Economy, and Federal Reserve
+# Board FEDS papers. Dedupes against state/research_posted.db so each
+# paper only fires once.
+#
+# The ledger is committed back to main like state/posts.db so cross-run
+# dedupe survives.
+
+on:
+  schedule:
+    - cron: "30 12 * * *"  # 08:30 EDT (summer) — 30 min after heartbeat slot
+    - cron: "30 13 * * *"  # 08:30 EST (winter)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit ledger updates
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          # Manual workflow_dispatch always runs.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "08" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post research digest
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli research-digest --post
+
+      - name: Commit ledger updates
+        if: success() && steps.dst_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add state/research_posted.db 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "research-digest: $(date -u +%FT%TZ)"
+            git pull --rebase
+            git push
+          fi
