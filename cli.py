@@ -516,6 +516,14 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
     payload = build_digest()
 
     print(f"  Found {len(payload.new_posts)} new research item(s)")
+    if payload.dropped_non_macro:
+        print(
+            f"  Dropped {len(payload.dropped_non_macro)} non-macro item(s) per LLM:"
+        )
+        for p in payload.dropped_non_macro[:10]:
+            v = payload.verdicts.get(p.url)
+            why = v.why if v else ""
+            print(f"      [{p.source_id}] {p.title[:70]}  — {why[:60]}")
     if payload.errors:
         print(f"  ⚠️ {len(payload.errors)} source(s) failed to fetch:")
         for src_id, err in payload.errors:

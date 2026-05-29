@@ -11,6 +11,8 @@ google-auth-oauthlib>=1.2
 google-api-python-client>=2.120
 # Phase 2 Fed research RSS scanner
 feedparser>=6.0
+# Phase 2c — LLM-based read-worthiness scoring for the research digest
+anthropic>=0.40
 
 # Dev
 pytest>=8.0

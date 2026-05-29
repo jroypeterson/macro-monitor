@@ -305,7 +305,9 @@ def test_build_digest_filters_already_posted(tmp_path: Path):
         "macro_monitor.schedulers.research_digest.fetch_all",
         return_value=([seen, fresh], []),
     ):
-        payload = build_digest(sources=[src], ledger=ledger)
+        payload = build_digest(
+            sources=[src], ledger=ledger, skip_gmail=True, skip_scoring=True
+        )
 
     new_urls = {p.url for p in payload.new_posts}
     assert seen.url not in new_urls

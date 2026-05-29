@@ -74,6 +74,10 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
           SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          # Phase 2c — Haiku 4.5 read-worthiness scorer + macro classifier.
+          # On missing/error, llm_scorer falls back to permissive verdicts
+          # so the digest doesn't silently empty.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_TOKEN_PATH: ".secrets/gmail_token.json"
           GMAIL_TOKEN_PATH_FLORIDABUSINESSMAN: ".secrets/gmail_token_floridabusinessman.json"
           PYTHONUTF8: "1"

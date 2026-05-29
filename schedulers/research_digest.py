@@ -31,6 +31,7 @@ from ..collectors.rss import (
     fetch_all,
     load_sources,
 )
+from ..scoring.llm_scorer import ScoreVerdict, score_posts
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,10 @@ class DigestPayload:
     blocks: list[dict]
     new_posts: list[ResearchPost]
     errors: list[tuple[str, str]]
+    # Filled by build_digest after scoring. Empty {} = scoring skipped.
+    verdicts: dict[str, ScoreVerdict]
+    # Items the LLM rejected as non-macro — kept for inspection/logging.
+    dropped_non_macro: list[ResearchPost]
 
 
 def build_digest(
@@ -48,10 +53,11 @@ def build_digest(
     gmail_senders: list[GmailSender] | None = None,
     ledger: ResearchLedger | None = None,
     skip_gmail: bool = False,
+    skip_scoring: bool = False,
 ) -> DigestPayload:
-    """Pull RSS + Gmail sources, dedupe, render. Caller owns the Slack
-    post. `skip_gmail=True` is useful for unit tests that don't want to
-    open the network."""
+    """Pull RSS + Gmail sources, dedupe, score, render. Caller owns the
+    Slack post. `skip_gmail=True` / `skip_scoring=True` are escape
+    hatches for unit tests that don't want to open the network."""
     if sources is None:
         sources = load_sources()
 
@@ -70,18 +76,37 @@ def build_digest(
     if own_ledger:
         ledger = ResearchLedger()
     try:
-        new_posts = ledger.filter_new(posts)
+        candidate_posts = ledger.filter_new(posts)
     finally:
         if own_ledger:
             ledger.close()
 
-    text = _render_text(new_posts, errors)
-    blocks = _render_blocks(new_posts, errors)
+    # Score and drop non-macro before rendering. Scoring is a single
+    # batched LLM call; on any failure it returns permissive verdicts so
+    # we never silently empty the digest.
+    verdicts: dict[str, ScoreVerdict] = {}
+    dropped: list[ResearchPost] = []
+    new_posts = candidate_posts
+    if candidate_posts and not skip_scoring:
+        verdicts = score_posts(candidate_posts)
+        kept: list[ResearchPost] = []
+        for p in candidate_posts:
+            v = verdicts.get(p.url)
+            if v is None or v.is_macro:
+                kept.append(p)
+            else:
+                dropped.append(p)
+        new_posts = kept
+
+    text = _render_text(new_posts, errors, verdicts)
+    blocks = _render_blocks(new_posts, errors, verdicts)
     return DigestPayload(
         text=text,
         blocks=blocks,
         new_posts=new_posts,
         errors=errors,
+        verdicts=verdicts,
+        dropped_non_macro=dropped,
     )
 
 
@@ -90,16 +115,39 @@ def build_digest(
 # ---------------------------------------------------------------------------
 
 
-def _group_by_source(posts: list[ResearchPost]) -> dict[str, list[ResearchPost]]:
-    """Preserve YAML source order in the rendered output."""
+def _group_by_source(
+    posts: list[ResearchPost],
+    verdicts: dict[str, ScoreVerdict] | None = None,
+) -> dict[str, list[ResearchPost]]:
+    """Preserve YAML source order in the rendered output. Within each
+    source, sort by LLM read-worthiness score desc when verdicts are
+    available — so the best item per source appears on top."""
     seen_order = []
     grouped: dict[str, list[ResearchPost]] = defaultdict(list)
     for p in posts:
         if p.source_display not in grouped:
             seen_order.append(p.source_display)
         grouped[p.source_display].append(p)
-    # Re-sort to preserve insertion order from `seen_order`
+
+    if verdicts:
+        def _score(p: ResearchPost) -> int:
+            v = verdicts.get(p.url)
+            return v.score if v else 0
+        for name in seen_order:
+            grouped[name].sort(key=_score, reverse=True)
+
     return {name: grouped[name] for name in seen_order}
+
+
+def _score_badge(score: int) -> str:
+    """Visual prefix for the score. Used in both text + blocks."""
+    if score >= 9:
+        return f"🔥 {score}/10"
+    if score >= 7:
+        return f"⭐ {score}/10"
+    if score >= 5:
+        return f"• {score}/10"
+    return f"○ {score}/10"
 
 
 def _fmt_pub_date(iso: str) -> str:
@@ -133,13 +181,15 @@ def _fmt_pub_date_portable(iso: str) -> str:
 
 
 def _render_text(
-    new_posts: list[ResearchPost], errors: list[tuple[str, str]]
+    new_posts: list[ResearchPost],
+    errors: list[tuple[str, str]],
+    verdicts: dict[str, ScoreVerdict] | None = None,
 ) -> str:
     """Plain-text fallback for the Slack `text` field."""
     if not new_posts:
         return "macro-monitor: no new Fed/macro research today."
     lines = [f"🏛️ NEW MACRO RESEARCH ({len(new_posts)})"]
-    for source_name, posts in _group_by_source(new_posts).items():
+    for source_name, posts in _group_by_source(new_posts, verdicts).items():
         is_gmail = any(p.url.startswith("gmail-msg:") for p in posts)
         label = source_name + (" (Gmail)" if is_gmail else "")
         lines.append(f"\n{label}:")
@@ -151,7 +201,9 @@ def _render_text(
                 if p.url.startswith("gmail-msg:")
                 else p.url
             )
-            lines.append(f"  • {p.title}{date_suffix}")
+            v = verdicts.get(p.url) if verdicts else None
+            badge = f"[{_score_badge(v.score)}] " if v else ""
+            lines.append(f"  • {badge}{p.title}{date_suffix}")
             lines.append(f"    {display_url}")
     if errors:
         lines.append(f"\n⚠️ {len(errors)} source(s) failed to fetch (see #status-reports)")
@@ -159,7 +211,9 @@ def _render_text(
 
 
 def _render_blocks(
-    new_posts: list[ResearchPost], errors: list[tuple[str, str]]
+    new_posts: list[ResearchPost],
+    errors: list[tuple[str, str]],
+    verdicts: dict[str, ScoreVerdict] | None = None,
 ) -> list[dict]:
     """Block Kit payload per the v5 plan §6 format:
 
@@ -183,7 +237,7 @@ def _render_blocks(
         }
     )
 
-    for source_name, posts in _group_by_source(new_posts).items():
+    for source_name, posts in _group_by_source(new_posts, verdicts).items():
         # Source subhead + bulleted entries
         is_gmail_source = any(p.url.startswith("gmail-msg:") for p in posts)
         source_label = source_name + (" 📧" if is_gmail_source else "")
@@ -197,7 +251,9 @@ def _render_blocks(
                 if p.url.startswith("gmail-msg:")
                 else p.url
             )
-            entry = f"• <{url_md}|{title_md}>"
+            v = verdicts.get(p.url) if verdicts else None
+            badge = f"`{_score_badge(v.score)}` " if v else ""
+            entry = f"{badge}<{url_md}|{title_md}>"
             pub = _fmt_pub_date_portable(p.published_at_iso)
             if pub:
                 entry += f" _{pub}_"
