@@ -282,14 +282,113 @@ def cmd_weekly_preview(args: argparse.Namespace) -> int:
     return 0
 
 
+def families_releasing_on(target, families, client):
+    """Return (matched_family_ids, failed) for numeric families whose FRED
+    release calendar shows a release on `target` (a `datetime.date`).
+
+    Keys on a tight realtime window [target, target] — FRED returns the
+    release date iff a release landed exactly that day (verified against
+    the live API). Event families and families without a
+    `release_calendar_id` are skipped.
+    """
+    from .collectors.fred import FREDError
+
+    iso = target.isoformat()
+    matched: list[str] = []
+    failed: list[str] = []
+    for fid, fam in families.items():
+        if fam.release_calendar_id is None or fam.family_type != "numeric":
+            continue
+        try:
+            dates = client.get_release_dates(
+                release_id=fam.release_calendar_id,
+                realtime_start=iso,
+                realtime_end=iso,
+                include_release_dates_with_no_data=False,
+            )
+        except FREDError as exc:
+            failed.append(f"{fid} (rel_id={fam.release_calendar_id}): {exc}")
+            continue
+        if any(rd.date == target for rd in dates):
+            matched.append(fid)
+    return sorted(matched), failed
+
+
 def cmd_replay_day(args: argparse.Namespace) -> int:
+    """Re-run the release pipeline for every family that had a FRED release
+    scheduled on `date` — a targeted catch-up / regeneration of one day's
+    releases (vs `poll-all`, which sweeps every family every run).
+
+    VINTAGE CAVEAT: this processes each family's CURRENT-LATEST FRED data,
+    not a point-in-time (ALFRED) vintage of `date`. For a recent date —
+    catching up a missed cron from this morning or last week — the latest
+    data IS what landed that morning, so the replay is exact. For an older
+    date it processes today's latest values for those families; the posts
+    ledger still prevents duplicate Slack posts (already-posted periods read
+    UNCHANGED and skip). True point-in-time replay is out of scope.
+    """
+    from datetime import datetime
+
+    try:
+        target = datetime.strptime(args.date, "%Y-%m-%d").date()
+    except ValueError:
+        print(f"Invalid date {args.date!r} — expected YYYY-MM-DD.", file=sys.stderr)
+        return 2
+
+    path = Path(args.config) if args.config else default_config_path()
+    families = load_config(path)
+    validate_all_or_raise(families)
+
+    from .collectors.fred import FREDClient
+
+    client = FREDClient()
+    print(f"Looking up families with a FRED release on {target}…", file=sys.stderr)
+    matched, failed = families_releasing_on(target, families, client)
+
+    if failed:
+        print(f"⚠️ {len(failed)} family calendar lookup(s) failed:", file=sys.stderr)
+        for f in failed:
+            print(f"   {f}", file=sys.stderr)
+
+    if not matched:
+        print(
+            f"No numeric Tier A/B releases scheduled on {target}. Nothing to replay.",
+            file=sys.stderr,
+        )
+        return 0
+
+    mode = "DRY-RUN" if args.dry_run else "LIVE POST"
     print(
-        f"[replay-day {args.date}] not yet implemented (Phase 1a in progress). "
-        f"Will re-run any releases that landed on {args.date} as if it were "
-        f"the original release morning.",
+        f"[{mode}] {len(matched)} release(s) on {target}: {', '.join(matched)}",
         file=sys.stderr,
     )
-    return 0
+    print(
+        "  (current-latest FRED data; ledger prevents duplicate posts — "
+        "see `replay-day --help`)",
+        file=sys.stderr,
+    )
+
+    errors: list[str] = []
+    for fid in matched:
+        print(f"\n  → replaying {fid}", file=sys.stderr)
+        sub_args = argparse.Namespace(
+            family=fid, dry_run=args.dry_run, config=args.config
+        )
+        try:
+            rc = cmd_post_release(sub_args)
+            if rc != 0:
+                errors.append(f"{fid}: rc={rc}")
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{fid}: {type(e).__name__}: {e}")
+
+    print(
+        f"\nreplay-day {target} complete. families={len(matched)} "
+        f"errors={len(errors)}",
+        file=sys.stderr,
+    )
+    for err in errors[:10]:
+        print(f"  ⚠️ {err}", file=sys.stderr)
+    return 0 if not errors else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -323,7 +422,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_weekly_preview)
 
-    sp = sub.add_parser("replay-day", help="Replay all releases for a given date")
+    sp = sub.add_parser(
+        "replay-day",
+        help=(
+            "Re-run the release pipeline for every family that had a FRED "
+            "release on a given date (targeted catch-up). Processes "
+            "current-latest data, not a point-in-time vintage; the ledger "
+            "prevents duplicate posts. Defaults to dry-run."
+        ),
+    )
     sp.add_argument("date", help="YYYY-MM-DD")
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
