@@ -27,9 +27,8 @@ python -m macro_monitor.cli post-release --family cpi --dry-run
 # Dry-run a Monday weekly preview:
 python -m macro_monitor.cli weekly-preview --dry-run
 
-# Replay a specific date end-to-end (no Slack post unless --post):
-# NOTE: replay-day is not yet implemented (stub) — see TODO.md.
-python -m macro_monitor.cli replay-day 2026-05-15 --dry-run
+# Re-run the releases that landed on a given date (catch-up; dry-run default):
+python -m macro_monitor.cli replay-day 2026-05-12 --dry-run
 ```
 
 ## What it produces

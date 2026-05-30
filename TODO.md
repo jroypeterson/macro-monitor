@@ -12,13 +12,13 @@ verified rather than copied from the roadmap.
 
 ## Quick / bounded (doc + small wiring)
 
-- [ ] **`replay-day` command is a stub but advertised in the README.**
-  `cmd_replay_day` (`cli.py`) only prints "not yet implemented (Phase 1a
-  in progress)", yet `README.md` shows `replay-day 2026-05-15 --dry-run`
-  as a usage example. Decide: implement it (re-run any releases that
-  landed on a given date as if it were the original release morning — the
-  polling + parse machinery already exists, so this is mostly wiring), or
-  remove it from the docs until built.
+- [x] **`replay-day` command** — SHIPPED 2026-05-30. Looks up which numeric
+  families had a FRED release on the given date (tight realtime `[date,date]`
+  window) and re-runs the post-release pipeline for each, dry-run by default.
+  Targeted per-date catch-up (vs `poll-all`'s full sweep). Vintage caveat
+  documented: processes current-latest data, not an ALFRED point-in-time
+  vintage — exact for recent dates; ledger prevents duplicate posts. Pure
+  selection helper `families_releasing_on()` unit-tested (4 tests).
 - [x] **README roadmap accuracy** — Phase 1.5 "static dashboard" is in
   fact shipped (`render_dashboard()` runs on every post, `cli.py`; plus a
   `render-dashboard` CLI verb), so the roadmap's unchecked 1.5 was
@@ -40,9 +40,16 @@ verified rather than copied from the roadmap.
   until a meeting tests the parser." Next FOMC meeting is the natural
   forcing function to finish + test the event parser so decisions post
   automatically.
-- [ ] **Level z-score** (`release_runner.py`: "level z-score not yet
-  implemented; flag in v1"). Minor — currently only the delta z-score is
-  computed.
+- [x] **Level z-score** — SHIPPED 2026-05-30. `transforms.level_zscore()`
+  standardizes the latest transform *value* `(latest - mean)/std` vs the
+  trailing window; `release_runner` selects it when `zscore_kind: level`
+  (config already permitted the value; it previously produced `None`). The
+  Tier B gate reads `context.zscore` so it gates on whichever kind a family
+  configures. Unit-tested (3 tests) + integration-verified on UMich
+  sentiment (level −1.64σ vs delta −0.79σ — different questions, as
+  intended). **No family flipped to `level` yet** — that's a per-family
+  tuning decision with Tier B posting-behavior implications. Best
+  candidates: `umich` (sentiment), `jolts` (openings rate), `claims`.
 
 ## Larger deferred phases
 

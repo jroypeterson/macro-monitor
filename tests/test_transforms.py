@@ -15,6 +15,7 @@ from macro_monitor.transforms import (
     annualized_n_month,
     apply_transform,
     delta_zscore,
+    level_zscore,
     mom_chg,
     mom_pct,
     qoq_pct_saar,
@@ -116,3 +117,28 @@ def test_delta_zscore_zero_when_constant_changes():
     s = monthly_series(values, start="2020-01-01")
     target = pd.Timestamp("2024-12-01")
     assert delta_zscore(s, target, "yoy_pct", lookback_years=4) is None
+
+
+def test_level_zscore_standardizes_latest_value():
+    import statistics
+
+    # Stationary alternating rate; level z = (latest - mean) / sample-std.
+    vals = [3.0, 5.0] * 30
+    s = monthly_series(vals)
+    target = s.index[-1]
+    z = level_zscore(s, target, "raw", lookback_years=5)
+    expected = (vals[-1] - statistics.mean(vals)) / statistics.stdev(vals)
+    assert z == pytest.approx(expected, rel=1e-9)
+
+
+def test_level_zscore_is_none_when_history_thin():
+    s = monthly_series([4.0] * 6)
+    target = pd.Timestamp("2020-06-01")
+    assert level_zscore(s, target, "raw", lookback_years=5) is None
+
+
+def test_level_zscore_none_when_constant_level():
+    # Flat level → std 0 → None (no meaningful z-score).
+    s = monthly_series([4.0] * 60)
+    target = pd.Timestamp("2024-12-01")
+    assert level_zscore(s, target, "raw", lookback_years=5) is None

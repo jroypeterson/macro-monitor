@@ -168,3 +168,43 @@ def delta_zscore(
     if len(deltas) < 12 or deltas.std() == 0:
         return None
     return float(deltas.iloc[-1] / deltas.std())
+
+
+def level_zscore(
+    series: pd.Series,
+    target: pd.Timestamp,
+    transform: str,
+    lookback_years: int = 5,
+) -> float | None:
+    """Compute the z-score of the LATEST transformed value against the
+    trailing N years of that same transform: ``(latest - mean) / std``.
+
+    "Is the current *level* unusual" — the right question when the anchor
+    transform is stationary (a rate or a YoY%: unemployment rate, job-
+    openings rate, sentiment index). Do NOT use this with a raw,
+    non-stationary level (e.g. a price index): every print would read ~+2σ
+    because the level only trends up. ``delta_zscore`` answers the
+    move-unusual question instead.
+    """
+    if transform not in TRANSFORMS:
+        raise KeyError(f"Unknown transform: {transform!r}")
+    fn = TRANSFORMS[transform]
+
+    end = target
+    start = target - pd.DateOffset(years=lookback_years)
+    history_dates = [d for d in series.index if start <= d <= end]
+    if len(history_dates) < 12:
+        return None
+
+    transformed = []
+    for d in history_dates:
+        v = fn(series, d)
+        if v is not None:
+            transformed.append(v)
+    if len(transformed) < 12:
+        return None
+
+    s = pd.Series(transformed)
+    if s.std() == 0:
+        return None
+    return float((s.iloc[-1] - s.mean()) / s.std())

@@ -68,8 +68,9 @@ def evaluate(family: FamilyConfig, result: ReleaseResult) -> GateVerdict:
             z_score=None,
         )
 
-    # Phase 1: trailing_5y_volatility — read the delta z-score that
-    # compute_release already computed against the family's anchor_transform.
+    # Phase 1: trailing_5y_volatility — read the z-score that compute_release
+    # already computed against the family's anchor_transform (delta or level
+    # per the family's zscore_kind; both are |z|>=threshold-gated identically).
     z = (
         result.context.zscore
         if result.context is not None

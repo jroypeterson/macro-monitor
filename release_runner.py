@@ -27,6 +27,7 @@ from .transforms import (
     annualized_n_month,
     apply_transform,
     delta_zscore,
+    level_zscore,
 )
 
 
@@ -386,15 +387,12 @@ def compute_release(
             )
             for t in ctx.trends
         ]
-        zscore_val = (
-            delta_zscore(
-                anchor,
-                target_period,
-                ctx.anchor_transform,
-                lookback_years=ctx.zscore_lookback_years,
-            )
-            if ctx.zscore_kind == "delta"
-            else None  # level z-score not yet implemented; flag in v1
+        _zscore_fn = delta_zscore if ctx.zscore_kind == "delta" else level_zscore
+        zscore_val = _zscore_fn(
+            anchor,
+            target_period,
+            ctx.anchor_transform,
+            lookback_years=ctx.zscore_lookback_years,
         )
         context_result = ContextResult(
             anchor_series=ctx.anchor_series,
