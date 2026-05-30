@@ -48,8 +48,16 @@ verified rather than copied from the roadmap.
 
 - [ ] **Phase 2 — international macro** (ECB / BoJ / eurozone / China / UK).
   Already named as "Phase 2" in `overview.py`'s pinned-overview text.
-- [ ] **Phase 2 — deeper HC-subsector cuts** (beyond current healthcare
-  employment + medical-care CPI sub-cuts).
+- [x] **Phase 2 — deeper HC-subsector cuts** — SHIPPED 2026-05-30. CPI now
+  breaks medical care into commodities (`SAM1`) / hospital & related
+  (`SEMD`) / professional services (`SEMC`, NSA) alongside the existing
+  medical-care-services line, with a `hc_cpi_detail` thread chart. PPI went
+  from headline-only to four HC producer-price cuts (hospitals `PCU622622`,
+  physician offices `PCU621111621111`, pharma mfg `PCU325412325412`,
+  surgical & medical instruments `PCU339112339112`) + a `hc_ppi_detail`
+  chart. All IDs verified live on FRED; CPI+PPI dry-runs render clean.
+  (Further depth possible later: dental/eyeglasses detail, GDP/PCE-side
+  HC services beyond the current PCE-health-services cut.)
 - [ ] **Phase 3 — earnings-transcript macro commentary** (cross-reference
   macro themes against the `transcripts/` corpus).
 

@@ -53,6 +53,21 @@ families:
         label: "Medical care services"
         primary_transform: yoy_pct
         tags: [healthcare]
+      # Deeper HC cuts: break medical care into commodities vs the two
+      # largest service sub-aggregates. SEMC is NSA-only on FRED (BLS does
+      # not SA the finer cuts); YoY display deseasonalizes so it's fine.
+      - id: CUSR0000SAM1
+        label: "Medical care commodities (drugs/equipment)"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: CUSR0000SEMD
+        label: "Hospital & related services"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: CUUR0000SEMC
+        label: "Professional services (physicians/dental)"
+        primary_transform: yoy_pct
+        tags: [healthcare]
       - id: CPIUFDSL
         label: "Food"
         primary_transform: yoy_pct
@@ -107,6 +122,20 @@ families:
             - {id: CPIENGSL,    transform: yoy_pct, label: "Energy"}
           filename: "cpi_components_{period}.png"
 
+        # HC-investor detail: the medical-care sub-cuts on one chart so
+        # provider (hospital/professional) vs commodity (drug/equipment)
+        # inflation can be read apart from the headline medical line.
+        - name: hc_cpi_detail
+          type: line
+          lookback_years: 10
+          series:
+            - {id: CUSR0000SAM2, transform: yoy_pct, label: "Medical care services"}
+            - {id: CUSR0000SEMD, transform: yoy_pct, label: "Hospital & related"}
+            - {id: CUUR0000SEMC, transform: yoy_pct, label: "Professional services"}
+            - {id: CUSR0000SAM1, transform: yoy_pct, label: "Medical care commodities"}
+          highlight_latest: true
+          filename: "cpi_hc_detail_{period}.png"
+
     # === Posting gate ===
     tier_b_gate: null   # null = Tier A behavior (always post)
 
@@ -124,6 +153,9 @@ families:
       component_hash:
         - CUSR0000SAH1
         - CUSR0000SAM2
+        - CUSR0000SAM1
+        - CUSR0000SEMD
+        - CUUR0000SEMC
         - CPIUFDSL
         - CPIENGSL
 
@@ -676,9 +708,28 @@ families:
         also_display: [yoy_pct, mom_pct]
 
     # === Components ===
-    # HC PPI sub-components (hospital PPI, physician offices PPI) deferred
-    # to Phase 2. v1 PPI is headline-only.
-    components: []
+    # HC-investor producer-price cuts: provider output prices (hospitals,
+    # physician offices) + manufacturer input/output prices (pharma,
+    # surgical/medical instruments). These are NAICS industry PPIs (index
+    # levels) so YoY is the meaningful read. They map to the coverage
+    # universe's Healthcare Services / Biopharma / MedTech sectors.
+    components:
+      - id: PCU622622
+        label: "Hospitals PPI"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: PCU621111621111
+        label: "Physician offices PPI"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: PCU325412325412
+        label: "Pharma preparation mfg PPI"
+        primary_transform: yoy_pct
+        tags: [healthcare]
+      - id: PCU339112339112
+        label: "Surgical & medical instruments PPI"
+        primary_transform: yoy_pct
+        tags: [healthcare]
 
     context:
       anchor_series: PPIFIS
@@ -708,13 +759,29 @@ families:
             - {id: PPIFES, transform: yoy_pct, label: "Core YoY"}
           filename: "ppi_25y_{period}.png"
 
+        # HC-investor detail: provider + manufacturer producer prices YoY.
+        - name: hc_ppi_detail
+          type: line
+          lookback_years: 10
+          series:
+            - {id: PCU622622,       transform: yoy_pct, label: "Hospitals"}
+            - {id: PCU621111621111, transform: yoy_pct, label: "Physician offices"}
+            - {id: PCU325412325412, transform: yoy_pct, label: "Pharma mfg"}
+            - {id: PCU339112339112, transform: yoy_pct, label: "Surgical/medical instruments"}
+          highlight_latest: true
+          filename: "ppi_hc_detail_{period}.png"
+
     tier_b_gate: null
 
     dedupe:
       headline_hash:
         - PPIFIS
         - PPIFES
-      component_hash: []
+      component_hash:
+        - PCU622622
+        - PCU621111621111
+        - PCU325412325412
+        - PCU339112339112
 
     agency:
       release_page: "https://www.bls.gov/ppi/"
