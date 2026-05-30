@@ -54,8 +54,34 @@ See Appendix B of the plan for the full table. Highlights:
 - **1e** FOMC + minutes (`family_type: event` — separate parser, no FRED data series)
 - **1f** ✅ Weekly preview + annual calendar HTML + Google Calendar backfill + `#status-reports` heartbeat + GitHub Actions cron
 - **1.5** Static dashboard + consensus enrichment
-- **2** Deeper HC + Fed research RSS
+- **2a** ✅ Fed research RSS digest (NBER, Liberty Street, SF/St Louis Fed, FEDS, Conversable Economist)
+- **2b** ✅ Macro-focus keyword filters + mainstream feeds (NYT/FT/Bloomberg/WSJ/Economist) + Gmail senders (Torsten Slok / Yardeni / Economist Today) + multi-account Gmail (jroypeterson + floridabusinessman)
+- **2c** ✅ Haiku 4.5 read-worthiness scorer + macro classifier + curated top picks + table of contents + per-source staleness probe
+- **2 deeper HC subsector** deferred
 - **3** Earnings-transcript macro commentary
+
+### Daily research digest
+
+```bash
+# Dry-run the daily Fed/macro research digest (scores items, shows what'd post):
+python -m macro_monitor.cli research-digest --dry-run
+
+# Live-fire to #macro (ledger updates so re-runs don't repost):
+python -m macro_monitor.cli research-digest --post
+
+# Scan a Gmail inbox for new high-signal sender candidates:
+python -m macro_monitor.cli suggest-research-senders --days 90 --account floridabusinessman
+
+# Authorize a new Gmail account (token lands in Dropbox/API Keys/):
+python -m macro_monitor.cli authorize-gmail --account <short-name>
+```
+
+Each item is batch-scored by Haiku 4.5 with `is_macro` (drops the
+keyword filter's misses — TV reviews, philosophy essays, geopolitics
+without econ angle) and a 1–10 read-worthiness score. The post opens
+with a curated top-picks section (score ≥7, capped at 7), then a
+table-of-contents listing every source with item counts, then the
+full grouped-by-source digest sorted high→low by score. Cost ~$0.005/run.
 
 ## GitHub Actions secrets
 
@@ -70,6 +96,9 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 | `SLACK_WEBHOOK_STATUS_REPORTS` | `heartbeat`, operator alerts |
 | `GOOGLE_CALENDAR_ID` | `calendar_backfill` (the Macro Calendar in floridabusinessman@gmail.com) |
 | `GOOGLE_CREDENTIALS_JSON` | `calendar_backfill` — paste the full `credentials.json` content; the workflow writes it to disk per run |
+| `ANTHROPIC_API_KEY` | `research_digest` — Haiku 4.5 read-worthiness scorer |
+| `GMAIL_TOKEN_JSON` | `research_digest` — default-account (jroypeterson) Gmail OAuth token |
+| `GMAIL_TOKEN_FLORIDABUSINESSMAN` | `research_digest` — floridabusinessman@gmail.com Gmail OAuth token |
 
 ## Workflows
 
@@ -81,12 +110,13 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
   annual_calendar.yml      Jan 1 + Apr/Jul/Oct 1 (quarterly refresh)
   calendar_backfill.yml    Sunday 21:00 ET — rolling 90-day Google Calendar push
   reconciliation.yml       Daily 17:00 ET — catch-up poll, surface stale series
+  research_digest.yml      Daily 08:30 ET — Fed/macro research RSS + Gmail digest
 ```
 
-All workflows are idempotent. `release_polling` and `reconciliation` commit
-`state/posts.db` back to the repo so the ledger survives across runs —
-without persistence every run would think it was the first time and
-re-post everything.
+All workflows are idempotent. `release_polling`, `reconciliation`, and
+`research_digest` commit their state DBs back to the repo so ledgers
+survive across runs — without persistence every run would think it was
+the first time and re-post everything.
 
 ## License
 
