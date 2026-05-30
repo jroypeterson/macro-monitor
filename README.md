@@ -28,6 +28,7 @@ python -m macro_monitor.cli post-release --family cpi --dry-run
 python -m macro_monitor.cli weekly-preview --dry-run
 
 # Replay a specific date end-to-end (no Slack post unless --post):
+# NOTE: replay-day is not yet implemented (stub) — see TODO.md.
 python -m macro_monitor.cli replay-day 2026-05-15 --dry-run
 ```
 
@@ -51,9 +52,9 @@ See Appendix B of the plan for the full table. Highlights:
 - **1b** ✅ Payrolls + `computed:` engine (sum_of, yoy_pct_of_sum, annualized_mom) + multi-pane HC employment subplots
 - **1c** ✅ PCE, claims (weekly cadence), GDP (quarterly cadence)
 - **1d** ✅ JOLTS, PPI, retail sales, ECI
-- **1e** FOMC + minutes (`family_type: event` — separate parser, no FRED data series)
+- **1e** FOMC + minutes (`family_type: event` — event scaffolding shipped; parser **manual until a meeting tests it**)
 - **1f** ✅ Weekly preview + annual calendar HTML + Google Calendar backfill + `#status-reports` heartbeat + GitHub Actions cron
-- **1.5** Static dashboard + consensus enrichment
+- **1.5** Static dashboard ✅ (renders on every post) · consensus enrichment **pending** (needs a consensus data source)
 - **2a** ✅ Fed research RSS digest (NBER, Liberty Street, SF/St Louis Fed, FEDS, Conversable Economist)
 - **2b** ✅ Macro-focus keyword filters + mainstream feeds (NYT/FT/Bloomberg/WSJ/Economist) + Gmail senders (Torsten Slok / Yardeni / Economist Today) + multi-account Gmail (jroypeterson + floridabusinessman)
 - **2c** ✅ Haiku 4.5 read-worthiness scorer + macro classifier + curated top picks + table of contents + per-source staleness probe
