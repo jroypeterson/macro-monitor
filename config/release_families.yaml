@@ -1321,6 +1321,102 @@ families:
       pdf_url_dated: null
       archive_path: "pdfs/archive/umich/{period}.pdf"
 
+  adp:
+    # === Metadata ===
+    # ADP National Employment Report — a private-payrolls read that lands ~2
+    # days before the BLS Employment Situation (the `payrolls` family above),
+    # widely watched as an NFP preview. Tier B: previews every Monday, posts a
+    # dedicated message only on a >=1.0sigma surprise so it doesn't double up on
+    # the payrolls headline every month.
+    #
+    # UNITS NOTE: the FRED ADP series are denominated in PERSONS, not thousands
+    # like PAYEMS. `display_unit: "K"` only APPENDS the suffix (it does not
+    # rescale), so it is intentionally omitted here — the monthly change renders
+    # as a full count (e.g. "+109,000") rather than the "+109K" shorthand. To
+    # match the payrolls "+K" style we'd need a rescaling transform; deferred.
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 194           # FRED release_id: ADP National Employment Report
+    release_time_et: "08:15"
+    source: fred
+
+    # === Display ===
+    display_name: "ADP National Employment Report"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    # ADPMNUSNERSA is the private nonfarm payroll LEVEL (persons). The market
+    # reads the monthly CHANGE, so anchor + display on mom_chg; yoy_pct for
+    # trend context.
+    headline:
+      - id: ADPMNUSNERSA
+        label: "Private payrolls change (ADP)"
+        primary_transform: mom_chg
+        also_display: [yoy_pct]
+
+    # === Components (thread) ===
+    # HC spine: ADP's Education & Health Services private-payroll cut (same
+    # persons units), shown as the monthly change.
+    components:
+      - id: ADPMINDEDHLTNERSA
+        label: "Education & Health Services (ADP)"
+        primary_transform: mom_chg
+        also_display: [yoy_pct]
+        tags: [healthcare]
+
+    # === Trend / z-score config ===
+    # Mirrors payrolls: the monthly change is stationary, so trend on the mean
+    # change and z-score the delta.
+    context:
+      anchor_series: ADPMNUSNERSA
+      anchor_transform: mom_chg
+      trends:
+        - {window_months: 3, stat: mean, label: "3mo avg change"}
+        - {window_months: 6, stat: mean, label: "6mo avg change"}
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: ADPMNUSNERSA, transform: yoy_pct, label: "ADP private payrolls YoY"}
+        highlight_latest: true
+        filename: "adp_5y_{period}.png"
+
+      thread:
+        - name: adp_hc_employment
+          type: line
+          lookback_years: 10
+          series:
+            - {id: ADPMINDEDHLTNERSA, transform: yoy_pct, label: "Education & Health Services YoY"}
+          highlight_latest: true
+          filename: "adp_hc_{period}.png"
+
+    # === Posting gate ===
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - ADPMNUSNERSA
+      component_hash:
+        - ADPMINDEDHLTNERSA
+
+    # === Reference reading ===
+    # ADP is a private release — no government PDF; the report lives on ADP's
+    # own site, so pdf URLs are null (the archiver no-ops gracefully).
+    agency:
+      release_page: "https://adpemploymentreport.com/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/adp/{period}.pdf"
+
 # === Families to add in later Phase 1 sub-phases ===
 # fomc_decision:   (1e — family_type: event)
 # fomc_minutes:    (1e — family_type: event)
