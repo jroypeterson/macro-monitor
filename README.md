@@ -1,4 +1,11 @@
 # macro-monitor
+> Disciplined US macro release feed to Slack `#macro`: posts Tier A indicators (CPI, payrolls, PCE, GDP, claims, JOLTS, PPI, ECI, FOMC) within ~1h of publication with charts, long-history context, and HC sub-cuts.
+
+- **Status:** live
+- **Runtime/trigger:** Python via GitHub Actions (release polling every 15 min 11:00–18:59 UTC weekdays; weekly preview Mon 08:00 UTC; reconcile Thu 15:30 UTC; heartbeat daily 12:00 UTC)
+- **Reads:** FRED API · Gmail research newsletters · RSS feeds · FOMC calendar
+- **Writes:** Slack `#macro` (releases + charts) · `#status-reports` (heartbeat) · Google Calendar (release events) · GitHub Pages HTML · `state/posts.db`
+- **Run:** `python -m macro_monitor.cli poll-all --post`  ·  **Entry points:** `macro_monitor/cli.py`, `macro_monitor/release_runner.py`, `macro_monitor/publishers/slack.py`
 
 Disciplined US macro data feed for `#macro` Slack channel. Posts Tier A
 releases (CPI, payrolls, PCE, GDP, claims, JOLTS, PPI, ECI, FOMC) within
