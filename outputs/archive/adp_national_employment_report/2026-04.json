@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "family_id": "adp_national_employment_report",
+  "family_display_name": "ADP National Employment Report",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-06-02T14:54:09.100607+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-02T14:54:06.830972+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ADPMNUSNERSA",
+      "label": "Private payrolls change (ADP)",
+      "primary": {
+        "transform": "mom_chg",
+        "value": 109000.0,
+        "raw_value": 132506000.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 0.4297440483860049
+        }
+      ],
+      "prior_primary": {
+        "transform": "mom_chg",
+        "value": 61000.0
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "ADPMINDEDHLTNERSA",
+      "label": "Education & Health Services (ADP)",
+      "transform": "mom_chg",
+      "value": 61000.0,
+      "tags": [
+        "healthcare"
+      ]
+    }
+  ],
+  "context": {
+    "anchor_series": "ADPMNUSNERSA",
+    "anchor_transform": "mom_chg",
+    "zscore": 0.3421918633084575,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo avg change",
+        "value": 0.05944029149705562,
+        "window_months": 3,
+        "stat": "mean"
+      },
+      {
+        "label": "6mo avg change",
+        "value": 0.04510315829459414,
+        "window_months": 6,
+        "stat": "mean"
+      }
+    ]
+  },
+  "charts": {
+    "main": "adp_5y_2026-04.png",
+    "adp_hc_employment": "adp_hc_2026-04.png"
+  },
+  "agency_pdf_url": null
+}
