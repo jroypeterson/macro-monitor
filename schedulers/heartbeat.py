@@ -151,11 +151,13 @@ def send_heartbeat(blocks: list[dict], text: str) -> tuple[bool, str]:
     webhook = os.environ.get("SLACK_WEBHOOK_STATUS_REPORTS")
     if not webhook:
         return False, "SLACK_WEBHOOK_STATUS_REPORTS not set"
-    import requests
+    from ..publishers.slack import requests_post_with_retry
 
     try:
-        resp = requests.post(
+        # Retry-with-backoff for transient-network resilience.
+        resp = requests_post_with_retry(
             webhook,
+            label="heartbeat",
             json={"text": text, "blocks": blocks},
             timeout=10,
         )

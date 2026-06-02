@@ -639,9 +639,11 @@ def _alert_status_reports_about_errors(
         }
     ]
     try:
-        import requests
-        requests.post(
+        # Retry-with-backoff for transient-network resilience.
+        from .publishers.slack import requests_post_with_retry
+        requests_post_with_retry(
             webhook,
+            label="status-reports source-health alert",
             json={"text": "macro_monitor source health", "blocks": blocks},
             timeout=10,
         )

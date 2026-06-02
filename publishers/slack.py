@@ -23,6 +23,48 @@ from ..posts_ledger import PostDecision
 from ..release_runner import ReleaseResult
 
 
+# ---------------------------------------------------------------------------
+# Transient-network resilience for webhook POSTs
+# ---------------------------------------------------------------------------
+# A momentary DNS/network blip (or, on a laptop, WiFi-not-yet-up on wake) can
+# kill the first POST to a Slack webhook. Retry-with-backoff rides through it.
+# We retry ONLY on transport-level errors (requests.exceptions.RequestException)
+# -- a successful-but-bad-status HTTP response is NOT retried; the caller keeps
+# its existing handling of the returned response. (2026-06-01.)
+_RETRY_BACKOFF = (5, 15, 30)  # seconds to wait BEFORE retry attempts 2..N
+
+
+def requests_post_with_retry(url, *, attempts=4, label="slack post", **kwargs):
+    """``requests.post`` with backoff retry on transient transport errors.
+
+    Re-raises the last ``RequestException`` if every attempt fails, so existing
+    callers keep their fallback / return-False behavior on a genuine outage --
+    this only adds resilience to momentary blips. A successful response (even a
+    non-2xx one) is returned as-is and never retried. The wall-clock sleep is
+    skipped under pytest (PYTEST_CURRENT_TEST) so network-error tests stay fast.
+    """
+    import time
+
+    import requests
+
+    last = None
+    for i in range(attempts):
+        try:
+            return requests.post(url, **kwargs)
+        except requests.exceptions.RequestException as e:
+            last = e
+            if i < attempts - 1:
+                delay = _RETRY_BACKOFF[min(i, len(_RETRY_BACKOFF) - 1)]
+                print(
+                    f"[{label}] attempt {i + 1}/{attempts} failed ({e}); "
+                    f"retrying in {delay}s",
+                    file=sys.stderr,
+                )
+                if not os.environ.get("PYTEST_CURRENT_TEST"):
+                    time.sleep(delay)
+    raise last
+
+
 @dataclass(frozen=True)
 class PublishedRelease:
     """What the publisher returns. Empty fields in dry-run mode."""
@@ -504,10 +546,10 @@ class SlackPublisher:
             print(f"[status-reports STUB] {message}", file=sys.stderr)
             return
         try:
-            import requests
-
-            requests.post(
+            # Retry-with-backoff for transient-network resilience.
+            requests_post_with_retry(
                 self.status_reports_webhook,
+                label="status-reports alert",
                 json={
                     "blocks": [
                         {
