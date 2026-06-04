@@ -515,6 +515,22 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_ahead_of_curve)
 
     sp = sub.add_parser(
+        "damodaran-inventory",
+        help="Render the Damodaran data inventory to readable/DAMODARAN_DATA_INVENTORY.md",
+    )
+    sp.set_defaults(func=cmd_damodaran_inventory)
+
+    sp = sub.add_parser(
+        "damodaran-fetch",
+        help="Download Damodaran's datasets (raw archive + latest + manifest)",
+    )
+    sp.add_argument(
+        "--relevance", default=None,
+        help="Comma-separated relevance filter, e.g. 'high,medium' (default: all)",
+    )
+    sp.set_defaults(func=cmd_damodaran_fetch)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -812,6 +828,30 @@ def cmd_inventory(args: argparse.Namespace) -> int:
     rel = out.relative_to(Path(__file__).parent)
     print(f"Rendered macro data inventory to {rel}")
     print(f"  Open: file://{out.absolute()}")
+    return 0
+
+
+def cmd_damodaran_inventory(args: argparse.Namespace) -> int:
+    """Render the Damodaran data inventory to readable/DAMODARAN_DATA_INVENTORY.md."""
+    from .damodaran.render import render
+
+    out = render()
+    print(f"Rendered Damodaran data inventory to {out.relative_to(Path(__file__).parent)}")
+    print(f"  Open: file://{out.absolute()}")
+    return 0
+
+
+def cmd_damodaran_fetch(args: argparse.Namespace) -> int:
+    """Download Damodaran's datasets (raw archive + latest mirror + manifest), then
+    refresh the inventory."""
+    from .damodaran.download import download
+    from .damodaran.render import render
+
+    rel = set(args.relevance.split(",")) if args.relevance else None
+    print(f"Downloading Damodaran datasets{' (relevance=' + args.relevance + ')' if rel else ''}...")
+    m = download(relevance=rel)
+    print(f"Done: {len(m['ok'])} ok · {len(m['missing'])} not-found · {len(m['error'])} error")
+    render()
     return 0
 
 

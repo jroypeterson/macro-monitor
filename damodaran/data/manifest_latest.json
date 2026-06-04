@@ -1,0 +1,1701 @@
+{
+  "fetched_utc": "2026-06-04T14:20:56+00:00",
+  "date": "2026-06-04",
+  "requested": 242,
+  "ok": [
+    {
+      "id": "histretSP",
+      "file": "histretSP.xls",
+      "bytes": 527872,
+      "category": "returns",
+      "region": "\u2014"
+    },
+    {
+      "id": "histimpl",
+      "file": "histimpl.xls",
+      "bytes": 113152,
+      "category": "erp",
+      "region": "\u2014"
+    },
+    {
+      "id": "ctryprem",
+      "file": "ctryprem.xlsx",
+      "bytes": 379527,
+      "category": "country_risk",
+      "region": "\u2014"
+    },
+    {
+      "id": "countrystats",
+      "file": "countrystats.xls",
+      "bytes": 94208,
+      "category": "country",
+      "region": "\u2014"
+    },
+    {
+      "id": "macro",
+      "file": "macro.xls",
+      "bytes": 75776,
+      "category": "macro",
+      "region": "\u2014"
+    },
+    {
+      "id": "ratings",
+      "file": "ratings.xls",
+      "bytes": 48640,
+      "category": "discount_rate",
+      "region": "\u2014"
+    },
+    {
+      "id": "countrytaxrates",
+      "file": "countrytaxrates.xls",
+      "bytes": 49152,
+      "category": "discount_rate",
+      "region": "\u2014"
+    },
+    {
+      "id": "mktcapmult",
+      "file": "mktcapmult.xlsx",
+      "bytes": 15307,
+      "category": "multiples",
+      "region": "\u2014"
+    },
+    {
+      "id": "mktcaprisk",
+      "file": "mktcaprisk.xlsx",
+      "bytes": 13492,
+      "category": "discount_rate",
+      "region": "\u2014"
+    },
+    {
+      "id": "macrodur",
+      "file": "macrodur.xls",
+      "bytes": 276992,
+      "category": "macro",
+      "region": "\u2014"
+    },
+    {
+      "id": "pe_US",
+      "file": "pedata.xls",
+      "bytes": 61952,
+      "category": "multiples",
+      "region": "US"
+    },
+    {
+      "id": "pe_Europe",
+      "file": "peEurope.xls",
+      "bytes": 61952,
+      "category": "multiples",
+      "region": "Europe"
+    },
+    {
+      "id": "pe_Japan",
+      "file": "peJapan.xls",
+      "bytes": 62464,
+      "category": "multiples",
+      "region": "Japan"
+    },
+    {
+      "id": "pe_Rest",
+      "file": "peRest.xls",
+      "bytes": 60928,
+      "category": "multiples",
+      "region": "Rest of World"
+    },
+    {
+      "id": "pe_emerg",
+      "file": "peemerg.xls",
+      "bytes": 61952,
+      "category": "multiples",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "pe_China",
+      "file": "peChina.xls",
+      "bytes": 61440,
+      "category": "multiples",
+      "region": "China"
+    },
+    {
+      "id": "pe_India",
+      "file": "peIndia.xls",
+      "bytes": 64000,
+      "category": "multiples",
+      "region": "India"
+    },
+    {
+      "id": "pe_Global",
+      "file": "peGlobal.xls",
+      "bytes": 63488,
+      "category": "multiples",
+      "region": "Global"
+    },
+    {
+      "id": "pbv_US",
+      "file": "pbvdata.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "US"
+    },
+    {
+      "id": "pbv_Europe",
+      "file": "pbvEurope.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Europe"
+    },
+    {
+      "id": "pbv_Japan",
+      "file": "pbvJapan.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Japan"
+    },
+    {
+      "id": "pbv_Rest",
+      "file": "pbvRest.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Rest of World"
+    },
+    {
+      "id": "pbv_emerg",
+      "file": "pbvemerg.xls",
+      "bytes": 53248,
+      "category": "multiples",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "pbv_China",
+      "file": "pbvChina.xls",
+      "bytes": 53248,
+      "category": "multiples",
+      "region": "China"
+    },
+    {
+      "id": "pbv_India",
+      "file": "pbvIndia.xls",
+      "bytes": 53248,
+      "category": "multiples",
+      "region": "India"
+    },
+    {
+      "id": "pbv_Global",
+      "file": "pbvGlobal.xls",
+      "bytes": 53248,
+      "category": "multiples",
+      "region": "Global"
+    },
+    {
+      "id": "ps_US",
+      "file": "psdata.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "US"
+    },
+    {
+      "id": "ps_Europe",
+      "file": "psEurope.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Europe"
+    },
+    {
+      "id": "ps_Japan",
+      "file": "psJapan.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Japan"
+    },
+    {
+      "id": "ps_Rest",
+      "file": "psRest.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "Rest of World"
+    },
+    {
+      "id": "ps_emerg",
+      "file": "psemerg.xls",
+      "bytes": 53248,
+      "category": "multiples",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "ps_China",
+      "file": "psChina.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "China"
+    },
+    {
+      "id": "ps_India",
+      "file": "psIndia.xls",
+      "bytes": 52736,
+      "category": "multiples",
+      "region": "India"
+    },
+    {
+      "id": "ps_Global",
+      "file": "psGlobal.xls",
+      "bytes": 53760,
+      "category": "multiples",
+      "region": "Global"
+    },
+    {
+      "id": "vebitda_US",
+      "file": "vebitda.xls",
+      "bytes": 58880,
+      "category": "multiples",
+      "region": "US"
+    },
+    {
+      "id": "vebitda_Europe",
+      "file": "vebitdaEurope.xls",
+      "bytes": 58368,
+      "category": "multiples",
+      "region": "Europe"
+    },
+    {
+      "id": "vebitda_Japan",
+      "file": "vebitdaJapan.xls",
+      "bytes": 58368,
+      "category": "multiples",
+      "region": "Japan"
+    },
+    {
+      "id": "vebitda_Rest",
+      "file": "vebitdaRest.xls",
+      "bytes": 57856,
+      "category": "multiples",
+      "region": "Rest of World"
+    },
+    {
+      "id": "vebitda_emerg",
+      "file": "vebitdaemerg.xls",
+      "bytes": 58368,
+      "category": "multiples",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "vebitda_China",
+      "file": "vebitdaChina.xls",
+      "bytes": 59392,
+      "category": "multiples",
+      "region": "China"
+    },
+    {
+      "id": "vebitda_India",
+      "file": "vebitdaIndia.xls",
+      "bytes": 58368,
+      "category": "multiples",
+      "region": "India"
+    },
+    {
+      "id": "vebitda_Global",
+      "file": "vebitdaGlobal.xls",
+      "bytes": 58368,
+      "category": "multiples",
+      "region": "Global"
+    },
+    {
+      "id": "betas_US",
+      "file": "betas.xls",
+      "bytes": 82432,
+      "category": "discount_rate",
+      "region": "US"
+    },
+    {
+      "id": "betas_Europe",
+      "file": "betaEurope.xls",
+      "bytes": 81408,
+      "category": "discount_rate",
+      "region": "Europe"
+    },
+    {
+      "id": "betas_Japan",
+      "file": "betaJapan.xls",
+      "bytes": 69632,
+      "category": "discount_rate",
+      "region": "Japan"
+    },
+    {
+      "id": "betas_Rest",
+      "file": "betaRest.xls",
+      "bytes": 71168,
+      "category": "discount_rate",
+      "region": "Rest of World"
+    },
+    {
+      "id": "betas_emerg",
+      "file": "betaemerg.xls",
+      "bytes": 81408,
+      "category": "discount_rate",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "betas_China",
+      "file": "betaChina.xls",
+      "bytes": 68608,
+      "category": "discount_rate",
+      "region": "China"
+    },
+    {
+      "id": "betas_India",
+      "file": "betaIndia.xls",
+      "bytes": 81408,
+      "category": "discount_rate",
+      "region": "India"
+    },
+    {
+      "id": "betas_Global",
+      "file": "betaGlobal.xls",
+      "bytes": 82944,
+      "category": "discount_rate",
+      "region": "Global"
+    },
+    {
+      "id": "totalbeta_US",
+      "file": "totalbeta.xls",
+      "bytes": 56320,
+      "category": "discount_rate",
+      "region": "US"
+    },
+    {
+      "id": "totalbeta_Europe",
+      "file": "totalbetaEurope.xls",
+      "bytes": 55808,
+      "category": "discount_rate",
+      "region": "Europe"
+    },
+    {
+      "id": "totalbeta_Japan",
+      "file": "totalbetaJapan.xls",
+      "bytes": 55808,
+      "category": "discount_rate",
+      "region": "Japan"
+    },
+    {
+      "id": "totalbeta_Rest",
+      "file": "totalbetaRest.xls",
+      "bytes": 57344,
+      "category": "discount_rate",
+      "region": "Rest of World"
+    },
+    {
+      "id": "totalbeta_emerg",
+      "file": "totalbetaemerg.xls",
+      "bytes": 55808,
+      "category": "discount_rate",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "totalbeta_China",
+      "file": "totalbetaChina.xls",
+      "bytes": 55808,
+      "category": "discount_rate",
+      "region": "China"
+    },
+    {
+      "id": "totalbeta_India",
+      "file": "totalbetaIndia.xls",
+      "bytes": 55808,
+      "category": "discount_rate",
+      "region": "India"
+    },
+    {
+      "id": "totalbeta_Global",
+      "file": "totalbetaGlobal.xls",
+      "bytes": 56320,
+      "category": "discount_rate",
+      "region": "Global"
+    },
+    {
+      "id": "wacc_US",
+      "file": "wacc.xls",
+      "bytes": 77312,
+      "category": "discount_rate",
+      "region": "US"
+    },
+    {
+      "id": "wacc_Europe",
+      "file": "waccEurope.xls",
+      "bytes": 78848,
+      "category": "discount_rate",
+      "region": "Europe"
+    },
+    {
+      "id": "wacc_Japan",
+      "file": "waccJapan.xls",
+      "bytes": 77312,
+      "category": "discount_rate",
+      "region": "Japan"
+    },
+    {
+      "id": "wacc_Rest",
+      "file": "waccRest.xls",
+      "bytes": 78336,
+      "category": "discount_rate",
+      "region": "Rest of World"
+    },
+    {
+      "id": "wacc_emerg",
+      "file": "waccemerg.xls",
+      "bytes": 78848,
+      "category": "discount_rate",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "wacc_China",
+      "file": "waccChina.xls",
+      "bytes": 77312,
+      "category": "discount_rate",
+      "region": "China"
+    },
+    {
+      "id": "wacc_India",
+      "file": "waccIndia.xls",
+      "bytes": 77312,
+      "category": "discount_rate",
+      "region": "India"
+    },
+    {
+      "id": "wacc_Global",
+      "file": "waccGlobal.xls",
+      "bytes": 75264,
+      "category": "discount_rate",
+      "region": "Global"
+    },
+    {
+      "id": "taxrate_US",
+      "file": "taxrate.xls",
+      "bytes": 59392,
+      "category": "discount_rate",
+      "region": "US"
+    },
+    {
+      "id": "taxrate_Europe",
+      "file": "taxrateEurope.xls",
+      "bytes": 61440,
+      "category": "discount_rate",
+      "region": "Europe"
+    },
+    {
+      "id": "taxrate_Japan",
+      "file": "taxrateJapan.xls",
+      "bytes": 58880,
+      "category": "discount_rate",
+      "region": "Japan"
+    },
+    {
+      "id": "taxrate_Rest",
+      "file": "taxrateRest.xls",
+      "bytes": 58368,
+      "category": "discount_rate",
+      "region": "Rest of World"
+    },
+    {
+      "id": "taxrate_emerg",
+      "file": "taxrateemerg.xls",
+      "bytes": 59904,
+      "category": "discount_rate",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "taxrate_China",
+      "file": "taxrateChina.xls",
+      "bytes": 59904,
+      "category": "discount_rate",
+      "region": "China"
+    },
+    {
+      "id": "taxrate_India",
+      "file": "taxrateIndia.xls",
+      "bytes": 59904,
+      "category": "discount_rate",
+      "region": "India"
+    },
+    {
+      "id": "taxrate_Global",
+      "file": "taxrateGlobal.xls",
+      "bytes": 59904,
+      "category": "discount_rate",
+      "region": "Global"
+    },
+    {
+      "id": "margin_US",
+      "file": "margin.xls",
+      "bytes": 78336,
+      "category": "fundamentals",
+      "region": "US"
+    },
+    {
+      "id": "margin_Europe",
+      "file": "marginEurope.xls",
+      "bytes": 77824,
+      "category": "fundamentals",
+      "region": "Europe"
+    },
+    {
+      "id": "margin_Japan",
+      "file": "marginJapan.xls",
+      "bytes": 77824,
+      "category": "fundamentals",
+      "region": "Japan"
+    },
+    {
+      "id": "margin_Rest",
+      "file": "marginRest.xls",
+      "bytes": 77824,
+      "category": "fundamentals",
+      "region": "Rest of World"
+    },
+    {
+      "id": "margin_emerg",
+      "file": "marginemerg.xls",
+      "bytes": 80384,
+      "category": "fundamentals",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "margin_China",
+      "file": "marginChina.xls",
+      "bytes": 77824,
+      "category": "fundamentals",
+      "region": "China"
+    },
+    {
+      "id": "margin_India",
+      "file": "marginIndia.xls",
+      "bytes": 78848,
+      "category": "fundamentals",
+      "region": "India"
+    },
+    {
+      "id": "margin_Global",
+      "file": "marginGlobal.xls",
+      "bytes": 78336,
+      "category": "fundamentals",
+      "region": "Global"
+    },
+    {
+      "id": "roe_US",
+      "file": "roe.xls",
+      "bytes": 49152,
+      "category": "fundamentals",
+      "region": "US"
+    },
+    {
+      "id": "roe_Europe",
+      "file": "roeEurope.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "Europe"
+    },
+    {
+      "id": "roe_Japan",
+      "file": "roeJapan.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "Japan"
+    },
+    {
+      "id": "roe_Rest",
+      "file": "roeRest.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "Rest of World"
+    },
+    {
+      "id": "roe_emerg",
+      "file": "roeemerg.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "roe_China",
+      "file": "roeChina.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "China"
+    },
+    {
+      "id": "roe_India",
+      "file": "roeIndia.xls",
+      "bytes": 48640,
+      "category": "fundamentals",
+      "region": "India"
+    },
+    {
+      "id": "roe_Global",
+      "file": "roeGlobal.xls",
+      "bytes": 49152,
+      "category": "fundamentals",
+      "region": "Global"
+    },
+    {
+      "id": "EVA_US",
+      "file": "EVA.xls",
+      "bytes": 94720,
+      "category": "fundamentals",
+      "region": "US"
+    },
+    {
+      "id": "EVA_Europe",
+      "file": "EVAEurope.xls",
+      "bytes": 94720,
+      "category": "fundamentals",
+      "region": "Europe"
+    },
+    {
+      "id": "EVA_Japan",
+      "file": "EVAJapan.xls",
+      "bytes": 92672,
+      "category": "fundamentals",
+      "region": "Japan"
+    },
+    {
+      "id": "EVA_Rest",
+      "file": "EVARest.xls",
+      "bytes": 93696,
+      "category": "fundamentals",
+      "region": "Rest of World"
+    },
+    {
+      "id": "EVA_emerg",
+      "file": "EVAemerg.xls",
+      "bytes": 97280,
+      "category": "fundamentals",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "EVA_China",
+      "file": "EVAChina.xls",
+      "bytes": 95232,
+      "category": "fundamentals",
+      "region": "China"
+    },
+    {
+      "id": "EVA_India",
+      "file": "EVAIndia.xls",
+      "bytes": 93184,
+      "category": "fundamentals",
+      "region": "India"
+    },
+    {
+      "id": "EVA_Global",
+      "file": "EVAGlobal.xls",
+      "bytes": 95232,
+      "category": "fundamentals",
+      "region": "Global"
+    },
+    {
+      "id": "mktcap_US",
+      "file": "MktCap.xls",
+      "bytes": 71168,
+      "category": "fundamentals",
+      "region": "US"
+    },
+    {
+      "id": "mktcap_Europe",
+      "file": "MktCapEurope.xls",
+      "bytes": 72192,
+      "category": "fundamentals",
+      "region": "Europe"
+    },
+    {
+      "id": "mktcap_Japan",
+      "file": "MktCapJapan.xls",
+      "bytes": 68096,
+      "category": "fundamentals",
+      "region": "Japan"
+    },
+    {
+      "id": "mktcap_Rest",
+      "file": "MktCapRest.xls",
+      "bytes": 76288,
+      "category": "fundamentals",
+      "region": "Rest of World"
+    },
+    {
+      "id": "mktcap_emerg",
+      "file": "MktCapemerg.xls",
+      "bytes": 71680,
+      "category": "fundamentals",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "mktcap_China",
+      "file": "MktCapChina.xls",
+      "bytes": 72192,
+      "category": "fundamentals",
+      "region": "China"
+    },
+    {
+      "id": "mktcap_India",
+      "file": "MktCapIndia.xls",
+      "bytes": 73216,
+      "category": "fundamentals",
+      "region": "India"
+    },
+    {
+      "id": "mktcap_Global",
+      "file": "MktCapGlobal.xls",
+      "bytes": 69632,
+      "category": "fundamentals",
+      "region": "Global"
+    },
+    {
+      "id": "fundgr_US",
+      "file": "fundgr.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "US"
+    },
+    {
+      "id": "fundgr_Europe",
+      "file": "fundgrEurope.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "Europe"
+    },
+    {
+      "id": "fundgr_Japan",
+      "file": "fundgrJapan.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "Japan"
+    },
+    {
+      "id": "fundgr_Rest",
+      "file": "fundgrRest.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "Rest of World"
+    },
+    {
+      "id": "fundgr_emerg",
+      "file": "fundgremerg.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "fundgr_China",
+      "file": "fundgrChina.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "China"
+    },
+    {
+      "id": "fundgr_India",
+      "file": "fundgrIndia.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "India"
+    },
+    {
+      "id": "fundgr_Global",
+      "file": "fundgrGlobal.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Global"
+    },
+    {
+      "id": "fundgrEB_US",
+      "file": "fundgrEB.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "US"
+    },
+    {
+      "id": "fundgrEB_Europe",
+      "file": "fundgrEBEurope.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Europe"
+    },
+    {
+      "id": "fundgrEB_Japan",
+      "file": "fundgrEBJapan.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Japan"
+    },
+    {
+      "id": "fundgrEB_Rest",
+      "file": "fundgrEBRest.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "Rest of World"
+    },
+    {
+      "id": "fundgrEB_emerg",
+      "file": "fundgrEBemerg.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "fundgrEB_China",
+      "file": "fundgrEBChina.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "China"
+    },
+    {
+      "id": "fundgrEB_India",
+      "file": "fundgrEBIndia.xls",
+      "bytes": 50688,
+      "category": "growth",
+      "region": "India"
+    },
+    {
+      "id": "fundgrEB_Global",
+      "file": "fundgrEBGlobal.xls",
+      "bytes": 51200,
+      "category": "growth",
+      "region": "Global"
+    },
+    {
+      "id": "histgr_US",
+      "file": "histgr.xls",
+      "bytes": 54272,
+      "category": "growth",
+      "region": "US"
+    },
+    {
+      "id": "histgr_Europe",
+      "file": "histgrEurope.xls",
+      "bytes": 53760,
+      "category": "growth",
+      "region": "Europe"
+    },
+    {
+      "id": "histgr_Japan",
+      "file": "histgrJapan.xls",
+      "bytes": 54784,
+      "category": "growth",
+      "region": "Japan"
+    },
+    {
+      "id": "histgr_Rest",
+      "file": "histgrRest.xls",
+      "bytes": 54784,
+      "category": "growth",
+      "region": "Rest of World"
+    },
+    {
+      "id": "histgr_emerg",
+      "file": "histgremerg.xls",
+      "bytes": 53248,
+      "category": "growth",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "histgr_China",
+      "file": "histgrChina.xls",
+      "bytes": 54784,
+      "category": "growth",
+      "region": "China"
+    },
+    {
+      "id": "histgr_India",
+      "file": "histgrIndia.xls",
+      "bytes": 54784,
+      "category": "growth",
+      "region": "India"
+    },
+    {
+      "id": "histgr_Global",
+      "file": "histgrGlobal.xls",
+      "bytes": 54272,
+      "category": "growth",
+      "region": "Global"
+    },
+    {
+      "id": "capex_US",
+      "file": "capex.xls",
+      "bytes": 59904,
+      "category": "cashflows",
+      "region": "US"
+    },
+    {
+      "id": "capex_Europe",
+      "file": "capexEurope.xls",
+      "bytes": 59392,
+      "category": "cashflows",
+      "region": "Europe"
+    },
+    {
+      "id": "capex_Japan",
+      "file": "capexJapan.xls",
+      "bytes": 58880,
+      "category": "cashflows",
+      "region": "Japan"
+    },
+    {
+      "id": "capex_Rest",
+      "file": "capexRest.xls",
+      "bytes": 58880,
+      "category": "cashflows",
+      "region": "Rest of World"
+    },
+    {
+      "id": "capex_emerg",
+      "file": "capexemerg.xls",
+      "bytes": 59904,
+      "category": "cashflows",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "capex_China",
+      "file": "capexChina.xls",
+      "bytes": 59392,
+      "category": "cashflows",
+      "region": "China"
+    },
+    {
+      "id": "capex_India",
+      "file": "capexIndia.xls",
+      "bytes": 60928,
+      "category": "cashflows",
+      "region": "India"
+    },
+    {
+      "id": "capex_Global",
+      "file": "capexGlobal.xls",
+      "bytes": 58880,
+      "category": "cashflows",
+      "region": "Global"
+    },
+    {
+      "id": "margin_rd_US",
+      "file": "R&D.xls",
+      "bytes": 61952,
+      "category": "cashflows",
+      "region": "US"
+    },
+    {
+      "id": "margin_rd_Europe",
+      "file": "R&DEurope.xls",
+      "bytes": 62464,
+      "category": "cashflows",
+      "region": "Europe"
+    },
+    {
+      "id": "margin_rd_Japan",
+      "file": "R&DJapan.xls",
+      "bytes": 62464,
+      "category": "cashflows",
+      "region": "Japan"
+    },
+    {
+      "id": "margin_rd_Rest",
+      "file": "R&DRest.xls",
+      "bytes": 60928,
+      "category": "cashflows",
+      "region": "Rest of World"
+    },
+    {
+      "id": "margin_rd_emerg",
+      "file": "R&Demerg.xls",
+      "bytes": 63488,
+      "category": "cashflows",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "margin_rd_China",
+      "file": "R&DChina.xls",
+      "bytes": 62976,
+      "category": "cashflows",
+      "region": "China"
+    },
+    {
+      "id": "margin_rd_India",
+      "file": "R&DIndia.xls",
+      "bytes": 60928,
+      "category": "cashflows",
+      "region": "India"
+    },
+    {
+      "id": "margin_rd_Global",
+      "file": "R&DGlobal.xls",
+      "bytes": 64000,
+      "category": "cashflows",
+      "region": "Global"
+    },
+    {
+      "id": "goodwill_US",
+      "file": "goodwill.xls",
+      "bytes": 53760,
+      "category": "cashflows",
+      "region": "US"
+    },
+    {
+      "id": "goodwill_Europe",
+      "file": "goodwillEurope.xls",
+      "bytes": 54272,
+      "category": "cashflows",
+      "region": "Europe"
+    },
+    {
+      "id": "goodwill_Japan",
+      "file": "goodwillJapan.xls",
+      "bytes": 52736,
+      "category": "cashflows",
+      "region": "Japan"
+    },
+    {
+      "id": "goodwill_Rest",
+      "file": "goodwillRest.xls",
+      "bytes": 53248,
+      "category": "cashflows",
+      "region": "Rest of World"
+    },
+    {
+      "id": "goodwill_emerg",
+      "file": "goodwillemerg.xls",
+      "bytes": 54272,
+      "category": "cashflows",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "goodwill_China",
+      "file": "goodwillChina.xls",
+      "bytes": 53760,
+      "category": "cashflows",
+      "region": "China"
+    },
+    {
+      "id": "goodwill_India",
+      "file": "goodwillIndia.xls",
+      "bytes": 52736,
+      "category": "cashflows",
+      "region": "India"
+    },
+    {
+      "id": "goodwill_Global",
+      "file": "goodwillGlobal.xls",
+      "bytes": 54272,
+      "category": "cashflows",
+      "region": "Global"
+    },
+    {
+      "id": "wcdata_US",
+      "file": "wcdata.xls",
+      "bytes": 51200,
+      "category": "cashflows",
+      "region": "US"
+    },
+    {
+      "id": "wcdata_Europe",
+      "file": "wcdataEurope.xls",
+      "bytes": 51200,
+      "category": "cashflows",
+      "region": "Europe"
+    },
+    {
+      "id": "wcdata_Japan",
+      "file": "wcdataJapan.xls",
+      "bytes": 50688,
+      "category": "cashflows",
+      "region": "Japan"
+    },
+    {
+      "id": "wcdata_Rest",
+      "file": "wcdataRest.xls",
+      "bytes": 51200,
+      "category": "cashflows",
+      "region": "Rest of World"
+    },
+    {
+      "id": "wcdata_emerg",
+      "file": "wcdataemerg.xls",
+      "bytes": 51200,
+      "category": "cashflows",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "wcdata_China",
+      "file": "wcdataChina.xls",
+      "bytes": 50688,
+      "category": "cashflows",
+      "region": "China"
+    },
+    {
+      "id": "wcdata_India",
+      "file": "wcdataIndia.xls",
+      "bytes": 50688,
+      "category": "cashflows",
+      "region": "India"
+    },
+    {
+      "id": "wcdata_Global",
+      "file": "wcdataGlobal.xls",
+      "bytes": 50688,
+      "category": "cashflows",
+      "region": "Global"
+    },
+    {
+      "id": "finflows_US",
+      "file": "finflows.xls",
+      "bytes": 64512,
+      "category": "cashflows",
+      "region": "US"
+    },
+    {
+      "id": "finflows_Europe",
+      "file": "finflowsEurope.xls",
+      "bytes": 64512,
+      "category": "cashflows",
+      "region": "Europe"
+    },
+    {
+      "id": "finflows_Japan",
+      "file": "finflowsJapan.xls",
+      "bytes": 64000,
+      "category": "cashflows",
+      "region": "Japan"
+    },
+    {
+      "id": "finflows_Rest",
+      "file": "finflowsRest.xls",
+      "bytes": 63488,
+      "category": "cashflows",
+      "region": "Rest of World"
+    },
+    {
+      "id": "finflows_emerg",
+      "file": "finflowsemerg.xls",
+      "bytes": 65024,
+      "category": "cashflows",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "finflows_China",
+      "file": "finflowsChina.xls",
+      "bytes": 64000,
+      "category": "cashflows",
+      "region": "China"
+    },
+    {
+      "id": "finflows_India",
+      "file": "finflowsIndia.xls",
+      "bytes": 64000,
+      "category": "cashflows",
+      "region": "India"
+    },
+    {
+      "id": "finflows_Global",
+      "file": "finflowsGlobal.xls",
+      "bytes": 65024,
+      "category": "cashflows",
+      "region": "Global"
+    },
+    {
+      "id": "divfcfe_US",
+      "file": "divfcfe.xls",
+      "bytes": 72192,
+      "category": "payout",
+      "region": "US"
+    },
+    {
+      "id": "divfcfe_Europe",
+      "file": "divfcfeEurope.xls",
+      "bytes": 72704,
+      "category": "payout",
+      "region": "Europe"
+    },
+    {
+      "id": "divfcfe_Japan",
+      "file": "divfcfeJapan.xls",
+      "bytes": 72192,
+      "category": "payout",
+      "region": "Japan"
+    },
+    {
+      "id": "divfcfe_Rest",
+      "file": "divfcfeRest.xls",
+      "bytes": 72704,
+      "category": "payout",
+      "region": "Rest of World"
+    },
+    {
+      "id": "divfcfe_emerg",
+      "file": "divfcfeemerg.xls",
+      "bytes": 73216,
+      "category": "payout",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "divfcfe_China",
+      "file": "divfcfeChina.xls",
+      "bytes": 71680,
+      "category": "payout",
+      "region": "China"
+    },
+    {
+      "id": "divfcfe_India",
+      "file": "divfcfeIndia.xls",
+      "bytes": 72192,
+      "category": "payout",
+      "region": "India"
+    },
+    {
+      "id": "divfcfe_Global",
+      "file": "divfcfeGlobal.xls",
+      "bytes": 73216,
+      "category": "payout",
+      "region": "Global"
+    },
+    {
+      "id": "divfund_US",
+      "file": "divfund.xls",
+      "bytes": 61952,
+      "category": "payout",
+      "region": "US"
+    },
+    {
+      "id": "divfund_Europe",
+      "file": "divfundEurope.xls",
+      "bytes": 66048,
+      "category": "payout",
+      "region": "Europe"
+    },
+    {
+      "id": "divfund_Japan",
+      "file": "divfundJapan.xls",
+      "bytes": 61440,
+      "category": "payout",
+      "region": "Japan"
+    },
+    {
+      "id": "divfund_Rest",
+      "file": "divfundRest.xls",
+      "bytes": 61440,
+      "category": "payout",
+      "region": "Rest of World"
+    },
+    {
+      "id": "divfund_emerg",
+      "file": "divfundemerg.xls",
+      "bytes": 62976,
+      "category": "payout",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "divfund_China",
+      "file": "divfundChina.xls",
+      "bytes": 61952,
+      "category": "payout",
+      "region": "China"
+    },
+    {
+      "id": "divfund_India",
+      "file": "divfundIndia.xls",
+      "bytes": 61440,
+      "category": "payout",
+      "region": "India"
+    },
+    {
+      "id": "divfund_Global",
+      "file": "divfundGlobal.xls",
+      "bytes": 63488,
+      "category": "payout",
+      "region": "Global"
+    },
+    {
+      "id": "debtdetails_US",
+      "file": "debtdetails.xls",
+      "bytes": 62464,
+      "category": "capital_structure",
+      "region": "US"
+    },
+    {
+      "id": "debtdetails_Europe",
+      "file": "debtdetailsEurope.xls",
+      "bytes": 62464,
+      "category": "capital_structure",
+      "region": "Europe"
+    },
+    {
+      "id": "debtdetails_Japan",
+      "file": "debtdetailsJapan.xls",
+      "bytes": 62464,
+      "category": "capital_structure",
+      "region": "Japan"
+    },
+    {
+      "id": "debtdetails_Rest",
+      "file": "debtdetailsRest.xls",
+      "bytes": 61440,
+      "category": "capital_structure",
+      "region": "Rest of World"
+    },
+    {
+      "id": "debtdetails_emerg",
+      "file": "debtdetailsemerg.xls",
+      "bytes": 62976,
+      "category": "capital_structure",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "debtdetails_China",
+      "file": "debtdetailsChina.xls",
+      "bytes": 61952,
+      "category": "capital_structure",
+      "region": "China"
+    },
+    {
+      "id": "debtdetails_India",
+      "file": "debtdetailsIndia.xls",
+      "bytes": 64000,
+      "category": "capital_structure",
+      "region": "India"
+    },
+    {
+      "id": "debtdetails_Global",
+      "file": "debtdetailsGlobal.xls",
+      "bytes": 62464,
+      "category": "capital_structure",
+      "region": "Global"
+    },
+    {
+      "id": "dbtfund_US",
+      "file": "dbtfund.xls",
+      "bytes": 75264,
+      "category": "capital_structure",
+      "region": "US"
+    },
+    {
+      "id": "dbtfund_Europe",
+      "file": "dbtfundEurope.xls",
+      "bytes": 75264,
+      "category": "capital_structure",
+      "region": "Europe"
+    },
+    {
+      "id": "dbtfund_Japan",
+      "file": "dbtfundJapan.xls",
+      "bytes": 74752,
+      "category": "capital_structure",
+      "region": "Japan"
+    },
+    {
+      "id": "dbtfund_Rest",
+      "file": "dbtfundRest.xls",
+      "bytes": 69120,
+      "category": "capital_structure",
+      "region": "Rest of World"
+    },
+    {
+      "id": "dbtfund_emerg",
+      "file": "dbtfundemerg.xls",
+      "bytes": 76288,
+      "category": "capital_structure",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "dbtfund_China",
+      "file": "dbtfundChina.xls",
+      "bytes": 75776,
+      "category": "capital_structure",
+      "region": "China"
+    },
+    {
+      "id": "dbtfund_India",
+      "file": "dbtfundIndia.xls",
+      "bytes": 74752,
+      "category": "capital_structure",
+      "region": "India"
+    },
+    {
+      "id": "dbtfund_Global",
+      "file": "dbtfundGlobal.xls",
+      "bytes": 76288,
+      "category": "capital_structure",
+      "region": "Global"
+    },
+    {
+      "id": "leaseeffect_US",
+      "file": "leaseeffect.xls",
+      "bytes": 79360,
+      "category": "capital_structure",
+      "region": "US"
+    },
+    {
+      "id": "leaseeffect_Europe",
+      "file": "leaseeffectEurope.xls",
+      "bytes": 78848,
+      "category": "capital_structure",
+      "region": "Europe"
+    },
+    {
+      "id": "leaseeffect_Japan",
+      "file": "leaseeffectJapan.xls",
+      "bytes": 77824,
+      "category": "capital_structure",
+      "region": "Japan"
+    },
+    {
+      "id": "leaseeffect_Rest",
+      "file": "leaseeffectRest.xls",
+      "bytes": 77312,
+      "category": "capital_structure",
+      "region": "Rest of World"
+    },
+    {
+      "id": "leaseeffect_emerg",
+      "file": "leaseeffectemerg.xls",
+      "bytes": 79360,
+      "category": "capital_structure",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "leaseeffect_China",
+      "file": "leaseeffectChina.xls",
+      "bytes": 77312,
+      "category": "capital_structure",
+      "region": "China"
+    },
+    {
+      "id": "leaseeffect_India",
+      "file": "leaseeffectIndia.xls",
+      "bytes": 76800,
+      "category": "capital_structure",
+      "region": "India"
+    },
+    {
+      "id": "leaseeffect_Global",
+      "file": "leaseeffectGlobal.xls",
+      "bytes": 79872,
+      "category": "capital_structure",
+      "region": "Global"
+    },
+    {
+      "id": "inshold_US",
+      "file": "inshold.xls",
+      "bytes": 51200,
+      "category": "governance",
+      "region": "US"
+    },
+    {
+      "id": "inshold_Europe",
+      "file": "insholdEurope.xls",
+      "bytes": 51712,
+      "category": "governance",
+      "region": "Europe"
+    },
+    {
+      "id": "inshold_Japan",
+      "file": "insholdJapan.xls",
+      "bytes": 51200,
+      "category": "governance",
+      "region": "Japan"
+    },
+    {
+      "id": "inshold_Rest",
+      "file": "insholdRest.xls",
+      "bytes": 51200,
+      "category": "governance",
+      "region": "Rest of World"
+    },
+    {
+      "id": "inshold_emerg",
+      "file": "insholdemerg.xls",
+      "bytes": 51200,
+      "category": "governance",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "inshold_China",
+      "file": "insholdChina.xls",
+      "bytes": 52736,
+      "category": "governance",
+      "region": "China"
+    },
+    {
+      "id": "inshold_India",
+      "file": "insholdIndia.xls",
+      "bytes": 52736,
+      "category": "governance",
+      "region": "India"
+    },
+    {
+      "id": "inshold_Global",
+      "file": "insholdGlobal.xls",
+      "bytes": 51200,
+      "category": "governance",
+      "region": "Global"
+    },
+    {
+      "id": "employee_US",
+      "file": "Employee.xls",
+      "bytes": 54784,
+      "category": "other",
+      "region": "US"
+    },
+    {
+      "id": "employee_Europe",
+      "file": "EmployeeEurope.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "Europe"
+    },
+    {
+      "id": "employee_Japan",
+      "file": "EmployeeJapan.xls",
+      "bytes": 53248,
+      "category": "other",
+      "region": "Japan"
+    },
+    {
+      "id": "employee_Rest",
+      "file": "EmployeeRest.xls",
+      "bytes": 54784,
+      "category": "other",
+      "region": "Rest of World"
+    },
+    {
+      "id": "employee_emerg",
+      "file": "Employeeemerg.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "employee_China",
+      "file": "EmployeeChina.xls",
+      "bytes": 55296,
+      "category": "other",
+      "region": "China"
+    },
+    {
+      "id": "employee_India",
+      "file": "EmployeeIndia.xls",
+      "bytes": 53248,
+      "category": "other",
+      "region": "India"
+    },
+    {
+      "id": "employee_Global",
+      "file": "EmployeeGlobal.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "Global"
+    },
+    {
+      "id": "dollar_Europe",
+      "file": "DollarEurope.xls",
+      "bytes": 67072,
+      "category": "other",
+      "region": "Europe"
+    },
+    {
+      "id": "dollar_Japan",
+      "file": "DollarJapan.xls",
+      "bytes": 65024,
+      "category": "other",
+      "region": "Japan"
+    },
+    {
+      "id": "dollar_Rest",
+      "file": "DollarRest.xls",
+      "bytes": 64512,
+      "category": "other",
+      "region": "Rest of World"
+    },
+    {
+      "id": "dollar_emerg",
+      "file": "Dollaremerg.xls",
+      "bytes": 67072,
+      "category": "other",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "dollar_China",
+      "file": "DollarChina.xls",
+      "bytes": 66048,
+      "category": "other",
+      "region": "China"
+    },
+    {
+      "id": "dollar_India",
+      "file": "DollarIndia.xls",
+      "bytes": 65024,
+      "category": "other",
+      "region": "India"
+    },
+    {
+      "id": "dollar_Global",
+      "file": "DollarGlobal.xls",
+      "bytes": 67584,
+      "category": "other",
+      "region": "Global"
+    },
+    {
+      "id": "optvar_US",
+      "file": "optvar.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "US"
+    },
+    {
+      "id": "optvar_Europe",
+      "file": "optvarEurope.xls",
+      "bytes": 55296,
+      "category": "other",
+      "region": "Europe"
+    },
+    {
+      "id": "optvar_Japan",
+      "file": "optvarJapan.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "Japan"
+    },
+    {
+      "id": "optvar_Rest",
+      "file": "optvarRest.xls",
+      "bytes": 53760,
+      "category": "other",
+      "region": "Rest of World"
+    },
+    {
+      "id": "optvar_emerg",
+      "file": "optvaremerg.xls",
+      "bytes": 54272,
+      "category": "other",
+      "region": "Emerging Markets"
+    },
+    {
+      "id": "optvar_China",
+      "file": "optvarChina.xls",
+      "bytes": 56320,
+      "category": "other",
+      "region": "China"
+    },
+    {
+      "id": "optvar_India",
+      "file": "optvarIndia.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "India"
+    },
+    {
+      "id": "optvar_Global",
+      "file": "optvarGlobal.xls",
+      "bytes": 55808,
+      "category": "other",
+      "region": "Global"
+    }
+  ],
+  "missing": [
+    {
+      "id": "dollar_US",
+      "url": "https://pages.stern.nyu.edu/~adamodar/pc/datasets/Dollar.xls"
+    }
+  ],
+  "error": []
+}

@@ -11,6 +11,11 @@ data/macro.db-shm
 state/*.json
 !state/.gitkeep
 
+# Damodaran raw data archive — mirrored locally + Dropbox-synced; refreshed annually,
+# ~70MB of .xls, not committed. manifest_latest.json IS tracked (small record).
+damodaran/data/raw/
+damodaran/data/latest/
+
 # Agency PDFs — non-blocking convenience mirror; gitignored per design.
 pdfs/
 
