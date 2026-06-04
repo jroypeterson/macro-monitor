@@ -1,0 +1,58 @@
+# Ahead of the Curve — chart specs. Each figure is rendered to a PNG by charts.py.
+# Phase 2 MVP: the 5 marquee charts that carry Ellis's thesis. Add the remaining
+# ~15 book figures here over time (config edit, no code change).
+#
+# Per-series fields:
+#   fred       — FRED series id (required)
+#   label      — legend label (required)
+#   transform  — 'yoy' (year-over-year rate of change, the Ellis lens) or 'raw' (level)
+#   divide_by  — optional FRED id to deflate by (real = nominal / deflator) BEFORE transform
+# Per-figure fields:
+#   bands      — 'bear' (curated bear_markets.yaml), 'recession' (FRED USREC), 'both', or 'none'
+#   lookback_years — window length (defaults to global default_lookback_years)
+
+default_lookback_years: 55
+source_note: "Source: FRED (BEA, BLS, Federal Reserve). Real series = nominal / deflator. Bands = S&P 500 bear markets. Recreation of charts from \"Ahead of the Curve\" (Joseph Ellis)."
+
+# Real series are derived nominal/deflator (the book's own definition) so the
+# history runs to 1959+, not the short current vintage of FRED's chained-dollar
+# series (PCEC96/PNFIC1 only start 2007). real PCE = PCE/PCEPI; real capex = PNFI/GDPDEF.
+figures:
+  - id: real_pce_yoy
+    title: "Real Consumer Spending (PCE), Year-over-Year"
+    subtitle: "The leading indicator: real PCE growth peaks and rolls over ahead of bear markets."
+    bands: bear
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+
+  - id: pce_leads_capex
+    title: "Consumer Spending Leads Capital Spending"
+    subtitle: "Real business capex (YoY) follows real PCE (YoY) with a lag — the book's core lead/lag."
+    bands: bear
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+      - {fred: PNFI, divide_by: GDPDEF, label: "Real Business Capex (YoY)", transform: yoy}
+
+  - id: pce_vs_employment
+    title: "Consumer Spending and Employment"
+    subtitle: "Employment growth (YoY) tracks and follows real consumer spending."
+    bands: bear
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+      - {fred: CE16OV, label: "Civilian Employment (YoY)", transform: yoy}
+
+  - id: real_earnings_vs_spending
+    title: "Real Hourly Earnings and Consumer Spending"
+    subtitle: "Real average hourly earnings (AHETPI deflated by CPI), YoY, vs real PCE."
+    bands: bear
+    series:
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+
+  - id: rates_vs_bears
+    title: "Interest Rates and Bear Markets"
+    subtitle: "Fed funds and the 10-year Treasury (levels) against the bear-market record."
+    bands: bear
+    series:
+      - {fred: FEDFUNDS, label: "Fed Funds Rate", transform: raw}
+      - {fred: GS10, label: "10-Year Treasury", transform: raw}

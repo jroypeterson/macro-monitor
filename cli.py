@@ -509,6 +509,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_inventory)
 
     sp = sub.add_parser(
+        "ahead-of-curve",
+        help="Build the Ahead-of-the-Curve charts (FRED) into readable/ahead_of_curve/",
+    )
+    sp.set_defaults(func=cmd_ahead_of_curve)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -806,6 +812,22 @@ def cmd_inventory(args: argparse.Namespace) -> int:
     rel = out.relative_to(Path(__file__).parent)
     print(f"Rendered macro data inventory to {rel}")
     print(f"  Open: file://{out.absolute()}")
+    return 0
+
+
+def cmd_ahead_of_curve(args: argparse.Namespace) -> int:
+    """Build the Ahead-of-the-Curve charts (FRED fetch + render) into
+    readable/ahead_of_curve/ and write the index.html gallery.
+    """
+    from .ahead_of_curve.build import build
+
+    rendered = build()
+    pngs = {k: v for k, v in rendered.items() if k != "index"}
+    print(f"Rendered {len(pngs)} chart(s):")
+    for name, path in pngs.items():
+        print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
+    if "index" in rendered:
+        print(f"\nOpen the gallery: file://{rendered['index'].absolute()}")
     return 0
 
 
