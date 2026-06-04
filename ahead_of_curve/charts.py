@@ -147,6 +147,7 @@ class SeriesSpec:
     label: str
     transform: str = "yoy"
     divide_by: str | None = None
+    unit: str | None = None  # override: 'pct' | 'pp' | 'index' | 'level'. None => inferred.
 
 
 @dataclass
@@ -177,6 +178,7 @@ def parse_figures(raw: dict) -> tuple[list[FigureSpec], str]:
                 fred=s["fred"], label=s["label"],
                 transform=s.get("transform", "yoy"),
                 divide_by=s.get("divide_by"),
+                unit=s.get("unit"),
             )
             for s in f.get("series", [])
         ]
@@ -191,10 +193,19 @@ def parse_figures(raw: dict) -> tuple[list[FigureSpec], str]:
     return figs, source_note
 
 
+def _fmt_value(v: float, unit: str) -> str:
+    if unit == "pp":
+        return f"{v:+.1f}pp"
+    if unit == "pct":
+        return f"{v:.1f}%"
+    return f"{v:,.1f}"  # index / level
+
+
 def _plot_series(spec: SeriesSpec, fetched: dict[str, pd.Series]) -> tuple[pd.Series, str]:
     """Return (values_series, unit) for one SeriesSpec. unit is 'pct' (percent: yoy
-    growth or rate levels) or 'pp' (percentage points: yoy acceleration)."""
-    unit = "pp" if spec.transform == "yoy_accel" else "pct"
+    growth or rate levels), 'pp' (percentage points: yoy acceleration), or 'index'/'level'
+    (plain numbers, e.g. a sentiment index). An explicit spec.unit overrides the default."""
+    unit = spec.unit or ("pp" if spec.transform == "yoy_accel" else "pct")
     base = fetched.get(spec.fred)
     if base is None or base.dropna().empty:
         return pd.Series(dtype=float), unit
@@ -204,10 +215,10 @@ def _plot_series(spec: SeriesSpec, fetched: dict[str, pd.Series]) -> tuple[pd.Se
             return pd.Series(dtype=float), unit
         base = real_deflate(base, deflator)
     if spec.transform == "yoy":
-        return yoy_pct(base), "pct"
+        return yoy_pct(base), unit
     if spec.transform == "yoy_accel":
-        return yoy_accel(base), "pp"
-    return base.dropna(), "pct"  # 'raw' here is rate levels (also a percent)
+        return yoy_accel(base), unit
+    return base.dropna(), unit  # 'raw' = rate level (pct) or index/level
 
 
 def render_figure(
@@ -220,7 +231,15 @@ def render_figure(
     source_note: str = "",
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    start = end - pd.DateOffset(years=fig_spec.lookback_years)
+
+    # Timeline mode: no economic series — a bands-only reference chart that spans the
+    # full available band history ("as far back as the data go").
+    is_timeline = len(fig_spec.series) == 0
+    if is_timeline:
+        band_starts = [b.start for b in bears] + [a for a, _ in recessions]
+        start = min(band_starts) if band_starts else end - pd.DateOffset(years=fig_spec.lookback_years)
+    else:
+        start = end - pd.DateOffset(years=fig_spec.lookback_years)
 
     fig, ax = plt.subplots(figsize=DEFAULT_FIGSIZE, dpi=DEFAULT_DPI)
 
@@ -230,13 +249,13 @@ def render_figure(
 
     if fig_spec.bands in ("bear", "both"):
         ranges = [_clip(b.start, b.end) for b in bears if b.end >= start and b.start <= end]
-        _shade(ax, ranges, _BEAR_COLOR, "Bear market")
+        _shade(ax, ranges, _BEAR_COLOR, "S&P 500 bear market")
     if fig_spec.bands in ("recession", "both"):
         ranges = [_clip(a, b) for a, b in recessions if b >= start and a <= end]
         _mark_recessions(ax, ranges, "NBER recession")
 
     units: set[str] = set()
-    plotted_any = False
+    plotted_any = is_timeline  # timeline has no series but is still a valid (bands-only) chart
     for idx, s in enumerate(fig_spec.series):
         values, unit = _plot_series(s, fetched)
         win = values[(values.index >= start) & (values.index <= end)]
@@ -248,7 +267,7 @@ def render_figure(
         ax.plot(win.index, win.values, label=s.label, color=color, linewidth=2.0, zorder=3)
         # Annotate the latest point with its value AND its date.
         last_d, last_v = win.index.max(), win.iloc[-1]
-        val_txt = f"{last_v:+.1f}pp" if unit == "pp" else f"{last_v:.1f}%"
+        val_txt = _fmt_value(last_v, unit)
         ax.scatter([last_d], [last_v], color=color, s=45, zorder=5,
                    edgecolor="white", linewidth=1.3)
         ax.annotate(f"{val_txt}  ({last_d:%b %Y})", xy=(last_d, last_v), xytext=(8, 0),
@@ -258,17 +277,25 @@ def render_figure(
     if not plotted_any:
         raise ValueError(f"figure {fig_spec.id!r}: no series produced data in window")
 
-    # Zero reference line + unit-appropriate y-axis formatting.
-    ax.axhline(0, color="#333333", linewidth=0.8, zorder=2)
-    if units == {"pp"}:
-        ax.yaxis.set_major_formatter(_PP_FORMATTER)
-    elif units == {"pct"}:
-        ax.yaxis.set_major_formatter(_PCT_FORMATTER)
+    if is_timeline:
+        # No data axis — hide the y-scale; bands span the full height.
+        ax.set_ylim(0, 1)
+        ax.set_yticks([])
+    else:
+        # Zero reference line + unit-appropriate y-axis formatting.
+        ax.axhline(0, color="#333333", linewidth=0.8, zorder=2)
+        if units == {"pp"}:
+            ax.yaxis.set_major_formatter(_PP_FORMATTER)
+        elif units == {"pct"}:
+            ax.yaxis.set_major_formatter(_PCT_FORMATTER)
 
-    # 5-year major tick marks (labeled), yearly minor ticks.
-    ax.xaxis.set_major_locator(mdates.YearLocator(5))
+    # Major tick marks (labeled) + yearly minor ticks. 5-yr by default; 10-yr for the
+    # very long timeline span so labels don't collide.
+    span_years = (end - start).days / 365.25
+    major_step = 10 if span_years > 80 else 5
+    ax.xaxis.set_major_locator(mdates.YearLocator(major_step))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax.xaxis.set_minor_locator(mdates.YearLocator(1))
+    ax.xaxis.set_minor_locator(mdates.YearLocator(5 if major_step == 10 else 1))
     ax.tick_params(axis="x", which="major", length=6, labelrotation=0)
     ax.tick_params(axis="x", which="minor", length=3)
 
@@ -277,7 +304,8 @@ def render_figure(
     if fig_spec.subtitle:
         ax.set_title(fig_spec.subtitle, fontsize=9.5, color="#444444", loc="left")
     fig.suptitle(fig_spec.title, fontsize=13, fontweight="bold", x=0.5, y=0.99)
-    ax.legend(loc="best")
+    if ax.get_legend_handles_labels()[0]:  # skip empty legend (e.g. bands-off timeline)
+        ax.legend(loc="best")
     ax.set_xlim(start, end)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])

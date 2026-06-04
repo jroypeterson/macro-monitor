@@ -149,7 +149,30 @@ def test_config_files_present_and_valid():
     d = Path(__file__).parent.parent / "ahead_of_curve"
     figs, _ = parse_figures(yaml.safe_load((d / "figures.yaml").read_text(encoding="utf-8")))
     bears = parse_bear_markets(yaml.safe_load((d / "bear_markets.yaml").read_text(encoding="utf-8")))
-    assert len(figs) == 8, "MVP 5 + 3 acceleration charts"
+    assert len(figs) >= 16, "5 MVP + 3 acceleration + Phase-3 figures + timeline"
     accel = [f for f in figs if any(s.transform == "yoy_accel" for s in f.series)]
     assert len(accel) == 3, "PCE, capex, real-earnings acceleration charts"
-    assert len(bears) >= 8, "expected the curated bear-market list"
+    timelines = [f for f in figs if not f.series]
+    assert len(timelines) == 1, "the bands-only bear/recession timeline"
+    assert len(bears) >= 12, "bear list extended back to the post-war era"
+
+
+def test_timeline_renders_without_series(tmp_path):
+    # A bands-only figure (no economic series) must render as a valid timeline.
+    fig = FigureSpec(id="tl", title="Timeline", bands="both", lookback_years=50, series=[])
+    bears = [charts.BearMarket(pd.Timestamp("1973-01-01"), pd.Timestamp("1974-10-01"), "")]
+    recs = [(pd.Timestamp("1980-01-01"), pd.Timestamp("1980-07-01"))]
+    out = render_figure(fig, {}, bears, recs, pd.Timestamp("2026-04-01"),
+                        tmp_path / "tl.png", "note")
+    assert out.exists() and out.stat().st_size > 1000
+
+
+def test_unit_override_index_series(tmp_path):
+    # An index-unit raw series renders with plain-number formatting (no % suffix).
+    from macro_monitor.ahead_of_curve.charts import _fmt_value, _plot_series
+    s = _monthly([70.0 + i * 0.1 for i in range(40)])
+    spec = charts.SeriesSpec(fred="UMCSENT", label="Sentiment", transform="raw", unit="index")
+    vals, unit = _plot_series(spec, {"UMCSENT": s})
+    assert unit == "index"
+    assert _fmt_value(72.3, "index") == "72.3"
+    assert _fmt_value(2.1, "pct") == "2.1%"

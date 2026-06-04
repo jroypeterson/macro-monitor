@@ -9,6 +9,7 @@ human-openable, one level below project root, flat filenames).
 """
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 import pandas as pd
@@ -28,8 +29,14 @@ _DIR = Path(__file__).parent
 _FIGURES_YAML = _DIR / "figures.yaml"
 _BEARS_YAML = _DIR / "bear_markets.yaml"
 _OUT_DIR = _DIR.parent / "readable" / "ahead_of_curve"
-# Pull deep history so the 35-year windows + YoY lookback are fully covered.
-_OBS_START = "1945-01-01"
+# Pull deep history: USREC reaches back to 1854 (for the full bear/recession timeline);
+# the economic series return their own natural start. The long windows + YoY lookback
+# are thus always fully covered.
+_OBS_START = "1854-01-01"
+
+# Band variants rendered per figure (for the gallery's on/off image-swap toggle).
+# Suffix "" is the default "both" image the gallery shows first.
+BAND_VARIANTS = {"both": "", "bear": "_bear", "recession": "_rec", "none": "_none"}
 
 
 def _load_yaml(path: Path) -> dict:
@@ -64,10 +71,18 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
             rows = "".join(f"<li>{line}</li>" for line in foot)
             foot_html = (f'<p class="foot-label">Release schedule</p>'
                          f'<ul class="foot">{rows}</ul>')
+        toggles = (
+            f'<div class="toggles">'
+            f'<label><input type="checkbox" class="bear" data-base="{f.id}" checked '
+            f'onchange="upd(this)"> S&amp;P bear bands</label>'
+            f'<label><input type="checkbox" class="rec" data-base="{f.id}" checked '
+            f'onchange="upd(this)"> NBER recessions</label></div>'
+        )
         cards.append(
             f'<section id="{f.id}"><h2>{f.title}</h2>'
             f'<p class="sub">{f.subtitle}</p>'
-            f'<img src="{png.name}" alt="{f.title}"/>'
+            f'{toggles}'
+            f'<img id="img_{f.id}" src="{png.name}" alt="{f.title}"/>'
             f'{foot_html}'
             f'<p class="back"><a href="#top">↑ back to index</a></p></section>'
         )
@@ -80,6 +95,9 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
         margin: 2rem auto; padding: 0 1rem; color: #222; }}
  h1 {{ font-size: 1.5rem; margin-bottom: .2rem; }}
  .meta {{ color: #777; font-size: .85rem; margin-bottom: 1.5rem; }}
+ .controls {{ background: #eef3f8; border: 1px solid #cfe0ef; border-radius: 8px;
+              padding: .7rem 1.2rem; margin-bottom: 1.2rem; font-size: .9rem; }}
+ .controls label {{ margin-right: 1.2rem; font-weight: 600; }}
  .toc {{ background: #f7f8fa; border: 1px solid #e2e2e2; border-radius: 8px;
          padding: .8rem 1.2rem; margin-bottom: 2.5rem; }}
  .toc ol {{ margin: .4rem 0 0; padding-left: 1.4rem; }}
@@ -88,7 +106,9 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
  .toc a:hover {{ text-decoration: underline; }}
  section {{ margin: 2.5rem 0; scroll-margin-top: 1rem; }}
  h2 {{ font-size: 1.15rem; margin-bottom: .2rem; }}
- .sub {{ color: #555; font-size: .9rem; margin: 0 0 .6rem; }}
+ .sub {{ color: #555; font-size: .9rem; margin: 0 0 .5rem; }}
+ .toggles {{ font-size: .82rem; color: #555; margin-bottom: .5rem; }}
+ .toggles label {{ margin-right: 1.1rem; }}
  img {{ width: 100%; border: 1px solid #e2e2e2; border-radius: 6px; }}
  .foot-label {{ font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
                 color: #999; margin: .8rem 0 .2rem; }}
@@ -102,8 +122,29 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
 <p class="meta">Recreation of Joseph Ellis's charts · year-over-year rate of change ·
 grey bands = S&amp;P 500 bear markets · dotted red = NBER recessions · {generated_label} ·
 {len(cards)} charts</p>
+<div class="controls">Show bands on ALL charts:
+ <label><input type="checkbox" id="allBear" checked onchange="setAll('bear', this.checked)"> S&amp;P bear bands</label>
+ <label><input type="checkbox" id="allRec" checked onchange="setAll('rec', this.checked)"> NBER recessions</label>
+</div>
 {toc}
 {''.join(cards)}
+<script>
+function suffix(base){{
+  var bear = document.querySelector('.bear[data-base="'+base+'"]').checked;
+  var rec  = document.querySelector('.rec[data-base="'+base+'"]').checked;
+  if (bear && rec) return '';
+  if (bear) return '_bear';
+  if (rec)  return '_rec';
+  return '_none';
+}}
+function upd(el){{
+  var base = el.dataset.base;
+  document.getElementById('img_'+base).src = base + suffix(base) + '.png';
+}}
+function setAll(cls, on){{
+  document.querySelectorAll('input.'+cls).forEach(function(b){{ b.checked = on; upd(b); }});
+}}
+</script>
 </body></html>"""
     out_path.write_text(html, encoding="utf-8")
     return out_path
@@ -135,15 +176,21 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
         end = max(all_idx) if all_idx else pd.Timestamp.today().normalize()
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Render four band variants per figure so the gallery can toggle overlays on/off
+    # (image-swap): both (default), bear-only, recession-only, none.
     rendered: dict[str, Path] = {}
     for f in figs:
-        try:
-            rendered[f.id] = render_figure(
-                f, fetched, bears, recessions, end,
-                out_dir / f"{f.id}.png", source_note=source_note,
-            )
-        except Exception as exc:  # noqa: BLE001
-            print(f"[WARN] ahead-of-curve: figure {f.id} failed: {exc}")
+        for bands_val, suffix in BAND_VARIANTS.items():
+            fv = dataclasses.replace(f, bands=bands_val)
+            try:
+                p = render_figure(
+                    fv, fetched, bears, recessions, end,
+                    out_dir / f"{f.id}{suffix}.png", source_note=source_note,
+                )
+                if bands_val == "both":
+                    rendered[f.id] = p  # the default image shown in the gallery
+            except Exception as exc:  # noqa: BLE001
+                print(f"[WARN] ahead-of-curve: figure {f.id} ({bands_val}) failed: {exc}")
 
     # Release-schedule footnotes (when the next data point is expected, for what period).
     release_ids = {SERIES_RELEASE_ID[s.fred] for f in figs for s in f.series

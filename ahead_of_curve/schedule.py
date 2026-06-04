@@ -16,15 +16,18 @@ from .charts import FigureSpec, _infer_periods_per_year
 
 # FRED series -> the FRED release that publishes it (release_id).
 SERIES_RELEASE_ID: dict[str, int] = {
-    "PCE": 54, "PCEPI": 54,        # Personal Income & Outlays
-    "PNFI": 53, "GDPDEF": 53,      # Gross Domestic Product
-    "CE16OV": 50, "AHETPI": 50,    # Employment Situation
-    "CPIAUCSL": 10,                # Consumer Price Index
-    "FEDFUNDS": 18, "GS10": 18,    # H.15 Selected Interest Rates
+    "PCE": 54, "PCEPI": 54,                 # Personal Income & Outlays
+    "PNFI": 53, "GDPDEF": 53, "GDP": 53,    # Gross Domestic Product
+    "CE16OV": 50, "AHETPI": 50, "UNRATE": 50,  # Employment Situation
+    "CPIAUCSL": 10,                         # Consumer Price Index
+    "FEDFUNDS": 18, "GS10": 18,             # H.15 Selected Interest Rates
+    "IPMAN": 14, "INDPRO": 14,              # G.17 Industrial Production
+    "UMCSENT": 175,                         # U. Michigan Consumer Sentiment
 }
 RELEASE_NAME: dict[int, str] = {
     54: "Personal Income & Outlays", 53: "GDP", 50: "Employment Situation",
-    10: "CPI", 18: "H.15 Selected Interest Rates",
+    10: "CPI", 18: "H.15 Selected Interest Rates", 14: "Industrial Production (G.17)",
+    175: "U. Michigan Consumer Sentiment",
 }
 _FREQ = {52: "weekly", 12: "monthly", 4: "quarterly", 1: "annual"}
 

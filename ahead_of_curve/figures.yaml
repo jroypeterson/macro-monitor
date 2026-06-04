@@ -79,3 +79,76 @@ figures:
     series:
       - {fred: FEDFUNDS, label: "Fed Funds Rate", transform: raw}
       - {fred: GS10, label: "10-Year Treasury", transform: raw}
+
+  # ---- Phase 3: more of the book's figures (FRED-doable; S&P-overlay figures
+  #      4-1/10-10/13-3 deferred pending a long S&P 500 history source). ----
+
+  - id: real_gdp_yoy
+    title: "Economic Growth and the Cycle"
+    subtitle: "Real GDP (YoY) = nominal GDP deflated by the GDP deflator. Book Fig 4-1."
+    bands: both
+    series:
+      - {fred: GDP, divide_by: GDPDEF, label: "Real GDP (YoY)", transform: yoy}
+
+  - id: pce_vs_industrial_production
+    title: "Consumer Spending and Industrial Production"
+    subtitle: "Industrial production (YoY) is a coincident output read that follows real PCE. Book Fig 7-3."
+    bands: both
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+      - {fred: IPMAN, label: "Industrial Production — mfg (YoY)", transform: yoy}
+
+  - id: industrial_production_vs_capex
+    title: "Industrial Production and Capital Spending"
+    subtitle: "Output and business investment (both YoY) move together through the cycle. Book Fig 7-5."
+    bands: both
+    series:
+      - {fred: IPMAN, label: "Industrial Production — mfg (YoY)", transform: yoy}
+      - {fred: PNFI, divide_by: GDPDEF, label: "Real Business Capex (YoY)", transform: yoy}
+
+  - id: real_earnings_vs_inflation
+    title: "Inflation and Real Hourly Earnings"
+    subtitle: "Real hourly earnings (YoY) vs CPI inflation (YoY) — inflation eats into real wage growth. Book Fig 10-4."
+    bands: both
+    series:
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
+      - {fred: CPIAUCSL, label: "CPI Inflation (YoY)", transform: yoy}
+
+  - id: employment_borrowing_earnings
+    title: "Employment, Borrowing and Hourly Earnings"
+    subtitle: "Employment, total domestic debt, and real hourly earnings (all YoY). Book Fig 10-9."
+    bands: both
+    series:
+      - {fred: CE16OV, label: "Civilian Employment (YoY)", transform: yoy}
+      - {fred: TCMDO, label: "Total Domestic Debt (YoY)", transform: yoy}
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
+
+  - id: consumer_sentiment
+    title: "Consumer Sentiment"
+    subtitle: "University of Michigan Index of Consumer Sentiment (level, 1966Q1=100). Book Fig 9-3."
+    bands: both
+    series:
+      - {fred: UMCSENT, label: "U. Michigan Consumer Sentiment", transform: raw, unit: index}
+
+  - id: unemployment_vs_bears
+    title: "Unemployment and Bear Markets"
+    subtitle: "The unemployment rate (level) against the bear-market and recession record. Book Fig 11-8."
+    bands: both
+    series:
+      - {fred: UNRATE, label: "Unemployment Rate", transform: raw}
+
+  - id: inflation_vs_rates
+    title: "Inflation and Interest Rates"
+    subtitle: "CPI inflation (YoY) vs the 10-year Treasury yield (level). Book Fig 12-4."
+    bands: both
+    series:
+      - {fred: CPIAUCSL, label: "CPI Inflation (YoY)", transform: yoy}
+      - {fred: GS10, label: "10-Year Treasury", transform: raw}
+
+  # ---- Reference: a bands-only timeline of every bear market + recession,
+  #      as far back as the data go (NBER recessions reach to the 1850s). ----
+  - id: bear_recession_timeline
+    title: "U.S. Bear Markets and Recessions — Timeline"
+    subtitle: "Reference: every S&P 500 bear market (grey) and NBER recession (dotted red), as far back as the data go. No economic series — just the cycle backdrop."
+    bands: both
+    series: []
