@@ -1,4 +1,4 @@
-"""Monday weekly preview.
+"""Sunday week-ahead preview.
 
 Goal 1 of the project: "This Week" (Tier A + B, detailed) AND
 "Looking Ahead — Next 4 Weeks" (Tier A only, compact) in a single
@@ -97,7 +97,7 @@ def build_preview_payload(
     client: FREDClient,
     today: date | None = None,
 ) -> tuple[str, list[dict]]:
-    """Build the Monday preview message: text + Block Kit blocks.
+    """Build the week-ahead preview message: text + Block Kit blocks.
 
     Returns (text_fallback, blocks). The text fallback is also used for
     the dry-run preview.

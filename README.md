@@ -7,7 +7,7 @@
 3. **Top-down market data** — `damodaran/` (risk-free, ERP, valuation multiples by market) + `market/` (Ken French factors, AQR factor premia, Shiller CAPE). Mirror/inventory now; charts later.
 
 - **Status:** live
-- **Runtime/trigger:** Python via GitHub Actions (release polling every 15 min 11:00–18:59 UTC weekdays; weekly preview Mon 08:00 UTC; reconcile Thu 15:30 UTC; heartbeat daily 12:00 UTC)
+- **Runtime/trigger:** Python via GitHub Actions (release polling every 15 min 11:00–18:59 UTC weekdays; weekly preview Sun 07:00 ET; reconcile Thu 15:30 UTC; heartbeat daily 12:00 UTC)
 - **Reads:** FRED API · Gmail research newsletters · RSS feeds · FOMC calendar · NYU Stern (Damodaran) · Ken French / AQR / Shiller data
 - **Writes:** Slack `#macro-and-markets` (releases + charts) · `#status-reports` (heartbeat) · Google Calendar (release events) · GitHub Pages HTML · `state/posts.db`
 - **Run:** `python -m macro_monitor.cli poll-all --post`  ·  **Entry points:** `macro_monitor/cli.py`, `macro_monitor/release_runner.py`, `macro_monitor/publishers/slack.py`
@@ -36,7 +36,7 @@ python -m macro_monitor.cli validate-config
 # Dry-run a release post against the most recent CPI period:
 python -m macro_monitor.cli post-release --family cpi --dry-run
 
-# Dry-run a Monday weekly preview:
+# Dry-run the Sunday week-ahead preview:
 python -m macro_monitor.cli weekly-preview --dry-run
 
 # Re-run the releases that landed on a given date (catch-up; dry-run default):
@@ -49,7 +49,7 @@ See Appendix B of the plan for the full table. Highlights:
 
 | Surface | Output |
 |---|---|
-| Slack `#macro` | Monday preview (this week + next 4 weeks); per-release main post with chart; threaded long-history + components + HC employment subplots; REVISED posts on revision; annual benchmark summary; quarterly Annual Macro Calendar HTML |
+| Slack `#macro` | Sunday week-ahead preview (this week + next 4 weeks); per-release main post with chart; threaded long-history + components + HC employment subplots; REVISED posts on revision; annual benchmark summary; quarterly Annual Macro Calendar HTML |
 | Slack `#status-reports` | Daily Tier B heartbeat; operator alerts on failure |
 | Google Calendar (`floridabusinessman@gmail.com`) | Tier A release events on the dedicated "Macro Calendar" (shared earnings-agent service account; no user OAuth) |
 | Local: `outputs/archive/<family>/<period>.{json,html}` | Per-period structured snapshot + browsable HTML report |
@@ -117,7 +117,7 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 ```
 .github/workflows/
   release_polling.yml      */15 11-18 UTC Mon-Fri (covers ET morning + 14:00 FOMC)
-  weekly_preview.yml       Monday 07:00 ET (this week + next 4 weeks)
+  weekly_preview.yml       Sunday 07:00 ET (this week + next 4 weeks)
   heartbeat.yml            Daily 08:00 ET to #status-reports
   annual_calendar.yml      Jan 1 + Apr/Jul/Oct 1 (quarterly refresh)
   calendar_backfill.yml    Sunday 21:00 ET — rolling 90-day Google Calendar push

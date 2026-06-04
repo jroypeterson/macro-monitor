@@ -230,7 +230,7 @@ def cmd_post_release(args: argparse.Namespace) -> int:
 
 
 def cmd_weekly_preview(args: argparse.Namespace) -> int:
-    """Build + post the Monday weekly preview (this week + next 4 weeks)."""
+    """Build + post the Sunday week-ahead preview (this week + next 4 weeks)."""
     path = Path(args.config) if args.config else default_config_path()
     families = load_config(path)
     validate_all_or_raise(families)
@@ -417,7 +417,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.set_defaults(func=cmd_post_release)
 
-    sp = sub.add_parser("weekly-preview", help="Post the Monday weekly preview")
+    sp = sub.add_parser("weekly-preview", help="Post the Sunday week-ahead preview")
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_weekly_preview)

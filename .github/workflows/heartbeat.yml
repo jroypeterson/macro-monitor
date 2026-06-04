@@ -1,8 +1,8 @@
 name: Heartbeat
 
 # Daily Tier B heartbeat to #status-reports per HEALTH_REPORTING.md §4.8.
-# Fires at 08:00 ET daily — just after the weekly-preview slot so the
-# preview's "did the Monday post land" question is answered by the
+# Fires at 08:00 ET daily — just after the Sunday weekly-preview slot so
+# the preview's "did the Sunday post land" question is answered by the
 # heartbeat the same morning.
 
 on:

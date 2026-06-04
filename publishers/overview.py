@@ -109,7 +109,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "type": "mrkdwn",
                 "text": (
                     "*When and what posts*\n"
-                    "• 📅 *Mon 07:00 ET* — week-ahead + 4-week lookout\n"
+                    "• 📅 *Sun 07:00 ET* — week-ahead + 4-week lookout\n"
                     "• 🔴 *Release time* — main post with headline + 5y chart; "
                     "thread with long-history + components + (for payrolls) "
                     "HC-employment two-pane chart\n"
