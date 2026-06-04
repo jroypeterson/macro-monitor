@@ -5,7 +5,9 @@
 # Per-series fields:
 #   fred       — FRED series id (required)
 #   label      — legend label (required)
-#   transform  — 'yoy' (year-over-year rate of change, the Ellis lens) or 'raw' (level)
+#   transform  — 'yoy' (year-over-year rate of change, the Ellis lens),
+#                'yoy_accel' (rate of change OF the YoY — 12-mo change in the growth
+#                rate, in percentage points; +ve = accelerating), or 'raw' (level)
 #   divide_by  — optional FRED id to deflate by (real = nominal / deflator) BEFORE transform
 # Per-figure fields:
 #   bands      — 'bear' (curated bear_markets.yaml), 'recession' (FRED USREC), 'both', or 'none'
@@ -25,6 +27,13 @@ figures:
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
 
+  - id: pce_accel
+    title: "Real Consumer Spending — Acceleration"
+    subtitle: "Rate of change of the real PCE YoY growth rate (12-mo change, pp). Above zero = accelerating."
+    bands: bear
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE growth — Δ (pp)", transform: yoy_accel}
+
   - id: pce_leads_capex
     title: "Consumer Spending Leads Capital Spending"
     subtitle: "Real business capex (YoY) follows real PCE (YoY) with a lag — the book's core lead/lag."
@@ -32,6 +41,13 @@ figures:
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
       - {fred: PNFI, divide_by: GDPDEF, label: "Real Business Capex (YoY)", transform: yoy}
+
+  - id: capex_accel
+    title: "Real Capital Spending — Acceleration"
+    subtitle: "Rate of change of the real business-capex YoY growth rate (12-mo change, pp). Above zero = accelerating."
+    bands: bear
+    series:
+      - {fred: PNFI, divide_by: GDPDEF, label: "Real capex growth — Δ (pp)", transform: yoy_accel}
 
   - id: pce_vs_employment
     title: "Consumer Spending and Employment"
@@ -48,6 +64,13 @@ figures:
     series:
       - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+
+  - id: earnings_accel
+    title: "Real Hourly Earnings — Acceleration"
+    subtitle: "Rate of change of the real-hourly-earnings YoY growth rate (12-mo change, pp). Above zero = accelerating."
+    bands: bear
+    series:
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real earnings growth — Δ (pp)", transform: yoy_accel}
 
   - id: rates_vs_bears
     title: "Interest Rates and Bear Markets"

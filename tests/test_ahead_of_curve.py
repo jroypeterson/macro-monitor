@@ -107,10 +107,27 @@ def test_render_figure_smoke(tmp_path):
     assert out.exists() and out.stat().st_size > 1000
 
 
+def test_yoy_accel_sign_tracks_acceleration():
+    from macro_monitor.ahead_of_curve.charts import yoy_accel
+    # Build a series whose YoY growth steadily accelerates, then decelerates.
+    # 48 months: first 24 grow at an increasing rate, last 24 at a decreasing rate.
+    vals = [100.0]
+    rates = [0.005 * i for i in range(24)] + [0.005 * (24 - i) for i in range(24)]
+    for r in rates:
+        vals.append(vals[-1] * (1 + r))
+    s = _monthly(vals)
+    accel = yoy_accel(s)
+    # Acceleration is positive while growth is speeding up, negative while slowing.
+    assert (accel.iloc[: len(accel) // 2] > 0).mean() > 0.7
+    assert accel.iloc[-1] < 0
+
+
 def test_config_files_present_and_valid():
     import yaml
     d = Path(__file__).parent.parent / "ahead_of_curve"
     figs, _ = parse_figures(yaml.safe_load((d / "figures.yaml").read_text(encoding="utf-8")))
     bears = parse_bear_markets(yaml.safe_load((d / "bear_markets.yaml").read_text(encoding="utf-8")))
-    assert len(figs) == 5, "MVP ships 5 figures"
+    assert len(figs) == 8, "MVP 5 + 3 acceleration charts"
+    accel = [f for f in figs if any(s.transform == "yoy_accel" for s in f.series)]
+    assert len(accel) == 3, "PCE, capex, real-earnings acceleration charts"
     assert len(bears) >= 8, "expected the curated bear-market list"

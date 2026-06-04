@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")  # headless: no display needed for file output
+import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
@@ -23,6 +24,7 @@ from ..charts.style import CYCLE, DEFAULT_DPI, DEFAULT_FIGSIZE  # noqa: E402
 _BEAR_COLOR = "#9AA0A6"       # grey bands (bear markets, primary)
 _RECESSION_COLOR = "#C0504D"  # muted red bands (NBER recessions, secondary)
 _PCT_FORMATTER = plt.FuncFormatter(lambda v, _pos: f"{v:.0f}%")
+_PP_FORMATTER = plt.FuncFormatter(lambda v, _pos: f"{v:+.0f}pp")
 
 
 # --------------------------------------------------------------------------- #
@@ -50,6 +52,16 @@ def yoy_pct(series: pd.Series) -> pd.Series:
     s = series.dropna()
     periods = _infer_periods_per_year(s)
     return (s.pct_change(periods) * 100).dropna()
+
+
+def yoy_accel(series: pd.Series) -> pd.Series:
+    """Rate of change of the YoY growth rate: the 12-month change in the YoY series,
+    in percentage points. Positive => growth is accelerating, negative => decelerating.
+    Answers the book's 'is the rate of change increasing or decreasing?' The 12-month
+    differencing smooths the otherwise-noisy month-to-month derivative."""
+    s = series.dropna()
+    periods = _infer_periods_per_year(s)
+    return yoy_pct(s).diff(periods).dropna()
 
 
 def real_deflate(nominal: pd.Series, deflator: pd.Series) -> pd.Series:
@@ -165,19 +177,23 @@ def parse_figures(raw: dict) -> tuple[list[FigureSpec], str]:
     return figs, source_note
 
 
-def _plot_series(spec: SeriesSpec, fetched: dict[str, pd.Series]) -> tuple[pd.Series, bool]:
-    """Return (values_series, is_pct) for one SeriesSpec. is_pct => format axis as %."""
+def _plot_series(spec: SeriesSpec, fetched: dict[str, pd.Series]) -> tuple[pd.Series, str]:
+    """Return (values_series, unit) for one SeriesSpec. unit is 'pct' (percent: yoy
+    growth or rate levels) or 'pp' (percentage points: yoy acceleration)."""
+    unit = "pp" if spec.transform == "yoy_accel" else "pct"
     base = fetched.get(spec.fred)
     if base is None or base.dropna().empty:
-        return pd.Series(dtype=float), spec.transform == "yoy"
+        return pd.Series(dtype=float), unit
     if spec.divide_by:
         deflator = fetched.get(spec.divide_by)
         if deflator is None or deflator.dropna().empty:
-            return pd.Series(dtype=float), True
+            return pd.Series(dtype=float), unit
         base = real_deflate(base, deflator)
     if spec.transform == "yoy":
-        return yoy_pct(base), True
-    return base.dropna(), True  # 'raw' here is rate levels (also a percent)
+        return yoy_pct(base), "pct"
+    if spec.transform == "yoy_accel":
+        return yoy_accel(base), "pp"
+    return base.dropna(), "pct"  # 'raw' here is rate levels (also a percent)
 
 
 def render_figure(
@@ -205,31 +221,42 @@ def render_figure(
         ranges = [_clip(a, b) for a, b in recessions if b >= start and a <= end]
         _shade(ax, ranges, _RECESSION_COLOR, "NBER recession")
 
-    all_pct = True
+    units: set[str] = set()
     plotted_any = False
     for idx, s in enumerate(fig_spec.series):
-        values, is_pct = _plot_series(s, fetched)
-        all_pct = all_pct and is_pct
+        values, unit = _plot_series(s, fetched)
         win = values[(values.index >= start) & (values.index <= end)]
         if win.empty:
             continue
         plotted_any = True
+        units.add(unit)
         color = CYCLE[idx % len(CYCLE)]
         ax.plot(win.index, win.values, label=s.label, color=color, linewidth=2.0, zorder=3)
-        # Annotate the latest point.
+        # Annotate the latest point with its value AND its date.
         last_d, last_v = win.index.max(), win.iloc[-1]
+        val_txt = f"{last_v:+.1f}pp" if unit == "pp" else f"{last_v:.1f}%"
         ax.scatter([last_d], [last_v], color=color, s=45, zorder=5,
                    edgecolor="white", linewidth=1.3)
-        ax.annotate(f"{last_v:.1f}%", xy=(last_d, last_v), xytext=(8, 0),
+        ax.annotate(f"{val_txt}  ({last_d:%b %Y})", xy=(last_d, last_v), xytext=(8, 0),
                     textcoords="offset points", fontsize=9, color=color,
                     weight="bold", va="center")
 
     if not plotted_any:
         raise ValueError(f"figure {fig_spec.id!r}: no series produced data in window")
 
-    if all_pct:
-        ax.axhline(0, color="#333333", linewidth=0.8, zorder=2)
+    # Zero reference line + unit-appropriate y-axis formatting.
+    ax.axhline(0, color="#333333", linewidth=0.8, zorder=2)
+    if units == {"pp"}:
+        ax.yaxis.set_major_formatter(_PP_FORMATTER)
+    elif units == {"pct"}:
         ax.yaxis.set_major_formatter(_PCT_FORMATTER)
+
+    # 5-year major tick marks (labeled), yearly minor ticks.
+    ax.xaxis.set_major_locator(mdates.YearLocator(5))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax.xaxis.set_minor_locator(mdates.YearLocator(1))
+    ax.tick_params(axis="x", which="major", length=6, labelrotation=0)
+    ax.tick_params(axis="x", which="minor", length=3)
 
     # Subtitle as a left-aligned axes title; main title as the figure suptitle
     # above it (avoids the two colliding at the top of the axes).
@@ -239,7 +266,6 @@ def render_figure(
     ax.legend(loc="best")
     ax.set_xlim(start, end)
 
-    fig.autofmt_xdate()
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     if source_note:
         fig.text(0.5, 0.005, source_note, ha="center", fontsize=7.5, color="#999999")
