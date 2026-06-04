@@ -145,6 +145,33 @@ figures:
       - {fred: CPIAUCSL, label: "CPI Inflation (YoY)", transform: yoy}
       - {fred: GS10, label: "10-Year Treasury", transform: raw}
 
+  # ---- S&P 500 overlay figures (dual-axis; S&P 500 level on the right, log scale).
+  #      S&P history is yfinance ^GSPC (daily resampled to monthly, back to ~1928). ----
+
+  - id: growth_and_stock_market
+    title: "Economic Growth, Recessions and the Stock Market"
+    subtitle: "Real GDP growth (YoY, left axis) and the S&P 500 (level, log, right axis). Book Fig 4-1."
+    bands: both
+    series:
+      - {fred: GDP, divide_by: GDPDEF, label: "Real GDP (YoY)", transform: yoy}
+      - {fred: GSPC, label: "S&P 500 (right, log)", transform: raw, unit: level, axis: right, scale: log}
+
+  - id: real_earnings_and_stock_market
+    title: "Real Hourly Earnings and the Stock Market"
+    subtitle: "Real hourly earnings (YoY, left axis) vs the S&P 500 (level, log, right axis). Book Fig 10-10."
+    bands: both
+    series:
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
+      - {fred: GSPC, label: "S&P 500 (right, log)", transform: raw, unit: level, axis: right, scale: log}
+
+  - id: long_rates_and_stock_market
+    title: "Long-Term Interest Rates and the Stock Market"
+    subtitle: "10-year Treasury yield (level, left axis) and the S&P 500 (level, log, right axis). Book Fig 13-3."
+    bands: both
+    series:
+      - {fred: GS10, label: "10-Year Treasury", transform: raw}
+      - {fred: GSPC, label: "S&P 500 (right, log)", transform: raw, unit: level, axis: right, scale: log}
+
   # ---- Reference: a bands-only timeline of every bear market + recession,
   #      as far back as the data go (NBER recessions reach to the 1850s). ----
   - id: bear_recession_timeline

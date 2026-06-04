@@ -13,6 +13,8 @@ google-api-python-client>=2.120
 feedparser>=6.0
 # Phase 2c — LLM-based read-worthiness scoring for the research digest
 anthropic>=0.40
+# Ahead-of-the-Curve: long S&P 500 history (^GSPC) for the stock-market overlay charts
+yfinance>=0.2
 
 # Dev
 pytest>=8.0

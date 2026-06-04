@@ -24,6 +24,7 @@ from .charts import (
     render_figure,
 )
 from .schedule import SERIES_RELEASE_ID, figure_footnotes, next_release_dates
+from .sp500 import SP500_KEY, fetch_sp500_monthly
 
 _DIR = Path(__file__).parent
 _FIGURES_YAML = _DIR / "figures.yaml"
@@ -160,13 +161,19 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
         needed |= f.fred_ids()
 
     client = client or FREDClient()
-    fetched = fetch_series(client, needed)
+    fetched = fetch_series(client, needed - {SP500_KEY})
+    # S&P 500 long history comes from yfinance, not FRED (FRED's SP500 is ~10yr only).
+    if SP500_KEY in needed:
+        try:
+            fetched[SP500_KEY] = fetch_sp500_monthly()
+        except Exception as exc:  # noqa: BLE001 — S&P figures degrade gracefully
+            print(f"[WARN] ahead-of-curve: S&P 500 (yfinance) fetch failed: {exc}")
     recessions = recession_ranges(fetched["USREC"]) if "USREC" in fetched else []
 
     # Anchor the right edge of every chart to the latest available real-PCE point,
     # falling back to the newest date across all fetched series.
     end = None
-    for anchor in ("PCEC96",):
+    for anchor in ("PCE",):
         s = fetched.get(anchor)
         if s is not None and not s.dropna().empty:
             end = s.dropna().index.max()

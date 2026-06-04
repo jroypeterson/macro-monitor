@@ -167,6 +167,34 @@ def test_timeline_renders_without_series(tmp_path):
     assert out.exists() and out.stat().st_size > 1000
 
 
+def test_dual_axis_renders_with_right_axis_series(tmp_path):
+    # A figure with a right-axis log S&P-style series renders (twinx path).
+    left = _monthly([100.0 + i for i in range(120)], start="2016-01-01")
+    sp = _monthly([2000.0 * (1.01 ** i) for i in range(120)], start="2016-01-01")
+    fetched = {"GS10": left, "GSPC": sp}
+    fig = FigureSpec(
+        id="dual", title="Dual", bands="both", lookback_years=8,
+        series=[
+            charts.SeriesSpec(fred="GS10", label="10Y", transform="raw"),
+            charts.SeriesSpec(fred="GSPC", label="S&P 500", transform="raw",
+                              unit="level", axis="right", scale="log"),
+        ],
+    )
+    out = render_figure(fig, fetched, [], [], sp.index.max(), tmp_path / "dual.png", "n")
+    assert out.exists() and out.stat().st_size > 1000
+
+
+def test_sp500_overlay_figures_are_dual_axis():
+    import yaml
+    d = Path(__file__).parent.parent / "ahead_of_curve"
+    figs, _ = parse_figures(yaml.safe_load((d / "figures.yaml").read_text(encoding="utf-8")))
+    sp = [f for f in figs if any(s.fred == "GSPC" for s in f.series)]
+    assert len(sp) == 3, "growth / real-earnings / long-rates vs stock market"
+    for f in sp:
+        right = [s for s in f.series if s.axis == "right"]
+        assert right and right[0].scale == "log"
+
+
 def test_unit_override_index_series(tmp_path):
     # An index-unit raw series renders with plain-number formatting (no % suffix).
     from macro_monitor.ahead_of_curve.charts import _fmt_value, _plot_series

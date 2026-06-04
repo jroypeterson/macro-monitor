@@ -18,6 +18,7 @@ matplotlib.use("Agg")  # headless: no display needed for file output
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
+from matplotlib.ticker import NullFormatter, ScalarFormatter  # noqa: E402
 
 from ..charts.style import CYCLE, DEFAULT_DPI, DEFAULT_FIGSIZE  # noqa: E402
 
@@ -148,6 +149,8 @@ class SeriesSpec:
     transform: str = "yoy"
     divide_by: str | None = None
     unit: str | None = None  # override: 'pct' | 'pp' | 'index' | 'level'. None => inferred.
+    axis: str = "left"       # 'left' | 'right' (secondary y-axis, e.g. an S&P 500 overlay)
+    scale: str = "linear"    # 'linear' | 'log' (used for the right axis)
 
 
 @dataclass
@@ -179,6 +182,8 @@ def parse_figures(raw: dict) -> tuple[list[FigureSpec], str]:
                 transform=s.get("transform", "yoy"),
                 divide_by=s.get("divide_by"),
                 unit=s.get("unit"),
+                axis=s.get("axis", "left"),
+                scale=s.get("scale", "linear"),
             )
             for s in f.get("series", [])
         ]
@@ -198,7 +203,18 @@ def _fmt_value(v: float, unit: str) -> str:
         return f"{v:+.1f}pp"
     if unit == "pct":
         return f"{v:.1f}%"
-    return f"{v:,.1f}"  # index / level
+    if unit == "level":
+        return f"{v:,.0f}"   # e.g. an S&P 500 level: "7,209"
+    return f"{v:,.1f}"       # index (e.g. a sentiment index): "49.8"
+
+
+def _apply_unit_formatter(axis, units: set[str]) -> None:
+    """Format an axis as percent / percentage-points when its series are uniformly that
+    unit; leave index/level/mixed axes with the default numeric formatter."""
+    if units == {"pp"}:
+        axis.yaxis.set_major_formatter(_PP_FORMATTER)
+    elif units == {"pct"}:
+        axis.yaxis.set_major_formatter(_PCT_FORMATTER)
 
 
 def _plot_series(spec: SeriesSpec, fetched: dict[str, pd.Series]) -> tuple[pd.Series, str]:
@@ -254,7 +270,9 @@ def render_figure(
         ranges = [_clip(a, b) for a, b in recessions if b >= start and a <= end]
         _mark_recessions(ax, ranges, "NBER recession")
 
-    units: set[str] = set()
+    left_units: set[str] = set()
+    right_units: set[str] = set()
+    ax_right = None
     plotted_any = is_timeline  # timeline has no series but is still a valid (bands-only) chart
     for idx, s in enumerate(fig_spec.series):
         values, unit = _plot_series(s, fetched)
@@ -262,17 +280,23 @@ def render_figure(
         if win.empty:
             continue
         plotted_any = True
-        units.add(unit)
+        if s.axis == "right":
+            if ax_right is None:
+                ax_right = ax.twinx()
+                ax_right.patch.set_visible(False)  # let ax's bands show through
+            target, target_units = ax_right, right_units
+        else:
+            target, target_units = ax, left_units
+        target_units.add(unit)
         color = CYCLE[idx % len(CYCLE)]
-        ax.plot(win.index, win.values, label=s.label, color=color, linewidth=2.0, zorder=3)
+        target.plot(win.index, win.values, label=s.label, color=color, linewidth=2.0, zorder=3)
         # Annotate the latest point with its value AND its date.
         last_d, last_v = win.index.max(), win.iloc[-1]
-        val_txt = _fmt_value(last_v, unit)
-        ax.scatter([last_d], [last_v], color=color, s=45, zorder=5,
-                   edgecolor="white", linewidth=1.3)
-        ax.annotate(f"{val_txt}  ({last_d:%b %Y})", xy=(last_d, last_v), xytext=(8, 0),
-                    textcoords="offset points", fontsize=9, color=color,
-                    weight="bold", va="center")
+        target.scatter([last_d], [last_v], color=color, s=45, zorder=5,
+                       edgecolor="white", linewidth=1.3)
+        target.annotate(f"{_fmt_value(last_v, unit)}  ({last_d:%b %Y})", xy=(last_d, last_v),
+                        xytext=(8, 0), textcoords="offset points", fontsize=9, color=color,
+                        weight="bold", va="center")
 
     if not plotted_any:
         raise ValueError(f"figure {fig_spec.id!r}: no series produced data in window")
@@ -282,12 +306,20 @@ def render_figure(
         ax.set_ylim(0, 1)
         ax.set_yticks([])
     else:
-        # Zero reference line + unit-appropriate y-axis formatting.
+        # Zero reference line on the left axis + unit-appropriate formatting.
         ax.axhline(0, color="#333333", linewidth=0.8, zorder=2)
-        if units == {"pp"}:
-            ax.yaxis.set_major_formatter(_PP_FORMATTER)
-        elif units == {"pct"}:
-            ax.yaxis.set_major_formatter(_PCT_FORMATTER)
+        _apply_unit_formatter(ax, left_units)
+
+    if ax_right is not None:
+        right_log = any(s.axis == "right" and s.scale == "log" for s in fig_spec.series)
+        if right_log:
+            ax_right.set_yscale("log")
+            ax_right.yaxis.set_major_formatter(ScalarFormatter())  # plain numbers, not 10^n
+            ax_right.yaxis.set_minor_formatter(NullFormatter())
+        else:
+            _apply_unit_formatter(ax_right, right_units)
+        rlabel = next((s.label for s in fig_spec.series if s.axis == "right"), "")
+        ax_right.set_ylabel(rlabel, fontsize=9, color="#555555")
 
     # Major tick marks (labeled) + yearly minor ticks. 5-yr by default; 10-yr for the
     # very long timeline span so labels don't collide.
@@ -304,8 +336,12 @@ def render_figure(
     if fig_spec.subtitle:
         ax.set_title(fig_spec.subtitle, fontsize=9.5, color="#444444", loc="left")
     fig.suptitle(fig_spec.title, fontsize=13, fontweight="bold", x=0.5, y=0.99)
-    if ax.get_legend_handles_labels()[0]:  # skip empty legend (e.g. bands-off timeline)
-        ax.legend(loc="best")
+    handles, labels = ax.get_legend_handles_labels()
+    if ax_right is not None:
+        h2, l2 = ax_right.get_legend_handles_labels()
+        handles, labels = handles + h2, labels + l2
+    if handles:  # skip empty legend (e.g. bands-off timeline)
+        ax.legend(handles, labels, loc="best")
     ax.set_xlim(start, end)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
