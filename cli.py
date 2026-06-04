@@ -503,6 +503,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_render_dashboard)
 
     sp = sub.add_parser(
+        "inventory",
+        help="Render the macro data inventory to readable/MACRO_DATA_INVENTORY.md",
+    )
+    sp.set_defaults(func=cmd_inventory)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -787,6 +793,19 @@ def cmd_render_dashboard(args: argparse.Namespace) -> int:
     rel = rendered.relative_to(Path(__file__).parent)
     print(f"Rendered dashboard to {rel}")
     print(f"  Open in browser: file://{rendered.absolute()}")
+    return 0
+
+
+def cmd_inventory(args: argparse.Namespace) -> int:
+    """Render the macro data inventory (data_inventory/datasets.yaml) to
+    readable/MACRO_DATA_INVENTORY.md. Source of truth is the YAML.
+    """
+    from .data_inventory.render import render
+
+    out = render()
+    rel = out.relative_to(Path(__file__).parent)
+    print(f"Rendered macro data inventory to {rel}")
+    print(f"  Open: file://{out.absolute()}")
     return 0
 
 

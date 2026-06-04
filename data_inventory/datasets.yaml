@@ -1,0 +1,470 @@
+# Macro data inventory — one entry per dataset. Schema: SCHEMA.md.
+# Seeded 2026-06-03 from the "Ahead of the Curve" (Joseph Ellis) chart-recreation work:
+# the ~18 series the book charts, mapped to FRED ids, plus supporting series (CPI deflator
+# for real earnings, NBER recession flag for shaded bands, S&P 500 for bear-market context).
+# Grow it whenever a new macro dataset is encountered, used or not. Fill `stats` after probing.
+#
+# Ellis's lens: nearly every figure is a YEAR-OVER-YEAR RATE OF CHANGE (transform: yoy_roc),
+# and real consumer spending (real PCE) is the leading indicator the rest of the cycle follows.
+
+datasets:
+  # ============================ CONSUMPTION (the leading indicator) ============================
+  - id: fred_real_pce
+    name: "Real Personal Consumption Expenditures"
+    publisher: "U.S. BEA (via FRED)"
+    publisher_type: federal_gov
+    category: [consumption]
+    url: "https://fred.stlouisfed.org/series/PCEC96"
+    access: {method: fred, detail: "PCEC96", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    release_timing: "~last business day of month (with personal income)"
+    lag: "~1 month"
+    revises: true
+    coverage: "Real (chained 2017$) personal consumption expenditures, SAAR. THE star series of the book — Ellis's thesis is that real PCE YoY leads industrial production, capex, employment, and the S&P."
+    geography: national
+    time_span: "1959 → present"
+    key_fields: [real_pce_saar]
+    transform: yoy_roc
+    ellis_figures: "7-3, 7-7, 8-4, 10-7, 11-3, 11-6, 11-11"
+    gaps: "Headline real PCE; the book sometimes splits goods vs services (PCEDG/PCES) — not seeded here."
+    relevance: "high — the leading indicator the whole framework hangs on"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "BEA iTable link on the book site maps to this FRED id. Pair with the deflator (fred_pce_deflator) if a nominal→real check is ever needed."
+
+  - id: fred_saving_rate
+    name: "Personal Saving Rate"
+    publisher: "U.S. BEA (via FRED)"
+    publisher_type: federal_gov
+    category: [consumption]
+    url: "https://fred.stlouisfed.org/series/PSAVERT"
+    access: {method: fred, detail: "PSAVERT", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1 month"
+    revises: true
+    coverage: "Personal saving as a % of disposable personal income."
+    geography: national
+    time_span: "1959 → present"
+    key_fields: [saving_rate_pct]
+    transform: raw
+    ellis_figures: "Supplemental (saving rate)"
+    gaps: "Heavily revised with benchmark updates; a level series, charted raw not YoY."
+    relevance: "medium — saving/spending tradeoff context"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  # ============================ OUTPUT / PRODUCTION ============================
+  - id: fred_real_gdp
+    name: "Real Gross Domestic Product"
+    publisher: "U.S. BEA (via FRED)"
+    publisher_type: federal_gov
+    category: [output]
+    url: "https://fred.stlouisfed.org/series/GDPC1"
+    access: {method: fred, detail: "GDPC1", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: quarterly
+    lag: "~1 month after quarter-end (advance), revised twice"
+    revises: true
+    coverage: "Real (chained) GDP, SAAR, quarterly."
+    geography: national
+    time_span: "1947 → present"
+    key_fields: [real_gdp_saar]
+    transform: yoy_roc
+    ellis_figures: "4-1"
+    gaps: "Quarterly only — lower resolution than the monthly PCE/IP series; advance estimate revises materially."
+    relevance: "high — the growth/recession backdrop in Fig 4-1"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_ip_manufacturing
+    name: "Industrial Production: Manufacturing (NAICS)"
+    publisher: "Federal Reserve (G.17, via FRED)"
+    publisher_type: central_bank
+    category: [production]
+    url: "https://fred.stlouisfed.org/series/IPMAN"
+    access: {method: fred, detail: "IPMAN", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~2-3 weeks"
+    revises: true
+    coverage: "Real output index for manufacturing. Book also uses total IP (INDPRO) interchangeably."
+    geography: national
+    time_span: "1972 → present (IPMAN); INDPRO 1919 →"
+    key_fields: [ip_manufacturing_index]
+    transform: yoy_roc
+    ellis_figures: "7-3, 7-5"
+    gaps: "IPMAN starts 1972; for pre-1972 history use INDPRO (total). Index, not level of $."
+    relevance: "high — a coincident output series that follows real PCE"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "Book's Fed datadownload G.17 link maps here. INDPRO is the total-index sibling with longer history."
+
+  # ============================ INVESTMENT (capex — a key lagging confirm) ============================
+  - id: fred_real_nonres_investment
+    name: "Real Private Nonresidential Fixed Investment"
+    publisher: "U.S. BEA (via FRED)"
+    publisher_type: federal_gov
+    category: [investment]
+    url: "https://fred.stlouisfed.org/series/PNFIC1"
+    access: {method: fred, detail: "PNFIC1", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: quarterly
+    lag: "~1 month after quarter-end"
+    revises: true
+    coverage: "Real (chained) business fixed investment, SAAR — the book's 'real capital spending'."
+    geography: national
+    time_span: "1947 → present"
+    key_fields: [real_nonres_investment_saar]
+    transform: yoy_roc
+    ellis_figures: "7-5, 7-7"
+    gaps: "Quarterly. For a monthly capex proxy see fred_core_capex_orders (NEWORDER)."
+    relevance: "high — capex YoY famously lags PCE YoY (the book's lead/lag overlay)"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_core_capex_orders
+    name: "Manufacturers' New Orders: Nondefense Capital Goods ex-Aircraft (core capex)"
+    publisher: "U.S. Census (via FRED)"
+    publisher_type: federal_gov
+    category: [investment]
+    url: "https://fred.stlouisfed.org/series/NEWORDER"
+    access: {method: fred, detail: "NEWORDER", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~5 weeks"
+    revises: true
+    coverage: "Nominal core capital-goods new orders, SA — a monthly leading proxy for business investment."
+    geography: national
+    time_span: "1992 → present"
+    key_fields: [core_capex_orders]
+    transform: yoy_roc
+    ellis_figures: "(monthly proxy for 7-5 / 7-7)"
+    gaps: "Nominal (not deflated); starts 1992. Supporting series, not a literal book figure."
+    relevance: "medium — higher-frequency capex read than the quarterly BEA series"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  # ============================ LABOR ============================
+  - id: fred_civilian_employment
+    name: "Civilian Employment Level"
+    publisher: "U.S. BLS (via FRED)"
+    publisher_type: federal_gov
+    category: [labor]
+    url: "https://fred.stlouisfed.org/series/CE16OV"
+    access: {method: fred, detail: "CE16OV", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1-3 weeks (employment situation)"
+    revises: true
+    coverage: "Household-survey count of employed persons (BLS LNS12000000)."
+    geography: national
+    time_span: "1948 → present"
+    key_fields: [civilian_employment]
+    transform: yoy_roc
+    ellis_figures: "10-9, 11-3, 11-11"
+    gaps: "Household survey (noisier than payrolls/PAYEMS); the book uses this household level."
+    relevance: "high — employment YoY follows consumer spending"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "PAYEMS (establishment payrolls) is the smoother sibling if we ever want it."
+
+  - id: fred_unemployment_rate
+    name: "Civilian Unemployment Rate"
+    publisher: "U.S. BLS (via FRED)"
+    publisher_type: federal_gov
+    category: [labor]
+    url: "https://fred.stlouisfed.org/series/UNRATE"
+    access: {method: fred, detail: "UNRATE", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1-3 weeks"
+    revises: true
+    coverage: "Unemployment rate, % of labor force (BLS LNS14000000)."
+    geography: national
+    time_span: "1948 → present"
+    key_fields: [unemployment_rate_pct]
+    transform: raw
+    ellis_figures: "11-6, 11-8"
+    gaps: "A rate (level), charted raw — the book overlays it inverted against spending/bears."
+    relevance: "high — classic recession/bear confirm in Figs 11-6/11-8"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_avg_hourly_earnings
+    name: "Average Hourly Earnings, Production & Nonsupervisory Employees, Total Private"
+    publisher: "U.S. BLS (via FRED)"
+    publisher_type: federal_gov
+    category: [earnings]
+    url: "https://fred.stlouisfed.org/series/AHETPI"
+    access: {method: fred, detail: "AHETPI", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1-3 weeks"
+    revises: true
+    coverage: "Nominal average hourly earnings (BLS CES0500000008). The book deflates this by CPI to get REAL hourly earnings."
+    geography: national
+    time_span: "1964 → present"
+    key_fields: [avg_hourly_earnings_nominal]
+    transform: yoy_roc
+    ellis_figures: "10-4, 10-7, 10-9, 10-10, 11-11"
+    gaps: "Nominal; the book's 'real average hourly earnings' = AHETPI deflated by CPIAUCSL (computed downstream). Production/nonsupervisory series (longer history than the all-employee AHE)."
+    relevance: "high — real hourly earnings YoY drives spending power (Figs 10-x)"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "Real version is computed: AHETPI / CPIAUCSL. Matches the book's BLS CES0500000008 link (production & nonsupervisory, not the all-employee series)."
+
+  # ============================ PRICES ============================
+  - id: fred_pce_deflator
+    name: "PCE Chain-type Price Index"
+    publisher: "U.S. BEA (via FRED)"
+    publisher_type: federal_gov
+    category: [prices]
+    url: "https://fred.stlouisfed.org/series/PCEPI"
+    access: {method: fred, detail: "PCEPI", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1 month"
+    revises: true
+    coverage: "PCE price index (the Fed's preferred inflation gauge). Core sibling: PCEPILFE."
+    geography: national
+    time_span: "1959 → present"
+    key_fields: [pce_price_index]
+    transform: yoy_roc
+    ellis_figures: "(inflation context; 12-4)"
+    gaps: "Headline; core is PCEPILFE. Used both as an inflation chart and as a deflator."
+    relevance: "medium — inflation backdrop + deflator"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_cpi
+    name: "Consumer Price Index, All Urban Consumers, All Items (CPI-U)"
+    publisher: "U.S. BLS (via FRED)"
+    publisher_type: federal_gov
+    category: [prices]
+    url: "https://fred.stlouisfed.org/series/CPIAUCSL"
+    access: {method: fred, detail: "CPIAUCSL", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~2 weeks"
+    revises: false
+    coverage: "Headline CPI-U, SA. The book's deflator for nominal average hourly earnings → real earnings."
+    geography: national
+    time_span: "1947 → present"
+    key_fields: [cpi_u]
+    transform: yoy_roc
+    ellis_figures: "(deflator for 10-4/10-7/10-10)"
+    gaps: "Headline CPI; the real-earnings chart depends on this matching the book's deflator choice."
+    relevance: "high — required to compute the book's REAL hourly earnings series"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  # ============================ RATES ============================
+  - id: fred_fed_funds
+    name: "Federal Funds Effective Rate"
+    publisher: "Federal Reserve (H.15, via FRED)"
+    publisher_type: central_bank
+    category: [rates]
+    url: "https://fred.stlouisfed.org/series/FEDFUNDS"
+    access: {method: fred, detail: "FEDFUNDS", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1 week"
+    revises: false
+    coverage: "Monthly average effective fed funds rate. Daily sibling: DFF."
+    geography: national
+    time_span: "1954 → present"
+    key_fields: [fed_funds_rate_pct]
+    transform: raw
+    ellis_figures: "12-2, 13-2"
+    gaps: "A policy rate (level), charted raw and overlaid on bears in Fig 13-2."
+    relevance: "high — policy-rate-vs-bear-market relationship"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_10y_treasury
+    name: "Market Yield on 10-Year Treasury (constant maturity)"
+    publisher: "Federal Reserve (H.15, via FRED)"
+    publisher_type: central_bank
+    category: [rates]
+    url: "https://fred.stlouisfed.org/series/GS10"
+    access: {method: fred, detail: "GS10", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1 week"
+    revises: false
+    coverage: "Monthly 10-year Treasury constant-maturity yield. Daily sibling: DGS10."
+    geography: national
+    time_span: "1953 → present"
+    key_fields: [treasury_10y_yield_pct]
+    transform: raw
+    ellis_figures: "13-3"
+    gaps: "Level series; charted raw."
+    relevance: "high — long-rate-vs-stock-market relationship (Fig 13-3)"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_prime_rate
+    name: "Bank Prime Loan Rate"
+    publisher: "Federal Reserve (H.15, via FRED)"
+    publisher_type: central_bank
+    category: [rates]
+    url: "https://fred.stlouisfed.org/series/MPRIME"
+    access: {method: fred, detail: "MPRIME", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "~1 week"
+    revises: false
+    coverage: "Bank prime loan rate, monthly. Daily sibling: DPRIME."
+    geography: national
+    time_span: "1949 → present"
+    key_fields: [prime_rate_pct]
+    transform: raw
+    ellis_figures: "(rates context, ch. 12-13)"
+    gaps: "Level; tracks fed funds + ~3pp spread — somewhat redundant with FEDFUNDS."
+    relevance: "low — borrowing-cost context, redundant with fed funds"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  - id: fred_discount_rate
+    name: "Discount Rate for the United States (historical)"
+    publisher: "Federal Reserve (via FRED)"
+    publisher_type: central_bank
+    category: [rates]
+    url: "https://fred.stlouisfed.org/series/INTDSRUSM193N"
+    access: {method: fred, detail: "INTDSRUSM193N", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "n/a (historical)"
+    revises: false
+    coverage: "Historical Fed discount rate, monthly."
+    geography: national
+    time_span: "1950 → ~2021 (discontinued)"
+    key_fields: [discount_rate_pct]
+    transform: raw
+    ellis_figures: "(12-2 context)"
+    gaps: "DISCONTINUED ~2021 and the discount-rate mechanism changed in 2003 (primary credit rate) — of historical interest only. Prefer FEDFUNDS for the modern policy rate."
+    relevance: "low — historical only; superseded by fed funds"
+    status: candidate
+    last_inventoried: 2026-06-03
+
+  # ============================ DEBT / CREDIT ============================
+  - id: fred_total_domestic_debt
+    name: "All Sectors — Debt Securities & Loans (total domestic debt, Z.1)"
+    publisher: "Federal Reserve (Z.1 Financial Accounts, via FRED)"
+    publisher_type: central_bank
+    category: [debt, credit]
+    url: "https://fred.stlouisfed.org/series/TCMDO"
+    access: {method: fred, detail: "TCMDO", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: quarterly
+    lag: "~2-3 months"
+    revises: true
+    coverage: "Total credit-market debt outstanding, all sectors — the book's 'total domestic debt / borrowing'."
+    geography: national
+    time_span: "1951 → present"
+    key_fields: [total_debt_outstanding]
+    transform: yoy_roc
+    ellis_figures: "10-9 (borrowing)"
+    gaps: "Quarterly; nominal $ stock. Heavy benchmark revisions."
+    relevance: "medium — borrowing/credit growth alongside employment & earnings (Fig 10-9)"
+    status: staged
+    last_inventoried: 2026-06-03
+
+  # ============================ SENTIMENT ============================
+  - id: fred_umich_sentiment
+    name: "University of Michigan: Consumer Sentiment"
+    publisher: "U. Michigan Surveys of Consumers (via FRED)"
+    publisher_type: academic_survey
+    category: [sentiment]
+    url: "https://fred.stlouisfed.org/series/UMCSENT"
+    access: {method: fred, detail: "UMCSENT (1978+), UMCSENT1 (1952-1977)", format: json, cost: free, auth: api_key, effort: low}
+    cadence: monthly
+    lag: "~0-2 weeks (prelim mid-month, final end-month)"
+    revises: true
+    coverage: "Index of consumer sentiment, 1966 Q1 = 100. The book's consumer-sentiment survey series."
+    geography: national
+    time_span: "1952 → present (spliced across UMCSENT1 + UMCSENT)"
+    key_fields: [consumer_sentiment_index]
+    transform: raw
+    ellis_figures: "9-3"
+    gaps: "Two FRED ids must be spliced for the full 1952→ history (UMCSENT1 ends 1977, UMCSENT starts 1978). Index level, charted raw."
+    relevance: "medium — sentiment as a coincident/soft indicator (Fig 9-3)"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "The Conference Board Consumer Confidence series the book also uses is proprietary (see conference_board_confidence); UMich is the free FRED-able stand-in."
+
+  - id: conference_board_confidence
+    name: "Conference Board Consumer Confidence Index"
+    publisher: "The Conference Board"
+    publisher_type: nonprofit_research
+    category: [sentiment]
+    url: "https://www.conference-board.org/topics/consumer-confidence"
+    access: {method: manual_download, detail: "press release / paid data feed", format: html, cost: freemium, auth: none, effort: high}
+    cadence: monthly
+    lag: "~last Tuesday of month"
+    revises: true
+    coverage: "Conference Board's consumer confidence index — distinct from UMich sentiment (more labor-market weighted)."
+    geography: national
+    time_span: "1967 → present"
+    key_fields: [consumer_confidence_index]
+    transform: raw
+    ellis_figures: "9-3"
+    gaps: "PROPRIETARY — not on FRED; only the headline number is free (press release), full history is paid. No clean programmatic path."
+    relevance: "medium — the book pairs it with UMich; UMich substitutes acceptably"
+    status: candidate
+    last_inventoried: 2026-06-03
+    notes: "Use fred_umich_sentiment as the free substitute unless JP wants the literal CB series. One of only 2 non-FRED series in the book."
+
+  # ============================ MARKETS ============================
+  - id: sp500_operating_eps
+    name: "S&P 500 Operating Earnings Per Share (estimates + actuals)"
+    publisher: "S&P Dow Jones Indices"
+    publisher_type: commercial_vendor
+    category: [markets]
+    url: "https://www.spglobal.com/spdji/en/documents/additional-material/sp-500-eps-est.xlsx"
+    access: {method: excel_download, detail: "sp-500-eps-est.xlsx", format: excel, cost: free, auth: none, effort: moderate}
+    cadence: quarterly
+    lag: "rolling (forward estimates + trailing actuals)"
+    revises: true
+    coverage: "S&P 500 quarterly operating + as-reported EPS, trailing and forward — the book's corporate-earnings series."
+    geography: national
+    time_span: "~1988 → present"
+    key_fields: [sp500_operating_eps_ttm]
+    transform: yoy_roc
+    ellis_figures: "(corporate earnings vs spending)"
+    gaps: "Single .xlsx with a fiddly multi-sheet layout (estimates vs actuals); URL/format changes periodically. Not on FRED. One of only 2 non-FRED series."
+    relevance: "medium — earnings YoY vs the cycle; the .xlsx parse is the effort"
+    status: candidate
+    last_inventoried: 2026-06-03
+    notes: "The only paid-feel source, though the headline .xlsx is free. Parsing effort, not access, is the blocker."
+
+  - id: sp500_price_index
+    name: "S&P 500 Price Index"
+    publisher: "S&P Dow Jones Indices (via FRED / yfinance)"
+    publisher_type: commercial_vendor
+    category: [markets]
+    url: "https://fred.stlouisfed.org/series/SP500"
+    access: {method: fred, detail: "SP500 (FRED, last ~10y only); ^GSPC via yfinance for full history", format: json, cost: free, auth: api_key, effort: low}
+    cadence: daily
+    lag: "real-time / EOD"
+    revises: false
+    coverage: "S&P 500 index level — used for the stock-market overlay and to derive bear-market date ranges."
+    geography: national
+    time_span: "FRED SP500: last 10y; ^GSPC (yfinance): 1927 →"
+    key_fields: [sp500_close]
+    transform: raw
+    ellis_figures: "4-1, 8-4, 10-10, 11-8, 13-2, 13-3 (the market line on every overlay)"
+    gaps: "FRED SP500 only covers ~10y; full history needs ^GSPC via yfinance. Bear-market bands (Phase 2) are derived from peak-to-trough drawdowns of this series (or curated in bear_markets.yaml)."
+    relevance: "high — the stock-market series the book overlays everything against"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "Phase-2 bear-market overlay: curate S&P 500 peak-to-trough (≥20%) date ranges in bear_markets.yaml, or compute from ^GSPC."
+
+  # ============================ REFERENCE (overlays) ============================
+  - id: fred_nber_recession
+    name: "NBER-based Recession Indicators (USREC)"
+    publisher: "NBER / Federal Reserve (via FRED)"
+    publisher_type: federal_gov
+    category: [reference]
+    url: "https://fred.stlouisfed.org/series/USREC"
+    access: {method: fred, detail: "USREC", format: json, cost: free, auth: api_key, effort: trivial}
+    cadence: monthly
+    lag: "NBER dates declared with long lag (~6-18 months after the fact)"
+    revises: true
+    coverage: "Binary 1/0 recession flag from NBER business-cycle dates — drives the OPTIONAL shaded recession bands behind the charts."
+    geography: national
+    time_span: "1854 → present"
+    key_fields: [recession_flag]
+    transform: raw
+    ellis_figures: "(optional shaded bands on any figure)"
+    gaps: "Recessions ≠ bear markets — the book shades BEAR MARKETS, which lead/differ from NBER recessions. USREC is the secondary 'recession band' toggle; primary bands come from bear_markets.yaml."
+    relevance: "medium — recession-band overlay toggle (distinct from bear-market bands)"
+    status: staged
+    last_inventoried: 2026-06-03
+    notes: "Phase-2 charts get TWO band options: bear-market bands (curated, primary, per the book) and NBER recession bands (USREC, secondary)."
