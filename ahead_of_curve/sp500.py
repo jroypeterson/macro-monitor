@@ -11,15 +11,26 @@ import pandas as pd
 SP500_KEY = "GSPC"  # the fetched-dict key the figures reference (fred: GSPC)
 
 
-def fetch_sp500_monthly(start: str = "1927-01-01") -> pd.Series:
-    """Month-start-indexed S&P 500 close, full history. Raises if yfinance/Yahoo fail
-    (the caller warns and renders S&P figures without the line / skips them)."""
+def fetch_sp500_daily(start: str = "1927-01-01") -> pd.Series:
+    """Daily S&P 500 close, full history. Raises if yfinance/Yahoo fail (the caller warns
+    and renders S&P figures without the line). Daily is needed so bear-market peak-to-trough
+    declines capture intra-month lows (e.g. the 2020 COVID crash)."""
     import yfinance as yf
 
     df = yf.download("^GSPC", start=start, interval="1d", progress=False, auto_adjust=True)
     close = df["Close"]
     if hasattr(close, "columns"):  # yfinance returns a single-col frame under a MultiIndex
         close = close.iloc[:, 0]
-    monthly = close.dropna().resample("MS").last()
+    return close.dropna()
+
+
+def to_monthly(daily: pd.Series) -> pd.Series:
+    """Month-start-indexed monthly series (last close of each month) for the charts."""
+    monthly = daily.resample("MS").last()
     monthly.name = SP500_KEY
     return monthly
+
+
+def fetch_sp500_monthly(start: str = "1927-01-01") -> pd.Series:
+    """Month-start-indexed S&P 500 close, full history (daily resampled)."""
+    return to_monthly(fetch_sp500_daily(start))

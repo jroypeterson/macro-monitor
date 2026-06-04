@@ -24,7 +24,8 @@ from .charts import (
     render_figure,
 )
 from .schedule import SERIES_RELEASE_ID, figure_footnotes, next_release_dates
-from .sp500 import SP500_KEY, fetch_sp500_monthly
+from .sp500 import SP500_KEY, fetch_sp500_daily, to_monthly
+from .stats import series_average_lines, timeline_stat_lines
 from .summary import key_takeaways
 
 _DIR = Path(__file__).parent
@@ -60,7 +61,7 @@ def fetch_series(client: FREDClient, ids: set[str]) -> dict[str, pd.Series]:
 
 def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
                          out_path: Path, generated_label: str,
-                         footnotes: dict[str, list[str]],
+                         note_blocks: dict[str, list[tuple[str, list[str]]]],
                          headline: str = "", takeaways: list[str] | None = None) -> Path:
     toc_items, cards = [], []
     for f in figs:
@@ -68,12 +69,11 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
         if png is None:
             continue
         toc_items.append(f'<li><a href="#{f.id}">{f.title}</a></li>')
-        foot = footnotes.get(f.id) or []
         foot_html = ""
-        if foot:
-            rows = "".join(f"<li>{line}</li>" for line in foot)
-            foot_html = (f'<p class="foot-label">Release schedule</p>'
-                         f'<ul class="foot">{rows}</ul>')
+        for header, lines in note_blocks.get(f.id, []):
+            rows = "".join(f"<li>{line}</li>" for line in lines)
+            foot_html += (f'<p class="foot-label">{header}</p>'
+                          f'<ul class="foot">{rows}</ul>')
         toggles = (
             f'<div class="toggles">'
             f'<label><input type="checkbox" class="bear" data-base="{f.id}" checked '
@@ -184,9 +184,13 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
     client = client or FREDClient()
     fetched = fetch_series(client, needed - {SP500_KEY})
     # S&P 500 long history comes from yfinance, not FRED (FRED's SP500 is ~10yr only).
+    # Keep the daily series for accurate bear-market peak-to-trough stats; the charts use
+    # the monthly resample.
+    sp_daily = None
     if SP500_KEY in needed:
         try:
-            fetched[SP500_KEY] = fetch_sp500_monthly()
+            sp_daily = fetch_sp500_daily()
+            fetched[SP500_KEY] = to_monthly(sp_daily)
         except Exception as exc:  # noqa: BLE001 — S&P figures degrade gracefully
             print(f"[WARN] ahead-of-curve: S&P 500 (yfinance) fetch failed: {exc}")
     recessions = recession_ranges(fetched["USREC"]) if "USREC" in fetched else []
@@ -224,12 +228,29 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
     release_ids = {SERIES_RELEASE_ID[s.fred] for f in figs for s in f.series
                    if s.fred in SERIES_RELEASE_ID}
     next_dates = next_release_dates(client, release_ids)
-    footnotes = figure_footnotes(figs, fetched, next_dates)
+    release = figure_footnotes(figs, fetched, next_dates)
     headline, takeaways = key_takeaways(fetched)
+    timeline_stats = timeline_stat_lines(
+        bears, recessions, sp_daily if sp_daily is not None else fetched.get(SP500_KEY))
+
+    # Assemble per-figure note blocks: (header, [lines]). Release schedule + trailing
+    # averages on the data charts; bear/recession statistics under the timeline.
+    note_blocks: dict[str, list[tuple[str, list[str]]]] = {}
+    for f in figs:
+        blocks: list[tuple[str, list[str]]] = []
+        if release.get(f.id):
+            blocks.append(("Release schedule", release[f.id]))
+        avg_lines = series_average_lines(f, fetched, end)
+        if avg_lines:
+            blocks.append(("Averages (short-term 1-yr · 10-yr · full history)", avg_lines))
+        if f.id == "bear_recession_timeline" and timeline_stats:
+            blocks.append(("Bear-market & recession statistics", timeline_stats))
+        if blocks:
+            note_blocks[f.id] = blocks
 
     generated_label = f"data through {end.date()}"
     index = _render_gallery_html(
-        figs, rendered, out_dir / "index.html", generated_label, footnotes,
+        figs, rendered, out_dir / "index.html", generated_label, note_blocks,
         headline, takeaways)
     rendered["index"] = index
     return rendered

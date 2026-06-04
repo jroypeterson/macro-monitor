@@ -89,10 +89,14 @@ class BearMarket:
 def parse_bear_markets(raw: dict) -> list[BearMarket]:
     out: list[BearMarket] = []
     for b in (raw or {}).get("bear_markets", []):
+        # End is given as a month (e.g. "2020-03"); run it through the LAST day of that
+        # month so the band + peak-to-trough decline capture the full end month (the 2020
+        # COVID trough was late March, not the 1st).
+        end = pd.Timestamp(str(b["end"])).to_period("M").end_time.normalize()
         out.append(
             BearMarket(
                 start=pd.Timestamp(str(b["start"])),
-                end=pd.Timestamp(str(b["end"])),
+                end=end,
                 name=str(b.get("name", "")),
             )
         )

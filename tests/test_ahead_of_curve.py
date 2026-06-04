@@ -169,6 +169,47 @@ def test_key_takeaways_empty_when_no_data():
     assert headline == "" and bullets == []
 
 
+def test_series_average_lines_short_10y_full():
+    from macro_monitor.ahead_of_curve.stats import series_average_lines
+
+    s = _monthly([2.0 + (i % 12) * 0.0 for i in range(240)], start="2006-05-01")  # flat 2.0
+    fig = FigureSpec(id="r", title="Rates", series=[
+        charts.SeriesSpec(fred="GS10", label="10Y", transform="raw")])
+    lines = series_average_lines(fig, {"GS10": s}, pd.Timestamp("2026-04-01"))
+    assert len(lines) == 1
+    assert "1-yr" in lines[0] and "10-yr" in lines[0] and "full-history" in lines[0]
+
+
+def test_series_average_lines_skips_acceleration():
+    from macro_monitor.ahead_of_curve.stats import series_average_lines
+
+    s = _monthly([100.0 + i for i in range(60)])
+    fig = FigureSpec(id="a", title="Accel", series=[
+        charts.SeriesSpec(fred="PCE", label="x", transform="yoy_accel")])
+    assert series_average_lines(fig, {"PCE": s}, s.index.max()) == []
+
+
+def test_timeline_stat_lines_declines_and_durations():
+    from macro_monitor.ahead_of_curve.stats import timeline_stat_lines
+
+    # Two bear windows in a synthetic S&P that halves then recovers in each.
+    idx = pd.date_range("1970-01-01", periods=240, freq="MS")
+    vals = [100.0] * 240
+    for i in range(12, 18):   # ~-40% dip
+        vals[i] = 60.0
+    for i in range(120, 126):  # ~-25% dip
+        vals[i] = 75.0
+    sp = pd.Series(vals, index=idx, dtype=float)
+    bears = [charts.BearMarket(pd.Timestamp("1971-01-01"), pd.Timestamp("1971-06-01"), "A"),
+             charts.BearMarket(pd.Timestamp("1980-01-01"), pd.Timestamp("1980-06-01"), "B")]
+    recs = [(pd.Timestamp("1970-01-01"), pd.Timestamp("1970-11-01")),
+            (pd.Timestamp("1973-11-01"), pd.Timestamp("1975-03-01"))]
+    lines = timeline_stat_lines(bears, recs, sp)
+    assert any("bear markets" in ln.lower() and "peak-to-trough" in ln.lower() for ln in lines)
+    assert any("recessions" in ln.lower() and "duration" in ln.lower() for ln in lines)
+    assert any("deepest" in ln and "shallowest" in ln for ln in lines)
+
+
 def test_config_files_present_and_valid():
     import yaml
     d = Path(__file__).parent.parent / "ahead_of_curve"
