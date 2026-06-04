@@ -22,6 +22,7 @@ from .charts import (
     recession_ranges,
     render_figure,
 )
+from .schedule import SERIES_RELEASE_ID, figure_footnotes, next_release_dates
 
 _DIR = Path(__file__).parent
 _FIGURES_YAML = _DIR / "figures.yaml"
@@ -49,33 +50,59 @@ def fetch_series(client: FREDClient, ids: set[str]) -> dict[str, pd.Series]:
 
 
 def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
-                         out_path: Path, generated_label: str) -> Path:
-    cards = []
+                         out_path: Path, generated_label: str,
+                         footnotes: dict[str, list[str]]) -> Path:
+    toc_items, cards = [], []
     for f in figs:
         png = rendered.get(f.id)
         if png is None:
             continue
+        toc_items.append(f'<li><a href="#{f.id}">{f.title}</a></li>')
+        foot = footnotes.get(f.id) or []
+        foot_html = ""
+        if foot:
+            rows = "".join(f"<li>{line}</li>" for line in foot)
+            foot_html = (f'<p class="foot-label">Release schedule</p>'
+                         f'<ul class="foot">{rows}</ul>')
         cards.append(
-            f'<section><h2>{f.title}</h2>'
+            f'<section id="{f.id}"><h2>{f.title}</h2>'
             f'<p class="sub">{f.subtitle}</p>'
-            f'<img src="{png.name}" alt="{f.title}"/></section>'
+            f'<img src="{png.name}" alt="{f.title}"/>'
+            f'{foot_html}'
+            f'<p class="back"><a href="#top">↑ back to index</a></p></section>'
         )
+    toc = f'<nav class="toc"><strong>Charts on this page</strong><ol>{"".join(toc_items)}</ol></nav>'
     html = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Ahead of the Curve — Charts</title>
 <style>
  body {{ font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 980px;
         margin: 2rem auto; padding: 0 1rem; color: #222; }}
- h1 {{ font-size: 1.5rem; }}
- .meta {{ color: #777; font-size: .85rem; margin-bottom: 2rem; }}
- section {{ margin: 2.5rem 0; }}
- h2 {{ font-size: 1.1rem; margin-bottom: .2rem; }}
+ h1 {{ font-size: 1.5rem; margin-bottom: .2rem; }}
+ .meta {{ color: #777; font-size: .85rem; margin-bottom: 1.5rem; }}
+ .toc {{ background: #f7f8fa; border: 1px solid #e2e2e2; border-radius: 8px;
+         padding: .8rem 1.2rem; margin-bottom: 2.5rem; }}
+ .toc ol {{ margin: .4rem 0 0; padding-left: 1.4rem; }}
+ .toc li {{ margin: .2rem 0; }}
+ .toc a {{ color: #1F4E79; text-decoration: none; }}
+ .toc a:hover {{ text-decoration: underline; }}
+ section {{ margin: 2.5rem 0; scroll-margin-top: 1rem; }}
+ h2 {{ font-size: 1.15rem; margin-bottom: .2rem; }}
  .sub {{ color: #555; font-size: .9rem; margin: 0 0 .6rem; }}
  img {{ width: 100%; border: 1px solid #e2e2e2; border-radius: 6px; }}
+ .foot-label {{ font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+                color: #999; margin: .8rem 0 .2rem; }}
+ ul.foot {{ margin: 0; padding-left: 1.2rem; color: #555; font-size: .82rem; }}
+ ul.foot li {{ margin: .15rem 0; }}
+ .back {{ font-size: .8rem; margin-top: .6rem; }}
+ .back a {{ color: #999; text-decoration: none; }}
 </style></head><body>
+<a id="top"></a>
 <h1>Ahead of the Curve — Charts</h1>
 <p class="meta">Recreation of Joseph Ellis's charts · year-over-year rate of change ·
-shaded bands = S&amp;P 500 bear markets · {generated_label} · {len(cards)} charts</p>
+grey bands = S&amp;P 500 bear markets · dotted red = NBER recessions · {generated_label} ·
+{len(cards)} charts</p>
+{toc}
 {''.join(cards)}
 </body></html>"""
     out_path.write_text(html, encoding="utf-8")
@@ -118,8 +145,15 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
         except Exception as exc:  # noqa: BLE001
             print(f"[WARN] ahead-of-curve: figure {f.id} failed: {exc}")
 
+    # Release-schedule footnotes (when the next data point is expected, for what period).
+    release_ids = {SERIES_RELEASE_ID[s.fred] for f in figs for s in f.series
+                   if s.fred in SERIES_RELEASE_ID}
+    next_dates = next_release_dates(client, release_ids)
+    footnotes = figure_footnotes(figs, fetched, next_dates)
+
     generated_label = f"data through {end.date()}"
-    index = _render_gallery_html(figs, rendered, out_dir / "index.html", generated_label)
+    index = _render_gallery_html(
+        figs, rendered, out_dir / "index.html", generated_label, footnotes)
     rendered["index"] = index
     return rendered
 

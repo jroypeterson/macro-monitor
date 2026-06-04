@@ -23,36 +23,36 @@ figures:
   - id: real_pce_yoy
     title: "Real Consumer Spending (PCE), Year-over-Year"
     subtitle: "The leading indicator: real PCE growth peaks and rolls over ahead of bear markets."
-    bands: bear
+    bands: both
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
 
   - id: pce_accel
     title: "Real Consumer Spending — Acceleration"
-    subtitle: "Rate of change of the real PCE YoY growth rate (12-mo change, pp). Above zero = accelerating."
-    bands: bear
+    subtitle: "Rate of change of the real PCE YoY growth rate (12-month change, in percentage points = pp). Above zero = accelerating; below = decelerating."
+    bands: both
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE growth — Δ (pp)", transform: yoy_accel}
 
   - id: pce_leads_capex
     title: "Consumer Spending Leads Capital Spending"
     subtitle: "Real business capex (YoY) follows real PCE (YoY) with a lag — the book's core lead/lag."
-    bands: bear
+    bands: both
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
       - {fred: PNFI, divide_by: GDPDEF, label: "Real Business Capex (YoY)", transform: yoy}
 
   - id: capex_accel
     title: "Real Capital Spending — Acceleration"
-    subtitle: "Rate of change of the real business-capex YoY growth rate (12-mo change, pp). Above zero = accelerating."
-    bands: bear
+    subtitle: "Rate of change of the real business-capex YoY growth rate (12-month change, in percentage points = pp). Above zero = accelerating; below = decelerating."
+    bands: both
     series:
       - {fred: PNFI, divide_by: GDPDEF, label: "Real capex growth — Δ (pp)", transform: yoy_accel}
 
   - id: pce_vs_employment
     title: "Consumer Spending and Employment"
     subtitle: "Employment growth (YoY) tracks and follows real consumer spending."
-    bands: bear
+    bands: both
     series:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
       - {fred: CE16OV, label: "Civilian Employment (YoY)", transform: yoy}
@@ -60,22 +60,22 @@ figures:
   - id: real_earnings_vs_spending
     title: "Real Hourly Earnings and Consumer Spending"
     subtitle: "Real average hourly earnings (AHETPI deflated by CPI), YoY, vs real PCE."
-    bands: bear
+    bands: both
     series:
       - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
 
   - id: earnings_accel
     title: "Real Hourly Earnings — Acceleration"
-    subtitle: "Rate of change of the real-hourly-earnings YoY growth rate (12-mo change, pp). Above zero = accelerating."
-    bands: bear
+    subtitle: "Rate of change of the real-hourly-earnings YoY growth rate (12-month change, in percentage points = pp). Above zero = accelerating; below = decelerating."
+    bands: both
     series:
       - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real earnings growth — Δ (pp)", transform: yoy_accel}
 
   - id: rates_vs_bears
     title: "Interest Rates and Bear Markets"
     subtitle: "Fed funds and the 10-year Treasury (levels) against the bear-market record."
-    bands: bear
+    bands: both
     series:
       - {fred: FEDFUNDS, label: "Fed Funds Rate", transform: raw}
       - {fred: GS10, label: "10-Year Treasury", transform: raw}

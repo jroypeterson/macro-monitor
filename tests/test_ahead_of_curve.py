@@ -122,6 +122,28 @@ def test_yoy_accel_sign_tracks_acceleration():
     assert accel.iloc[-1] < 0
 
 
+def test_figure_footnotes_report_cadence_next_release_and_period():
+    from datetime import date
+
+    from macro_monitor.ahead_of_curve.schedule import figure_footnotes
+
+    pce = _monthly([100.0 + i for i in range(40)], start="2023-01-01")  # latest = Apr 2026
+    capex = pd.Series(range(20), index=pd.date_range("2021-04-01", periods=20, freq="QS"), dtype=float)
+    fetched = {"PCE": pce, "PCEPI": pce, "PNFI": capex, "GDPDEF": capex}
+    figs, _ = parse_figures({"figures": [
+        {"id": "f", "title": "T", "series": [
+            {"fred": "PCE", "divide_by": "PCEPI", "label": "Real PCE (YoY)", "transform": "yoy"},
+            {"fred": "PNFI", "divide_by": "GDPDEF", "label": "Real Capex (YoY)", "transform": "yoy"},
+        ]},
+    ]})
+    next_dates = {54: date(2026, 6, 25), 53: date(2026, 6, 25)}
+    foot = figure_footnotes(figs, fetched, next_dates)["f"]
+    assert len(foot) == 2  # one per numerator series; deflators omitted
+    assert "monthly" in foot[0] and "next release ~Jun 25, 2026" in foot[0]
+    assert "covers May 2026" in foot[0]      # latest Apr + 1 month
+    assert "quarterly" in foot[1] and "covers" in foot[1]
+
+
 def test_config_files_present_and_valid():
     import yaml
     d = Path(__file__).parent.parent / "ahead_of_curve"

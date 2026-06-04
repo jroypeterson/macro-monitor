@@ -117,10 +117,24 @@ def recession_ranges(usrec: pd.Series) -> list[tuple[pd.Timestamp, pd.Timestamp]
 
 
 def _shade(ax, ranges, color, label) -> None:
+    """Solid translucent band — used for bear markets (the primary overlay)."""
     first = True
     for a, b in ranges:
         ax.axvspan(a, b, color=color, alpha=0.18, lw=0,
                    label=(label if first else None), zorder=0)
+        first = False
+
+
+def _mark_recessions(ax, ranges, label) -> None:
+    """NBER recessions, drawn distinctly from the grey bear bands: a faint red wash
+    bracketed by dotted vertical lines at the official peak and trough. Reads clearly
+    even where it overlaps a grey bear-market band."""
+    first = True
+    for a, b in ranges:
+        ax.axvspan(a, b, color=_RECESSION_COLOR, alpha=0.06, lw=0,
+                   label=(label if first else None), zorder=0)
+        for x in (a, b):
+            ax.axvline(x, color=_RECESSION_COLOR, linestyle=":", linewidth=1.1, zorder=1)
         first = False
 
 
@@ -219,7 +233,7 @@ def render_figure(
         _shade(ax, ranges, _BEAR_COLOR, "Bear market")
     if fig_spec.bands in ("recession", "both"):
         ranges = [_clip(a, b) for a, b in recessions if b >= start and a <= end]
-        _shade(ax, ranges, _RECESSION_COLOR, "NBER recession")
+        _mark_recessions(ax, ranges, "NBER recession")
 
     units: set[str] = set()
     plotted_any = False
