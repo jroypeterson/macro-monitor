@@ -144,6 +144,31 @@ def test_figure_footnotes_report_cadence_next_release_and_period():
     assert "quarterly" in foot[1] and "covers" in foot[1]
 
 
+def test_key_takeaways_headline_and_bullets():
+    from macro_monitor.ahead_of_curve.summary import key_takeaways
+
+    # Real PCE accelerating: monthly growth rate rises every month -> YoY keeps rising
+    # -> acceleration positive through the latest point.
+    base = [100.0]
+    for i in range(48):
+        base.append(base[-1] * (1 + 0.0008 * i))
+    pce = _monthly(base, start="2022-01-01")
+    flat = _monthly([100.0] * len(base), start="2022-01-01")
+    fetched = {"PCE": pce, "PCEPI": flat, "FEDFUNDS": _monthly([4.3] * 30, start="2024-01-01")}
+    headline, bullets = key_takeaways(fetched)
+    assert "leading indicator" in headline.lower()
+    assert "accelerating" in headline
+    assert any("real consumer spending" in b.lower() for b in bullets)
+    assert any("fed funds" in b.lower() for b in bullets)
+
+
+def test_key_takeaways_empty_when_no_data():
+    from macro_monitor.ahead_of_curve.summary import key_takeaways
+
+    headline, bullets = key_takeaways({})
+    assert headline == "" and bullets == []
+
+
 def test_config_files_present_and_valid():
     import yaml
     d = Path(__file__).parent.parent / "ahead_of_curve"

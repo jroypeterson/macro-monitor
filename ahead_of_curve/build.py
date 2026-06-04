@@ -25,6 +25,7 @@ from .charts import (
 )
 from .schedule import SERIES_RELEASE_ID, figure_footnotes, next_release_dates
 from .sp500 import SP500_KEY, fetch_sp500_monthly
+from .summary import key_takeaways
 
 _DIR = Path(__file__).parent
 _FIGURES_YAML = _DIR / "figures.yaml"
@@ -59,7 +60,8 @@ def fetch_series(client: FREDClient, ids: set[str]) -> dict[str, pd.Series]:
 
 def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
                          out_path: Path, generated_label: str,
-                         footnotes: dict[str, list[str]]) -> Path:
+                         footnotes: dict[str, list[str]],
+                         headline: str = "", takeaways: list[str] | None = None) -> Path:
     toc_items, cards = [], []
     for f in figs:
         png = rendered.get(f.id)
@@ -88,6 +90,17 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
             f'<p class="back"><a href="#top">↑ back to index</a></p></section>'
         )
     toc = f'<nav class="toc"><strong>Charts on this page</strong><ol>{"".join(toc_items)}</ol></nav>'
+    summary_html = ""
+    if takeaways:
+        items = "".join(f"<li>{t}</li>" for t in takeaways)
+        head = f'<p class="summary-head">{headline}</p>' if headline else ""
+        summary_html = (
+            f'<section class="summary"><h2>Key takeaways</h2>{head}'
+            f'<ul>{items}</ul>'
+            f'<p class="summary-note">Auto-generated from the latest data each build · '
+            f'Ellis\'s lens: watch the <em>rate of change</em> of real consumer spending, '
+            f'not just the level · not investment advice.</p></section>'
+        )
     html = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Ahead of the Curve — Charts</title>
@@ -105,6 +118,13 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
  .toc li {{ margin: .2rem 0; }}
  .toc a {{ color: #1F4E79; text-decoration: none; }}
  .toc a:hover {{ text-decoration: underline; }}
+ .summary {{ background: #fbfcfd; border: 1px solid #e2e2e2; border-left: 4px solid #1F4E79;
+             border-radius: 8px; padding: 1rem 1.4rem; margin-bottom: 2.5rem; }}
+ .summary h2 {{ margin: 0 0 .5rem; font-size: 1.05rem; }}
+ .summary-head {{ font-size: .98rem; font-weight: 600; color: #1F4E79; margin: 0 0 .7rem; }}
+ .summary ul {{ margin: 0; padding-left: 1.2rem; }}
+ .summary li {{ margin: .35rem 0; font-size: .9rem; color: #333; }}
+ .summary-note {{ font-size: .76rem; color: #999; margin: .8rem 0 0; }}
  section {{ margin: 2.5rem 0; scroll-margin-top: 1rem; }}
  h2 {{ font-size: 1.15rem; margin-bottom: .2rem; }}
  .sub {{ color: #555; font-size: .9rem; margin: 0 0 .5rem; }}
@@ -128,6 +148,7 @@ grey bands = S&amp;P 500 bear markets · dotted red = NBER recessions · {genera
  <label><input type="checkbox" id="allRec" checked onchange="setAll('rec', this.checked)"> NBER recessions</label>
 </div>
 {toc}
+{summary_html}
 {''.join(cards)}
 <script>
 function suffix(base){{
@@ -204,10 +225,12 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
                    if s.fred in SERIES_RELEASE_ID}
     next_dates = next_release_dates(client, release_ids)
     footnotes = figure_footnotes(figs, fetched, next_dates)
+    headline, takeaways = key_takeaways(fetched)
 
     generated_label = f"data through {end.date()}"
     index = _render_gallery_html(
-        figs, rendered, out_dir / "index.html", generated_label, footnotes)
+        figs, rendered, out_dir / "index.html", generated_label, footnotes,
+        headline, takeaways)
     rendered["index"] = index
     return rendered
 
