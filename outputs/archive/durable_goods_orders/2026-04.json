@@ -4,9 +4,9 @@
   "family_display_name": "Durable Goods Orders",
   "period": "2026-04",
   "period_label": "April 2026",
-  "posted_at": "2026-06-02T14:53:47.058873+00:00",
+  "posted_at": "2026-06-04T13:58:46.907525+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-06-02T14:53:43.719958+00:00",
+  "source_fetched_at": "2026-06-04T13:58:46.289138+00:00",
   "latest_observation_period": "2026-04",
   "expected_observation_period": "2026-04",
   "is_stale": false,
@@ -19,18 +19,18 @@
       "label": "New orders: durable goods",
       "primary": {
         "transform": "mom_pct",
-        "value": 7.946631387134628,
-        "raw_value": 345956.0
+        "value": 8.018159976285943,
+        "raw_value": 346182.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 17.182255130762904
+          "value": 17.2588058761165
         }
       ],
       "prior_primary": {
         "transform": "mom_pct",
-        "value": 1.3455268741718873
+        "value": 1.3445782065755418
       }
     }
   ],
@@ -39,14 +39,14 @@
       "id": "NEWORDER",
       "label": "Core capex (ex-defense, ex-aircraft)",
       "transform": "yoy_pct",
-      "value": 10.444721362436526,
+      "value": 10.526456834291388,
       "tags": []
     }
   ],
   "context": {
     "anchor_series": "DGORDER",
     "anchor_transform": "mom_pct",
-    "zscore": 1.0262274212994222,
+    "zscore": 1.0372958569900823,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
