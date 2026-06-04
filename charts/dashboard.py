@@ -21,7 +21,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from ..config import FamilyConfig
-from ..outputs import outputs_root
+from ..outputs import family_slug, outputs_root
 
 ET = ZoneInfo("America/New_York")
 
@@ -48,22 +48,26 @@ def render_dashboard(
 
     stats = {"families_total": len(families), "with_data": 0, "stale": 0}
 
-    for family_id, family in sorted_families:
-        latest_json = latest_dir / f"{family_id}.json"
+    for _family_key, family in sorted_families:
+        # Artifacts are stored under the slugified display name (see
+        # outputs.family_slug), NOT the YAML config key — the two only
+        # coincidentally match for some families.
+        slug = family_slug(family.display_name)
+        latest_json = latest_dir / f"{slug}.json"
         if not latest_json.exists():
-            family_cards.append(_render_card_no_data(family_id, family))
+            family_cards.append(_render_card_no_data(slug, family))
             continue
         try:
             payload = json.loads(latest_json.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            family_cards.append(_render_card_no_data(family_id, family))
+            family_cards.append(_render_card_no_data(slug, family))
             continue
 
         stats["with_data"] += 1
         if payload.get("is_stale"):
             stats["stale"] += 1
 
-        family_cards.append(_render_card(family_id, family, payload))
+        family_cards.append(_render_card(slug, family, payload))
 
     body_html = _HTML_TEMPLATE.format(
         generated_at=datetime.now(ET).strftime("%a %b %d %Y %H:%M ET"),

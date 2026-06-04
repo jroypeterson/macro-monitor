@@ -1,5 +1,6 @@
-"""Google Calendar publisher — creates Tier A release events on the
-dedicated "Macro Calendar" in floridabusinessman@gmail.com.
+"""Google Calendar publisher — creates release events on the dedicated
+"Macro Calendar" in floridabusinessman@gmail.com. Scope is every family
+with a FRED release_calendar_id (all tiers); see config.calendar_families.
 
 Auth: SERVICE ACCOUNT (shared with earnings-agent). NOT user OAuth.
 The calendar is shared with the earnings-agent service account at

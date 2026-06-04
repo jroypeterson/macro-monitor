@@ -420,5 +420,28 @@ def validate_all_or_raise(families: dict[str, FamilyConfig]) -> None:
         raise ValueError(msg)
 
 
+def calendar_families(
+    families: dict[str, FamilyConfig],
+) -> dict[str, FamilyConfig]:
+    """The single definition of "what belongs on a calendar surface".
+
+    A family appears on the schedule calendars (the Google Calendar
+    backfill AND the annual HTML grid) iff it has a FRED
+    `release_calendar_id` to pull release dates from. Both surfaces must
+    route through this so their family scope can never silently diverge
+    — that divergence is the bug class that previously left the annual
+    HTML showing only Tier A while the Google Calendar carried all 17.
+
+    Tier is deliberately NOT filtered here: both surfaces show all tiers.
+    To curate a surface by tier later, do it at the call site, not here,
+    so the shared baseline stays the same.
+    """
+    return {
+        fid: f
+        for fid, f in families.items()
+        if f.release_calendar_id is not None
+    }
+
+
 def default_config_path() -> Path:
     return Path(__file__).parent / "config" / "release_families.yaml"

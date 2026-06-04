@@ -438,7 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser(
         "backfill-calendar",
-        help="Push the next 90 days of Tier A releases into Google Calendar",
+        help="Push the next 90 days of scheduled releases (all tiers) into Google Calendar",
     )
     sp.add_argument(
         "--days", type=int, default=90, help="Lookahead window in days"

@@ -2,7 +2,8 @@
 
 Goal 1 of the project: "This Week" (Tier A + B, detailed) AND
 "Looking Ahead — Next 4 Weeks" (Tier A only, compact) in a single
-Slack post. Source: FRED /releases/dates for all Tier A families.
+Slack post. Source: FRED /releases/dates for every scheduled family
+(any tier with a release_calendar_id; see config.calendar_families).
 
 Run via: `python -m macro_monitor.cli weekly-preview [--post]`
 """
@@ -14,7 +15,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from ..collectors.fred import FREDClient, FREDError, ReleaseDate
-from ..config import FamilyConfig
+from ..config import FamilyConfig, calendar_families
 
 ET = ZoneInfo("America/New_York")
 
@@ -58,9 +59,10 @@ def fetch_scheduled_releases(
     from datetime import date as _date_cls
     today = _date_cls.today()
 
-    for family_id, family in families.items():
-        if family.release_calendar_id is None:
-            continue
+    # Shared family scope with the annual HTML grid (config.calendar_families):
+    # both the Google Calendar backfill (which calls this) and the HTML must
+    # see the same set, so they can never silently diverge.
+    for family_id, family in calendar_families(families).items():
         try:
             dates = client.get_release_dates(
                 release_id=family.release_calendar_id,

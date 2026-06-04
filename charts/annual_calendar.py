@@ -17,7 +17,7 @@ from datetime import date
 from pathlib import Path
 
 from ..collectors.fred import FREDClient, FREDError
-from ..config import FamilyConfig
+from ..config import FamilyConfig, calendar_families
 from .style import CYCLE
 
 
@@ -39,12 +39,12 @@ def render_annual_calendar(
     events: dict[date, list[tuple[str, str, str]]] = defaultdict(list)
     # Stable color per family so the grid reads consistently
     family_color: dict[str, str] = {}
-    tier_a = {
-        fid: f for fid, f in families.items()
-        if f.tier == "A" and f.release_calendar_id is not None
-    }
+    # Every family with a FRED release calendar — both Tier A (Slack-posted)
+    # and Tier B (heartbeat-only) — so the grid is a complete schedule.
+    # Shared with the Google Calendar backfill via config.calendar_families.
+    cal_families = calendar_families(families)
     failed_families: list[str] = []
-    for idx, (fid, fam) in enumerate(sorted(tier_a.items())):
+    for idx, (fid, fam) in enumerate(sorted(cal_families.items())):
         family_color[fid] = CYCLE[idx % len(CYCLE)]
         try:
             dates = client.get_release_dates(
@@ -60,7 +60,7 @@ def render_annual_calendar(
             if year_start <= rd.date <= year_end:
                 events[rd.date].append((fid, fam.display_name, fam.release_time_et))
 
-    html_text = _render_html(year, events, family_color, tier_a, failed_families)
+    html_text = _render_html(year, events, family_color, cal_families, failed_families)
     output_path.write_text(html_text, encoding="utf-8")
     return output_path
 
@@ -130,13 +130,19 @@ def _render_html(
     year: int,
     events: dict[date, list[tuple[str, str, str]]],
     family_color: dict[str, str],
-    tier_a: dict[str, FamilyConfig],
+    cal_families: dict[str, FamilyConfig],
     failed_families: list[str] | None = None,
 ) -> str:
+    def _legend_label(fam: FamilyConfig) -> str:
+        # Tag Tier B (heartbeat-only) families so the curated Tier A set
+        # stays visually distinct from the broader schedule.
+        suffix = "" if fam.tier == "A" else " <span style='color:#999;font-size:0.85em'>(B)</span>"
+        return html.escape(fam.display_name) + suffix
+
     legend_items = "\n".join(
         f"    <div class='legend-item'><span class='swatch' style='background:{family_color[fid]}'></span>"
-        f"<span>{html.escape(tier_a[fid].display_name)}</span></div>"
-        for fid in sorted(tier_a)
+        f"<span>{_legend_label(cal_families[fid])}</span></div>"
+        for fid in sorted(cal_families)
     )
 
     months_html_parts = []
@@ -211,6 +217,7 @@ def _render_month(
 
 # Tight name abbreviations so the calendar grid cells stay readable
 ABBREVIATIONS = {
+    # Tier A
     "CPI": "CPI",
     "PPI": "PPI",
     "Employment Situation": "Jobs",
@@ -220,6 +227,15 @@ ABBREVIATIONS = {
     "GDP": "GDP",
     "Employment Cost Index": "ECI",
     "PCE / Personal Income & Outlays": "PCE",
+    # Tier B
+    "Industrial Production": "IndPro",
+    "Housing Starts & Permits": "Housing",
+    "Durable Goods Orders": "Durables",
+    "Trade Balance": "Trade",
+    "Consumer Credit": "Credit",
+    "Productivity & Unit Labor Costs": "Prod",
+    "UMich Consumer Sentiment": "UMich",
+    "ADP National Employment Report": "ADP",
 }
 
 

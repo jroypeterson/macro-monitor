@@ -100,14 +100,25 @@ def write_release_artifacts(
     return json_archive, html_archive
 
 
-def _family_id(display_name: str) -> str:
-    """Slugify display name to a stable id used as the filesystem path."""
+def family_slug(display_name: str) -> str:
+    """Slugify a family display name to the stable id used as the
+    filesystem path for archive/ and latest/ artifacts.
+
+    This is the single source of truth for how a family maps to its
+    on-disk filename — readers (e.g. the dashboard) must use this rather
+    than the YAML config key, which only coincidentally matches the slug
+    for some families.
+    """
     return (
         display_name.lower()
         .replace(" ", "_")
         .replace("&", "and")
         .replace("/", "_")
     )
+
+
+# Backwards-compatible private alias (kept for existing call sites).
+_family_id = family_slug
 
 
 def _serialize_headline(h) -> dict:
