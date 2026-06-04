@@ -541,6 +541,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_market_fetch)
 
     sp = sub.add_parser(
+        "market-charts",
+        help="Build the top-down market charts (CAPE, ERP, factors) into readable/market/",
+    )
+    sp.set_defaults(func=cmd_market_charts)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -874,6 +880,19 @@ def cmd_market_fetch(args: argparse.Namespace) -> int:
     print(f"Downloading market datasets{' (relevance=' + args.relevance + ')' if rel else ''}...")
     m = download(relevance=rel)
     print(f"Done: {len(m['ok'])} ok · {len(m['missing'])} not-found · {len(m['error'])} error")
+    return 0
+
+
+def cmd_market_charts(args: argparse.Namespace) -> int:
+    """Build the top-down market charts (CAPE, ERP, factors) into readable/market/."""
+    from .market.build_charts import build
+
+    out = build()
+    print(f"Rendered {len(out)} market chart(s):")
+    for name, path in out.items():
+        print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
+    idx = path.parent / "index.html"
+    print(f"\nOpen the gallery: file://{idx.absolute()}")
     return 0
 
 

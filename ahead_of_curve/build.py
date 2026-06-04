@@ -142,7 +142,7 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
 <h1>Ahead of the Curve — Charts</h1>
 <p class="meta">Recreation of Joseph Ellis's charts · year-over-year rate of change ·
 grey bands = S&amp;P 500 bear markets · dotted red = NBER recessions · {generated_label} ·
-{len(cards)} charts</p>
+{len(cards)} charts · <a href="../index.html">↑ workspace hub</a></p>
 <div class="controls">Show bands on ALL charts:
  <label><input type="checkbox" id="allBear" checked onchange="setAll('bear', this.checked)"> S&amp;P bear bands</label>
  <label><input type="checkbox" id="allRec" checked onchange="setAll('rec', this.checked)"> NBER recessions</label>

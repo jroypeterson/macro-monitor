@@ -56,9 +56,9 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
     tier_b_lines = _lines(tier_b)
 
     text = (
-        "macro-monitor channel overview\n"
-        f"Tracks {len(tier_a)} Tier A families (always post) + {len(tier_b)} "
-        "Tier B families (preview always; post only on material surprise)."
+        "macro-and-markets channel overview\n"
+        f"Macro release feed ({len(tier_a)} Tier A + {len(tier_b)} Tier B families) plus "
+        "top-down market data (valuation, ERP, factor returns) and the Ahead-of-the-Curve charts."
     )
 
     blocks: list[dict] = [
@@ -66,8 +66,20 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": "📊 macro-monitor — channel overview",
+                "text": "📊 macro-and-markets — channel overview",
                 "emoji": True,
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "*This channel covers three layers:*\n"
+                    "1️⃣ *Macro releases & cycle* — the disciplined Tier A/B release feed (below)\n"
+                    "2️⃣ *Ahead of the Curve* — Joseph Ellis's leading-indicator chart framework (23 charts)\n"
+                    "3️⃣ *Top-down market data* — valuation, ERP & factor returns (Damodaran · Ken French · AQR · Shiller)"
+                ),
             },
         },
         {
@@ -117,6 +129,13 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "type": "mrkdwn",
                 "text": (
                     "*Where else to look*\n"
+                    "• 🧭 *Overview hub* + chart galleries — Ahead-of-the-Curve (Ellis) and market "
+                    "valuation/factor charts (CAPE vs history, implied ERP, Fama-French factors). "
+                    "Generated under `readable/` (open locally) — see "
+                    "<https://github.com/jroypeterson/macro-monitor/tree/main/readable|repo `readable/`>.\n"
+                    "• 💹 *Top-down market data inventories* — "
+                    "<https://github.com/jroypeterson/macro-monitor/blob/main/damodaran/DATA_OVERVIEW.md|Damodaran time-series overview>, "
+                    "<https://github.com/jroypeterson/macro-monitor/blob/main/market/README.md|Ken French / AQR / Shiller datasets>.\n"
                     "• 📊 <https://jroypeterson.github.io/macro-monitor/dashboard/|Current state dashboard> — "
                     "latest value per family, mini-charts, links into release reports. Auto-refreshes after every release post.\n"
                     "• 📅 <https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html|2026 Annual Macro Calendar> — "
@@ -140,7 +159,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                     "• *Conference Board Consumer Confidence* — same licensing issue\n"
                     "• *FOMC decisions / minutes* — manual until a meeting tests the parser\n"
                     "• *International macro* (ECB / BoJ / eurozone / China / UK) — Phase 2\n"
-                    "• *Market data* (yields, USD, oil) — not the project's edge"
+                    "• *Intraday market data* (live yields, USD, oil) — sigma-alert owns price moves"
                 ),
             },
         },
