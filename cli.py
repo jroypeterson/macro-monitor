@@ -531,6 +531,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_damodaran_fetch)
 
     sp = sub.add_parser(
+        "market-fetch",
+        help="Download top-down market datasets (Ken French / AQR / Shiller)",
+    )
+    sp.add_argument(
+        "--relevance", default=None,
+        help="Comma-separated relevance filter, e.g. 'high,medium' (default: all)",
+    )
+    sp.set_defaults(func=cmd_market_fetch)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -852,6 +862,18 @@ def cmd_damodaran_fetch(args: argparse.Namespace) -> int:
     m = download(relevance=rel)
     print(f"Done: {len(m['ok'])} ok · {len(m['missing'])} not-found · {len(m['error'])} error")
     render()
+    return 0
+
+
+def cmd_market_fetch(args: argparse.Namespace) -> int:
+    """Download the top-down market datasets (Ken French / AQR / Shiller) into
+    market/data/ (raw archive + latest + manifest)."""
+    from .market.download import download
+
+    rel = set(args.relevance.split(",")) if args.relevance else None
+    print(f"Downloading market datasets{' (relevance=' + args.relevance + ')' if rel else ''}...")
+    m = download(relevance=rel)
+    print(f"Done: {len(m['ok'])} ok · {len(m['missing'])} not-found · {len(m['error'])} error")
     return 0
 
 

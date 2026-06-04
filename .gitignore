@@ -16,6 +16,10 @@ state/*.json
 damodaran/data/raw/
 damodaran/data/latest/
 
+# Top-down market data archive (Ken French / AQR / Shiller) — same policy.
+market/data/raw/
+market/data/latest/
+
 # Agency PDFs — non-blocking convenience mirror; gitignored per design.
 pdfs/
 

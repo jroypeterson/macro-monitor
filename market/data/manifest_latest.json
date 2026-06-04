@@ -1,0 +1,81 @@
+{
+  "fetched_utc": "2026-06-04T16:48:30+00:00",
+  "date": "2026-06-04",
+  "requested": 12,
+  "ok": [
+    {
+      "id": "ff_3factor_monthly",
+      "source": "Ken French",
+      "file": "F-F_Research_Data_Factors_CSV.zip",
+      "bytes": 13044
+    },
+    {
+      "id": "ff_5factor_monthly",
+      "source": "Ken French",
+      "file": "F-F_Research_Data_5_Factors_2x3_CSV.zip",
+      "bytes": 11879
+    },
+    {
+      "id": "ff_momentum_monthly",
+      "source": "Ken French",
+      "file": "F-F_Momentum_Factor_CSV.zip",
+      "bytes": 5600
+    },
+    {
+      "id": "ff_3factor_daily",
+      "source": "Ken French",
+      "file": "F-F_Research_Data_Factors_daily_CSV.zip",
+      "bytes": 177582
+    },
+    {
+      "id": "ff_portfolios_beme",
+      "source": "Ken French",
+      "file": "Portfolios_Formed_on_BE-ME_CSV.zip",
+      "bytes": 218446
+    },
+    {
+      "id": "aqr_century",
+      "source": "AQR",
+      "file": "Century-of-Factor-Premia-Monthly.xlsx",
+      "bytes": 1784414
+    },
+    {
+      "id": "aqr_vme",
+      "source": "AQR",
+      "file": "Value-and-Momentum-Everywhere-Factors-Monthly.xlsx",
+      "bytes": 254584
+    },
+    {
+      "id": "aqr_bab",
+      "source": "AQR",
+      "file": "Betting-Against-Beta-Equity-Factors-Monthly.xlsx",
+      "bytes": 2492380
+    },
+    {
+      "id": "aqr_qmj",
+      "source": "AQR",
+      "file": "Quality-Minus-Junk-Factors-Monthly.xlsx",
+      "bytes": 2252554
+    },
+    {
+      "id": "aqr_devil_hml",
+      "source": "AQR",
+      "file": "The-Devil-in-HMLs-Details-Factors-Monthly.xlsx",
+      "bytes": 1936838
+    },
+    {
+      "id": "aqr_tsmom",
+      "source": "AQR",
+      "file": "Time-Series-Momentum-Factors-Monthly.xlsx",
+      "bytes": 185784
+    },
+    {
+      "id": "shiller_cape",
+      "source": "Robert Shiller",
+      "file": "ie_data.xls",
+      "bytes": 1628672
+    }
+  ],
+  "missing": [],
+  "error": []
+}
