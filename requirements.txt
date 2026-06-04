@@ -15,6 +15,8 @@ feedparser>=6.0
 anthropic>=0.40
 # Ahead-of-the-Curve: long S&P 500 history (^GSPC) for the stock-market overlay charts
 yfinance>=0.2
+# Damodaran archive: reading his legacy .xls files (.xlsx handled by openpyxl)
+xlrd>=2.0
 
 # Dev
 pytest>=8.0
