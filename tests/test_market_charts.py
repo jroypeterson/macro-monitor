@@ -60,3 +60,14 @@ def test_parse_damodaran_erp_smoke():
     df = C.parse_damodaran_erp()
     assert df.index.min().year <= 1961
     assert df["implied_erp"].dropna().iloc[-1] > 0
+
+
+def test_cape_regex_skips_enspace_entity():
+    # The multpl value cell leads with an &#x2002; en-space entity whose digits ("2002")
+    # must NOT be mistaken for the value — regression for that parse bug.
+    from macro_monitor.market.cape import _ROW
+
+    html = "<td>Jun 3, 2026</td>\n<td>\n&#x2002;\n42.53\n</td>\n<td>May 1, 2026</td>\n<td>&#x2002; 41.04</td>"
+    rows = _ROW.findall(html)
+    assert ("Jun 3, 2026", "42.53") in rows
+    assert ("May 1, 2026", "41.04") in rows

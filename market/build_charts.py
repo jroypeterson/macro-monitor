@@ -9,12 +9,13 @@ from pathlib import Path
 
 import pandas as pd
 
+from . import cape as CAPE
 from . import charts as C
 
 _MKT = Path(__file__).parent / "data" / "latest"
 _DAM = Path(__file__).parent.parent / "damodaran" / "data" / "latest"
 _OUT = Path(__file__).parent.parent / "readable" / "market"
-_SRC = "Sources: Robert Shiller (Yale), A. Damodaran (NYU Stern), Kenneth French Data Library."
+_SRC = "Sources: Shiller CAPE via multpl.com (current), A. Damodaran (NYU Stern), Kenneth French Data Library."
 
 
 def _cumulative(returns: pd.Series) -> pd.Series:
@@ -27,8 +28,8 @@ def build(out_dir: Path = _OUT) -> dict[str, Path]:
     rendered: dict[str, dict] = {}
 
     # --- 1. Shiller CAPE vs its own history -------------------------------- #
-    shiller = C.parse_shiller()
-    cape = shiller["cape"].dropna()
+    # Sourced live from multpl.com (current); Shiller's own ie_data.xls lags ~2 years.
+    cape = CAPE.load_cape().dropna()
     pctile = (cape.rank(pct=True).iloc[-1]) * 100
     rendered["cape_history"] = dict(
         title="Shiller CAPE vs History",
