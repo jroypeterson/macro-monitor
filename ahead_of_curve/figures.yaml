@@ -57,6 +57,15 @@ figures:
       - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
       - {fred: CE16OV, label: "Civilian Employment (YoY)", transform: yoy}
 
+  - id: employment_wages_spending
+    title: "Employment, Wage Growth and Consumer Spending"
+    subtitle: "Employment (YoY) and real hourly earnings (YoY) drive real consumer spending (YoY). Book Fig 11-11."
+    bands: both
+    series:
+      - {fred: CE16OV, label: "Civilian Employment (YoY)", transform: yoy}
+      - {fred: AHETPI, divide_by: CPIAUCSL, label: "Real Avg Hourly Earnings (YoY)", transform: yoy}
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+
   - id: real_earnings_vs_spending
     title: "Real Hourly Earnings and Consumer Spending"
     subtitle: "Real average hourly earnings (AHETPI deflated by CPI), YoY, vs real PCE."
@@ -130,12 +139,27 @@ figures:
     series:
       - {fred: UMCSENT, label: "U. Michigan Consumer Sentiment", transform: raw, unit: index}
 
+  - id: saving_rate
+    title: "The Saving Rate"
+    subtitle: "Personal saving as a share of disposable income (level). Book Supplemental figure."
+    bands: both
+    series:
+      - {fred: PSAVERT, label: "Personal Saving Rate", transform: raw}
+
   - id: unemployment_vs_bears
     title: "Unemployment and Bear Markets"
     subtitle: "The unemployment rate (level) against the bear-market and recession record. Book Fig 11-8."
     bands: both
     series:
       - {fred: UNRATE, label: "Unemployment Rate", transform: raw}
+
+  - id: unemployment_vs_spending
+    title: "Unemployment and Consumer Spending"
+    subtitle: "Real PCE growth (YoY, left axis) vs the unemployment rate (level, right axis). Book Fig 11-6."
+    bands: both
+    series:
+      - {fred: PCE, divide_by: PCEPI, label: "Real PCE (YoY)", transform: yoy}
+      - {fred: UNRATE, label: "Unemployment Rate (right)", transform: raw, axis: right}
 
   - id: inflation_vs_rates
     title: "Inflation and Interest Rates"

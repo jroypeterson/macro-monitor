@@ -16,7 +16,7 @@ from .charts import FigureSpec, _infer_periods_per_year
 
 # FRED series -> the FRED release that publishes it (release_id).
 SERIES_RELEASE_ID: dict[str, int] = {
-    "PCE": 54, "PCEPI": 54,                 # Personal Income & Outlays
+    "PCE": 54, "PCEPI": 54, "PSAVERT": 54,  # Personal Income & Outlays
     "PNFI": 53, "GDPDEF": 53, "GDP": 53,    # Gross Domestic Product
     "CE16OV": 50, "AHETPI": 50, "UNRATE": 50,  # Employment Situation
     "CPIAUCSL": 10,                         # Consumer Price Index
