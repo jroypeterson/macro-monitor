@@ -4,9 +4,9 @@
   "family_display_name": "PPI",
   "period": "2026-04",
   "period_label": "April 2026",
-  "posted_at": "2026-06-04T13:58:39.147983+00:00",
+  "posted_at": "2026-06-05T02:40:51.643399+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-06-04T13:58:37.098910+00:00",
+  "source_fetched_at": "2026-06-05T02:40:42.624920+00:00",
   "latest_observation_period": "2026-04",
   "expected_observation_period": "2026-04",
   "is_stale": false,
@@ -94,6 +94,15 @@
       "label": "Surgical & medical instruments PPI",
       "transform": "yoy_pct",
       "value": 3.4544455378481054,
+      "tags": [
+        "healthcare"
+      ]
+    },
+    {
+      "id": "PCU621210621210",
+      "label": "Dentist offices PPI",
+      "transform": "yoy_pct",
+      "value": 3.61842810679438,
       "tags": [
         "healthcare"
       ]

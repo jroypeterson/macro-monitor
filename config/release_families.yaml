@@ -730,6 +730,10 @@ families:
         label: "Surgical & medical instruments PPI"
         primary_transform: yoy_pct
         tags: [healthcare]
+      - id: PCU621210621210
+        label: "Dentist offices PPI"
+        primary_transform: yoy_pct
+        tags: [healthcare]
 
     context:
       anchor_series: PPIFIS
@@ -768,6 +772,7 @@ families:
             - {id: PCU621111621111, transform: yoy_pct, label: "Physician offices"}
             - {id: PCU325412325412, transform: yoy_pct, label: "Pharma mfg"}
             - {id: PCU339112339112, transform: yoy_pct, label: "Surgical/medical instruments"}
+            - {id: PCU621210621210, transform: yoy_pct, label: "Dentist offices"}
           highlight_latest: true
           filename: "ppi_hc_detail_{period}.png"
 
@@ -782,6 +787,7 @@ families:
         - PCU621111621111
         - PCU325412325412
         - PCU339112339112
+        - PCU621210621210
 
     agency:
       release_page: "https://www.bls.gov/ppi/"
