@@ -135,6 +135,18 @@ def test_boe_csv_collapses_unchanged_runs():
 
 # ───────────────────────── format + model ──────────────────
 
+def test_apply_yoy_matches_same_period_prior_year():
+    from macro_monitor.international.collect import apply_yoy
+    # 13 monthly index points; YoY defined only once we have a year-back match.
+    obs = [IntlObservation(f"2025-{m:02d}", 100.0 + m) for m in range(1, 13)]
+    obs.append(IntlObservation("2026-01", 111.1))  # vs 2025-01 = 101.0
+    out = apply_yoy(obs)
+    assert out[-1].period == "2026-01"
+    assert round(out[-1].value, 2) == round((111.1 / 101.0 - 1) * 100, 2)
+    # No spurious YoY for periods lacking a prior-year base.
+    assert all(o.period == "2026-01" for o in out)
+
+
 def test_fmt_period_variants():
     assert fmt_period("2025-12") == "Dec 2025"
     assert fmt_period("2026-Q1") == "Q1 2026"

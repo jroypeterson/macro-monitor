@@ -137,9 +137,11 @@ series:
     source: estat
     freq: monthly
     params:
-      # CPI 2020-base, all-Japan, all-items, YoY table — confirm on first key use.
+      # CPI 2020-base all-items INDEX (all-Japan); collector derives YoY.
       statsDataId: "0003427113"
       filters: {cdCat01: "0001"}
+      limit: 30
+      transform: yoy_pct
 
   - id: jp_rate
     region: japan

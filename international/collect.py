@@ -8,9 +8,34 @@ one broken source never sinks the whole digest.
 from __future__ import annotations
 
 from .config import IntlSeriesSpec, load_series, validate_series_or_raise
-from .model import IntlSeriesResult
+from .model import IntlObservation, IntlSeriesResult
 from .sources import FETCHERS, SourceError
 from .sources.base import make_session
+
+
+def _prior_year_period(period: str) -> str | None:
+    """The same period one year earlier: '2026-04'->'2025-04',
+    '2026-Q1'->'2025-Q1', '2026'->'2025'. None if unparseable."""
+    parts = period.split("-")
+    try:
+        prev_year = int(parts[0]) - 1
+    except ValueError:
+        return None
+    return "-".join([str(prev_year), *parts[1:]])
+
+
+def apply_yoy(observations: list[IntlObservation]) -> list[IntlObservation]:
+    """Convert a level series to a year-on-year % change by matching each
+    period to the same period one year earlier — robust to gaps (no
+    positional 12-row assumption)."""
+    by_period = {o.period: o.value for o in observations}
+    out: list[IntlObservation] = []
+    for o in observations:
+        base_p = _prior_year_period(o.period)
+        base = by_period.get(base_p) if base_p else None
+        if base:
+            out.append(IntlObservation(o.period, (o.value / base - 1.0) * 100.0))
+    return out
 
 
 def collect_one(spec: IntlSeriesSpec, *, session) -> IntlSeriesResult:
@@ -30,7 +55,15 @@ def collect_one(spec: IntlSeriesSpec, *, session) -> IntlSeriesResult:
         result.error = f"no fetcher for source {spec.source!r}"
         return result
     try:
-        result.observations = fetcher(spec, session=session)
+        obs = fetcher(spec, session=session)
+        if (spec.params or {}).get("transform") == "yoy_pct":
+            obs = apply_yoy(obs)
+            if not obs:
+                raise SourceError(
+                    f"{spec.id}: yoy_pct transform produced no points "
+                    "(need ≥13 months / 5 quarters of level data)"
+                )
+        result.observations = obs
     except SourceError as exc:
         result.error = str(exc)
     except Exception as exc:  # noqa: BLE001 — defensive: never let one series crash the run
