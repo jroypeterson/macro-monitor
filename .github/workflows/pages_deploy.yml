@@ -49,13 +49,14 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Stage outputs/ + readable/ into the published site
-        # outputs/ first, then readable/ (its index.html overwrites outputs/index.html
-        # so the comprehensive overview hub is the site root). No other path collisions.
+      - name: Stage readable/ + outputs/ into the published site
+        # readable/ first (brings the galleries: fiscal, drug_prices, market, ahead_of_curve),
+        # then outputs/ — so outputs/index.html wins as the site landing page (the comprehensive
+        # card hub with live links to every view). No path collisions besides index.html.
         run: |
           mkdir -p _site
-          cp -r outputs/. _site/
           cp -r readable/. _site/
+          cp -r outputs/. _site/
 
       - name: Upload the staged site as the Pages artifact
         uses: actions/upload-pages-artifact@v3

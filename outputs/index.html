@@ -6,14 +6,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-         max-width: 720px; margin: 3em auto; padding: 0 1em; color: #222; background: #fafafa; }
+         max-width: 760px; margin: 3em auto; padding: 0 1em; color: #222; background: #fafafa; }
   h1 { font-size: 1.8em; margin-bottom: 0.2em; }
   .subtitle { color: #666; margin-bottom: 2em; font-size: 0.95em; }
-  .card { background: white; border-radius: 6px; padding: 1.2em 1.5em;
+  .card { background: white; border-radius: 6px; padding: 1.1em 1.4em;
           border: 1px solid #e0e0e0; margin-bottom: 0.8em; }
-  .card a { color: #1F4E79; text-decoration: none; font-weight: 600; font-size: 1.05em; }
-  .card a:hover { text-decoration: underline; }
+  .card > a { color: #1F4E79; text-decoration: none; font-weight: 600; font-size: 1.05em; }
+  .card > a:hover { text-decoration: underline; }
   .card .desc { font-size: 0.9em; color: #666; margin-top: 0.3em; }
+  .card h2 { font-size: 1.05em; margin: 0 0 0.2em 0; color: #1F4E79; }
+  .card h2 .sub { font-weight: 400; font-size: 0.8em; color: #888; }
+  .list { margin-top: 0.5em; }
+  .list .item { padding: 0.4em 0; border-top: 1px solid #f0f0f0; }
+  .list .item:first-child { border-top: none; }
+  .list .item a { color: #1F4E79; text-decoration: none; font-weight: 600; font-size: 0.97em; }
+  .list .item a:hover { text-decoration: underline; }
+  .list .item .d { color: #666; font-size: 0.83em; display: block; margin-top: 0.1em; }
   .footer { font-size: 0.8em; color: #888; margin-top: 2em; }
   code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
 </style>
@@ -21,9 +29,8 @@
 <body>
 
 <h1>📊 macro-monitor</h1>
-<p class="subtitle">Disciplined US macro feed for the <code>#macro</code> Slack channel.
-Posts release headlines + charts for 9 Tier A families (CPI, payrolls,
-PCE, claims, GDP, JOLTS, PPI, retail sales, ECI).</p>
+<p class="subtitle">Macro &amp; markets + healthcare/biopharma intelligence. Live links to every
+dashboard, chart, and project view below.</p>
 
 <div class="card">
   <a href="dashboard/">📈 Current state dashboard</a>
@@ -37,32 +44,38 @@ PCE, claims, GDP, JOLTS, PPI, retail sales, ECI).</p>
 
 <div class="card">
   <a href="international/">🌍 Global macro dashboard</a>
-  <div class="desc">Latest CPI / GDP / unemployment / policy rates for the eurozone, UK, China &amp; Japan. Refreshed weekly.</div>
+  <div class="desc">Latest CPI / GDP / unemployment / policy rates + 2Y/10Y yields for the eurozone, UK, China &amp; Japan. Refreshed weekly.</div>
 </div>
 
 <div class="card">
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/dashboard.html">🏥 Healthcare &amp; biopharma (hc_macro_policy)</a>
-  <div class="desc">Full HC-environment cockpit on the hc-macro-policy-pages site:
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/dashboard.html">HC operating dashboard</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/cms_calendar.html">CMS rule-cycle calendar</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/cms_rates.html">CMS rates (incl. MA)</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/nih_funding.html">NIH funding</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/mlr.html">Managed-care MLR</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/enrollment.html">Coverage / enrollment</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/hospital_medians.html">NFP hospital medians</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/policy_timeline.html">Policy timeline</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/medicaid_states.html">State Medicaid</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/china_biopharma.html">China biopharma</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/biotech_rd.html">Biopharma R&amp;D</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/biotech_vc.html">Biotech VC</a> ·
-  <a href="https://jroypeterson.github.io/hc-macro-policy-pages/trade_groups.html">Trade-group surveys</a>.</div>
+  <h2>🏥 Healthcare &amp; biopharma <span class="sub">— hc-macro-policy-pages</span></h2>
+  <div class="desc">The full HC-environment cockpit. Each view live below.</div>
+  <div class="list">
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/dashboard.html">HC operating dashboard</a><span class="d">39-series weekly HC operating data, rebuilt by subsector from public sources.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/cms_calendar.html">CMS rule-cycle calendar</a><span class="d">3-year calendar of CMS payment-rule cycles + key data releases (Federal Register).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/cms_rates.html">CMS rates (incl. Medicare Advantage)</a><span class="d">Headline update %, proposed vs final, by payment system + the MA rate cycle.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/nih_funding.html">NIH funding</a><span class="d">Program level, President's request vs enacted, FY2014–26 (+ "Congress vs request" gap).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/mlr.html">Managed-care MLR</a><span class="d">Medical loss ratio by insurer (UNH/ELV/HUM/CNC/CVS/MOH/CI), FY2014–25.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/enrollment.html">Coverage / enrollment</a><span class="d">Enrollment by segment — actuals + projections labelled by source (CBO/CMS/KFF).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/hospital_medians.html">NFP hospital rating medians</a><span class="d">Fitch sector ratios — operating margin, days cash, capital spending + outlook.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/policy_timeline.html">Policy implementation timeline</a><span class="d">Phase-in dates for major HC policy changes (IRA, MA v28, OBBB, ESRD, DSH, TEAM…).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/medicaid_states.html">State Medicaid spending</a><span class="d">Total Medicaid by state — US map + 10-yr trend (CMS-64/KFF).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/china_biopharma.html">China biopharma macro</a><span class="d">Drug market, NMPA first-in-class approvals, the China-origin out-licensing wave.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/biotech_rd.html">Biopharma R&amp;D spend</a><span class="d">Large-cap R&amp;D $ and % of revenue, FY2015–24 (SEC XBRL).</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/biotech_vc.html">Biotech / health VC</a><span class="d">Digital-health VC, biotech IPO window, biopharma VC.</span></div>
+    <div class="item"><a href="https://jroypeterson.github.io/hc-macro-policy-pages/trade_groups.html">Trade-group surveys</a><span class="d">NIC senior-housing occupancy, AHA cost growth, MGMA physician comp.</span></div>
+  </div>
 </div>
 
 <div class="card">
-  <a href="https://github.com/jroypeterson/macro-monitor/tree/main/readable">📂 Local galleries (readable/)</a>
-  <div class="desc">Open locally (not deployed to Pages): Ahead-of-the-Curve, market valuation/factor charts,
-  the <b>government &amp; healthcare spending</b> and <b>drug-price inflation</b> charts. See
-  <code>readable/index.html</code> for the full local hub.</div>
+  <h2>📂 Charts &amp; galleries</h2>
+  <div class="desc">Now deployed — live online.</div>
+  <div class="list">
+    <div class="item"><a href="fiscal/">Government &amp; healthcare spending</a><span class="d">Federal outlays/receipts/deficit (% of GDP) + the Medicare/Medicaid wedge.</span></div>
+    <div class="item"><a href="drug_prices/">Drug-price inflation</a><span class="d">Consumer (CPI) vs producer (PPI pharma) drug prices, YoY.</span></div>
+    <div class="item"><a href="market/">Top-down market valuation &amp; factors</a><span class="d">Shiller CAPE vs history, Damodaran implied ERP, Fama-French factor returns.</span></div>
+    <div class="item"><a href="ahead_of_curve/">Ahead of the Curve</a><span class="d">Joseph Ellis's leading-indicator chart framework (23 charts).</span></div>
+  </div>
 </div>
 
 <div class="card">
@@ -71,9 +84,9 @@ PCE, claims, GDP, JOLTS, PPI, retail sales, ECI).</p>
 </div>
 
 <div class="footer">
-  Per-release HTML reports live under <code>archive/&lt;family&gt;/&lt;period&gt;.html</code>
-  but are linked from the dashboard above. Static-site deploy from the repo's
-  <code>outputs/</code> directory via GitHub Actions.
+  Per-release HTML reports live under <code>archive/&lt;family&gt;/&lt;period&gt;.html</code>,
+  linked from the dashboard above. Static-site deploy of <code>outputs/</code> + <code>readable/</code>
+  via GitHub Actions. Healthcare views are hosted on the sibling <code>hc-macro-policy-pages</code> site.
 </div>
 
 </body>
