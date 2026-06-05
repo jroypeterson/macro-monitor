@@ -1,9 +1,9 @@
 name: Deploy site to GitHub Pages
 
 # Deploys BOTH outputs/ and readable/ to GitHub Pages, so every surface has a
-# permanent public URL and the comprehensive overview hub (readable/index.html)
-# is the site landing page:
-#   https://jroypeterson.github.io/macro-monitor/                  (overview hub)
+# permanent public URL and the comprehensive card hub (outputs/index.html) is
+# the site landing page:
+#   https://jroypeterson.github.io/macro-monitor/                  (card hub — landing)
 #   https://jroypeterson.github.io/macro-monitor/dashboard/        (outputs/)
 #   https://jroypeterson.github.io/macro-monitor/calendar/...      (outputs/)
 #   https://jroypeterson.github.io/macro-monitor/international/     (outputs/)
@@ -12,9 +12,9 @@ name: Deploy site to GitHub Pages
 #   https://jroypeterson.github.io/macro-monitor/market/           (readable/)
 #   https://jroypeterson.github.io/macro-monitor/ahead_of_curve/   (readable/)
 #
-# Staging merges outputs/ then readable/ into _site (readable/index.html wins as
-# the root index). Fires on pushes touching outputs/** or readable/** — incl. the
-# release/reconcile/calendar cron auto-commits, so the public site stays fresh.
+# Staging merges readable/ then outputs/ into _site (outputs/index.html wins as
+# the root landing page). Fires on pushes touching outputs/** or readable/** — incl.
+# the release/reconcile/calendar cron auto-commits, so the public site stays fresh.
 # NOTE: only public, cited data lives here — never deploy positions/account/paid data.
 
 on:
