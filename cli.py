@@ -608,6 +608,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.set_defaults(func=cmd_authorize_gmail)
 
+    sp = sub.add_parser(
+        "global-macro",
+        help="Collect international macro (EZ/UK/China/Japan) → render dashboard + post Global macro digest to #macro",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument(
+        "--no-dashboard",
+        action="store_true",
+        help="Skip rendering outputs/international/index.html",
+    )
+    sp.set_defaults(func=cmd_global_macro)
+
     return p
 
 
@@ -809,6 +822,61 @@ def cmd_overview(args: argparse.Namespace) -> int:
             f"choose 'Pin to channel'.",
             file=sys.stderr,
         )
+    except SlackApiError as e:
+        print(f"  ⚠️ Post failed: {e.response.get('error')}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def cmd_global_macro(args: argparse.Namespace) -> int:
+    """Collect international macro, render the dashboard panel, and (with
+    --post) publish the weekly Global macro digest to #macro."""
+    from datetime import date
+
+    from .international.collect import collect_all
+    from .international.dashboard import render_dashboard as render_intl_dashboard
+    from .international.digest import build_digest_blocks
+
+    print("Collecting international macro (Eurozone / UK / China / Japan)…", file=sys.stderr)
+    results = collect_all()
+    ok = [r for r in results if r.ok]
+    failed = [r for r in results if not r.ok]
+    print(f"  {len(ok)}/{len(results)} series collected", file=sys.stderr)
+    for r in failed:
+        print(f"    ⚠️ {r.spec_id}: {r.error}", file=sys.stderr)
+
+    if not args.no_dashboard:
+        path = render_intl_dashboard(results)
+        rel = path.relative_to(Path(__file__).parent)
+        print(f"  dashboard: {rel}", file=sys.stderr)
+
+    as_of = date.today().isoformat()
+    text, blocks = build_digest_blocks(results, as_of=as_of)
+
+    if args.dry_run:
+        print("\n=== GLOBAL MACRO DIGEST (DRY-RUN) ===")
+        for b in blocks:
+            if b["type"] == "section":
+                print(b["text"]["text"])
+                print()
+        print("  Use --post to publish to #macro.", file=sys.stderr)
+        return 0
+
+    import os
+
+    from slack_sdk import WebClient
+    from slack_sdk.errors import SlackApiError
+
+    bot_token = os.environ.get("SLACK_BOT_TOKEN")
+    channel_id = os.environ.get("SLACK_MACRO_CHANNEL_ID")
+    if not bot_token or not channel_id:
+        print("  SLACK_BOT_TOKEN + SLACK_MACRO_CHANNEL_ID required for --post", file=sys.stderr)
+        return 2
+    try:
+        resp = WebClient(token=bot_token).chat_postMessage(
+            channel=channel_id, text=text, blocks=blocks
+        )
+        print(f"  Posted Global macro digest to {resp['channel']} ts={resp['ts']}", file=sys.stderr)
     except SlackApiError as e:
         print(f"  ⚠️ Post failed: {e.response.get('error')}", file=sys.stderr)
         return 1

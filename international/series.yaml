@@ -1,0 +1,154 @@
+# International macro series — Phase 2 "Global macro" layer.
+# Each entry: region + indicator + source + source-specific `params` locator.
+# Sources: eurostat | ecb | oecd | ons | boe | estat | boj
+# Periods normalize to YYYY-MM / YYYY-Qn / YYYY / YYYY-MM-DD.
+
+series:
+  # ───────────────────────── Eurozone (Eurostat + ECB) ────────────────────
+  - id: ez_cpi
+    region: eurozone
+    indicator: cpi_yoy
+    label: HICP all-items (YoY)
+    source: eurostat
+    freq: monthly
+    params:
+      dataset: prc_hicp_manr
+      filters: {coicop: CP00, geo: EA20}
+
+  - id: ez_core_cpi
+    region: eurozone
+    indicator: core_cpi_yoy
+    label: HICP ex energy, food, alcohol & tobacco (YoY)
+    source: eurostat
+    freq: monthly
+    params:
+      dataset: prc_hicp_manr
+      filters: {coicop: TOT_X_NRG_FOOD, geo: EA20}
+
+  - id: ez_gdp
+    region: eurozone
+    indicator: gdp_yoy
+    label: Real GDP (YoY)
+    source: eurostat
+    freq: quarterly
+    params:
+      dataset: namq_10_gdp
+      filters: {unit: CLV_PCH_SM, s_adj: SCA, na_item: B1GQ, geo: EA20}
+
+  - id: ez_unemp
+    region: eurozone
+    indicator: unemployment
+    label: Unemployment rate
+    source: eurostat
+    freq: monthly
+    params:
+      dataset: une_rt_m
+      filters: {unit: PC_ACT, s_adj: SA, age: TOTAL, sex: T, geo: EA21}
+
+  - id: ez_rate
+    region: eurozone
+    indicator: policy_rate
+    label: ECB main refinancing rate
+    source: ecb
+    freq: daily
+    decimals: 2
+    params:
+      flow: FM
+      key: B.U2.EUR.4F.KR.MRR_FR.LEV
+
+  # ───────────────────────── United Kingdom (ONS + BoE) ───────────────────
+  - id: uk_cpi
+    region: uk
+    indicator: cpi_yoy
+    label: CPI all-items (YoY)
+    source: ons
+    freq: monthly
+    params:
+      url: https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7g7/mm23/data
+
+  - id: uk_core_cpi
+    region: uk
+    indicator: core_cpi_yoy
+    label: Core CPI ex energy, food, alcohol & tobacco (YoY)
+    source: ons
+    freq: monthly
+    params:
+      url: https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/dko8/mm23/data
+
+  - id: uk_gdp
+    region: uk
+    indicator: gdp_yoy
+    label: Real GDP (YoY)
+    source: ons
+    freq: quarterly
+    params:
+      url: https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/ihyr/qna/data
+
+  - id: uk_unemp
+    region: uk
+    indicator: unemployment
+    label: Unemployment rate (16+)
+    source: ons
+    freq: monthly
+    params:
+      url: https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms/data
+
+  - id: uk_rate
+    region: uk
+    indicator: policy_rate
+    label: BoE Bank Rate
+    source: boe
+    freq: daily
+    decimals: 2
+    params:
+      series: IUDBEDR
+
+  # ───────────────────────── China (OECD) ─────────────────────────────────
+  - id: cn_cpi
+    region: china
+    indicator: cpi_yoy
+    label: CPI all-items (YoY)
+    source: oecd
+    freq: monthly
+    params:
+      flow: "OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0"
+      key: CHN.M.N.CPI.PA._T.N.GY
+      start: "2024-01"
+
+  - id: cn_gdp
+    region: china
+    indicator: gdp_yoy
+    label: Real GDP (YoY)
+    source: oecd
+    freq: quarterly
+    params:
+      # Quarterly real GDP growth - G20 countries; TRANSFORMATION=GY (YoY).
+      flow: "OECD.SDD.NAD,DSD_NAMAIN1@DF_QNA_EXPENDITURE_GROWTH_G20,1.1"
+      key: Q..CHN.........GY.
+      start: "2023-Q1"
+
+  # ───────────────────────── Japan (e-Stat gated + OECD rate) ─────────────
+  # Japan CPI/GDP need ESTAT_APP_ID in .env (see sources/estat.py). Until the
+  # key is added these rows surface as "unavailable" in the digest.
+  - id: jp_cpi
+    region: japan
+    indicator: cpi_yoy
+    label: CPI all-items (YoY)
+    source: estat
+    freq: monthly
+    params:
+      # CPI 2020-base, all-Japan, all-items, YoY table — confirm on first key use.
+      statsDataId: "0003427113"
+      filters: {cdCat01: "0001"}
+
+  - id: jp_rate
+    region: japan
+    indicator: policy_rate
+    label: BoJ policy rate (call money, monthly avg)
+    # BoJ has no clean keyless by-code endpoint; FRED's call-money rate is
+    # the reliable proxy (see sources/boj.py for why native is deferred).
+    source: fred
+    freq: monthly
+    decimals: 2
+    params:
+      series: IRSTCI01JPM156N

@@ -75,10 +75,11 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    "*This channel covers three layers:*\n"
+                    "*This channel covers four layers:*\n"
                     "1️⃣ *Macro releases & cycle* — the disciplined Tier A/B release feed (below)\n"
                     "2️⃣ *Ahead of the Curve* — Joseph Ellis's leading-indicator chart framework (23 charts)\n"
-                    "3️⃣ *Top-down market data* — valuation, ERP & factor returns (Damodaran · Ken French · AQR · Shiller)"
+                    "3️⃣ *Top-down market data* — valuation, ERP & factor returns (Damodaran · Ken French · AQR · Shiller)\n"
+                    "4️⃣ *Global macro* — international CPI/GDP/rates (Eurozone · UK · China · Japan), weekly"
                 ),
             },
         },
@@ -110,6 +111,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "text": (
                     "*When and what posts*\n"
                     "• 📅 *Sun 07:00 ET* — week-ahead + 4-week lookout\n"
+                    "• 🌍 *Sun 08:00 ET* — Global macro digest (Eurozone / UK / China / Japan)\n"
                     "• 🔴 *Release time* — main post with headline + 5y chart; "
                     "thread with long-history + components + (for payrolls) "
                     "HC-employment two-pane chart\n"
@@ -145,6 +147,8 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                     "(headline update %, proposed vs final, by payment system).\n"
                     "• 📊 <https://jroypeterson.github.io/macro-monitor/dashboard/|Current state dashboard> — "
                     "latest value per family, mini-charts, links into release reports. Auto-refreshes after every release post.\n"
+                    "• 🌍 <https://jroypeterson.github.io/macro-monitor/international/|Global macro dashboard> — "
+                    "latest CPI / GDP / unemployment / policy rates for the eurozone, UK, China & Japan. Refreshed weekly.\n"
                     "• 📅 <https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html|2026 Annual Macro Calendar> — "
                     "year-long release schedule (all tiers; Tier B tagged), refreshed quarterly\n"
                     "• `#status-reports` — daily 08:00 ET heartbeat + operator alerts\n"
@@ -165,7 +169,6 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                     "• *ISM Mfg + Services PMI* — licensing terms (no free redistribution)\n"
                     "• *Conference Board Consumer Confidence* — same licensing issue\n"
                     "• *FOMC decisions / minutes* — manual until a meeting tests the parser\n"
-                    "• *International macro* (ECB / BoJ / eurozone / China / UK) — Phase 2\n"
                     "• *Intraday market data* (live yields, USD, oil) — sigma-alert owns price moves"
                 ),
             },

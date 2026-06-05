@@ -53,8 +53,19 @@ verified rather than copied from the roadmap.
 
 ## Larger deferred phases
 
-- [ ] **Phase 2 — international macro** (ECB / BoJ / eurozone / China / UK).
-  Already named as "Phase 2" in `overview.py`'s pinned-overview text.
+- [x] **Phase 2 — international macro ("Global macro")** — SHIPPED 2026-06-04.
+  Eurozone / UK / China / Japan CPI, core CPI, GDP, unemployment & policy
+  rates from native sources (Eurostat JSON-stat · ECB & OECD SDMX-JSON · ONS
+  `/data` · BoE IADB CSV · FRED for Japan's rate), normalized to one model and
+  surfaced as a weekly `#macro` "Global macro" digest + `outputs/international/`
+  dashboard panel — `cli global-macro`, `global_macro.yml` (Sun 08:00 ET).
+  Declarative series in `international/series.yaml`; per-series failure
+  isolation. **Remaining:** (a) Japan CPI/GDP need a free `ESTAT_APP_ID` (e-Stat
+  client built + gated; time-code decode to confirm on first key use); (b) China
+  NBS native API is geo-blocked (403) so China uses OECD — fine, but note it;
+  (c) BoJ has no clean keyless by-code endpoint, so Japan's policy rate uses
+  FRED's call-money series (`sources/boj.py` left as a stub for a future native
+  client); (d) possible later adds: PMIs, China IP, eurozone-member detail.
 - [x] **Phase 2 — deeper HC-subsector cuts** — SHIPPED 2026-05-30. CPI now
   breaks medical care into commodities (`SAM1`) / hospital & related
   (`SEMD`) / professional services (`SEMC`, NSA) alongside the existing

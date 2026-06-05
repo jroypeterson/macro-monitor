@@ -1,0 +1,65 @@
+name: Global macro
+
+# Sunday 08:00 ET weekly "Global macro" digest to #macro (Eurozone / UK /
+# China / Japan: CPI, GDP, unemployment, policy rates) + refresh the
+# outputs/international/ dashboard panel.
+# 08:00 EDT = 12:00 UTC, 08:00 EST = 13:00 UTC — list both for DST.
+
+on:
+  schedule:
+    - cron: "0 12 * * 0"   # 08:00 EDT (summer), Sunday
+    - cron: "0 13 * * 0"   # 08:00 EST (winter), Sunday
+  workflow_dispatch: {}
+
+jobs:
+  global-macro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT; exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "08" ]; then
+            echo "Outside 08:00 ET (now $ET_HOUR ET); skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Global macro digest
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          ESTAT_APP_ID: ${{ secrets.ESTAT_APP_ID }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli global-macro --post
+
+      - name: Commit refreshed dashboard panel
+        if: steps.dst_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add outputs/international/index.html || true
+          git diff --cached --quiet || git commit -m "global-macro: refresh international dashboard panel [skip ci]"
+          git push || true

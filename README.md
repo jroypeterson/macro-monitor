@@ -70,7 +70,23 @@ See Appendix B of the plan for the full table. Highlights:
 - **2b** ✅ Macro-focus keyword filters + mainstream feeds (NYT/FT/Bloomberg/WSJ/Economist) + Gmail senders (Torsten Slok / Yardeni / Economist Today) + multi-account Gmail (jroypeterson + floridabusinessman)
 - **2c** ✅ Haiku 4.5 read-worthiness scorer + macro classifier + curated top picks + table of contents + per-source staleness probe
 - **2 deeper HC subsector** ✅ CPI medical breakdown (commodities / hospital & related / professional services alongside medical-care-services) + PPI HC cuts (hospitals, physician offices, pharma mfg, surgical & medical instruments), each with a dedicated thread chart + Healthcare-context lines
+- **2 international (Global macro)** ✅ Eurozone / UK / China / Japan CPI, core CPI, GDP, unemployment & policy rates from native sources (Eurostat · ECB · ONS · BoE · OECD · FRED), surfaced as a weekly `#macro` "Global macro" digest + `outputs/international/` dashboard panel — separate from the US Tier A/B feed. Japan CPI/GDP need a free `ESTAT_APP_ID` (see `.env.example`); all other regions are keyless.
 - **3** Earnings-transcript macro commentary
+
+### International "Global macro" layer
+
+```bash
+# Dry-run the weekly Global macro digest (collects EZ/UK/China/Japan, renders
+# the dashboard panel, prints what'd post — no Slack):
+python -m macro_monitor.cli global-macro --dry-run
+
+# Live-fire to #macro + commit the refreshed dashboard panel:
+python -m macro_monitor.cli global-macro --post
+```
+
+Series are declarative in `international/series.yaml` (region + indicator +
+source + locator). Each region pulls from its authoritative source; one dead
+endpoint is isolated to a single "unavailable" row rather than sinking the run.
 
 ### Daily research digest
 
@@ -111,6 +127,7 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 | `ANTHROPIC_API_KEY` | `research_digest` — Haiku 4.5 read-worthiness scorer |
 | `GMAIL_TOKEN_JSON` | `research_digest` — default-account (jroypeterson) Gmail OAuth token |
 | `GMAIL_TOKEN_FLORIDABUSINESSMAN` | `research_digest` — floridabusinessman@gmail.com Gmail OAuth token |
+| `ESTAT_APP_ID` | `global_macro` — Japan e-Stat appId (optional; only Japan CPI/GDP need it) |
 
 ## Workflows
 
@@ -123,6 +140,7 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
   calendar_backfill.yml    Sunday 21:00 ET — rolling 90-day Google Calendar push
   reconciliation.yml       Daily 17:00 ET — catch-up poll, surface stale series
   research_digest.yml      Daily 08:30 ET — Fed/macro research RSS + Gmail digest
+  global_macro.yml         Sunday 08:00 ET — international "Global macro" digest + dashboard
 ```
 
 All workflows are idempotent. `release_polling`, `reconciliation`, and
