@@ -1,20 +1,29 @@
-name: Deploy outputs/ to GitHub Pages
+name: Deploy site to GitHub Pages
 
-# Deploys outputs/ to GitHub Pages so the dashboard, annual calendar,
-# and per-release HTML reports all have permanent URLs:
-#   https://jroypeterson.github.io/macro-monitor/dashboard/
-#   https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html
-#   https://jroypeterson.github.io/macro-monitor/archive/<family>/<period>.html
+# Deploys BOTH outputs/ and readable/ to GitHub Pages, so every surface has a
+# permanent public URL and the comprehensive overview hub (readable/index.html)
+# is the site landing page:
+#   https://jroypeterson.github.io/macro-monitor/                  (overview hub)
+#   https://jroypeterson.github.io/macro-monitor/dashboard/        (outputs/)
+#   https://jroypeterson.github.io/macro-monitor/calendar/...      (outputs/)
+#   https://jroypeterson.github.io/macro-monitor/international/     (outputs/)
+#   https://jroypeterson.github.io/macro-monitor/fiscal/           (readable/)
+#   https://jroypeterson.github.io/macro-monitor/drug_prices/      (readable/)
+#   https://jroypeterson.github.io/macro-monitor/market/           (readable/)
+#   https://jroypeterson.github.io/macro-monitor/ahead_of_curve/   (readable/)
 #
-# Fires on every push that touches outputs/** — which includes the
-# auto-commits from release_polling, reconciliation, and annual_calendar
-# crons. So the public dashboard is always fresh-as-of the last release.
+# Staging merges outputs/ then readable/ into _site (readable/index.html wins as
+# the root index). Fires on pushes touching outputs/** or readable/** — incl. the
+# release/reconcile/calendar cron auto-commits, so the public site stays fresh.
+# NOTE: only public, cited data lives here — never deploy positions/account/paid data.
 
 on:
   push:
     branches: [main]
     paths:
       - "outputs/**"
+      - "readable/**"
+      - ".github/workflows/pages_deploy.yml"
   workflow_dispatch: {}
 
 # Only one Pages deploy at a time; cancel in-progress runs if a new
@@ -40,10 +49,18 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload outputs/ as the Pages artifact
+      - name: Stage outputs/ + readable/ into the published site
+        # outputs/ first, then readable/ (its index.html overwrites outputs/index.html
+        # so the comprehensive overview hub is the site root). No other path collisions.
+        run: |
+          mkdir -p _site
+          cp -r outputs/. _site/
+          cp -r readable/. _site/
+
+      - name: Upload the staged site as the Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: outputs
+          path: _site
 
       - id: deployment
         name: Deploy
