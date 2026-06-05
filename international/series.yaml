@@ -56,6 +56,30 @@ series:
       flow: FM
       key: B.U2.EUR.4F.KR.MRR_FR.LEV
 
+  - id: ez_yield_2y
+    region: eurozone
+    indicator: yield_2y
+    label: 2Y euro-area AAA yield
+    source: ecb
+    freq: daily
+    decimals: 2
+    params:
+      flow: YC
+      key: B.U2.EUR.4F.G_N_A.SV_C_YM.SR_2Y
+      start: "2025-12-01"
+
+  - id: ez_yield_10y
+    region: eurozone
+    indicator: yield_10y
+    label: 10Y euro-area AAA yield
+    source: ecb
+    freq: daily
+    decimals: 2
+    params:
+      flow: YC
+      key: B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y
+      start: "2025-12-01"
+
   # ───────────────────────── United Kingdom (ONS + BoE) ───────────────────
   - id: uk_cpi
     region: uk
@@ -102,6 +126,18 @@ series:
     decimals: 2
     params:
       series: IUDBEDR
+
+  - id: uk_yield_10y
+    region: uk
+    indicator: yield_10y
+    label: 10Y gilt (nominal par)
+    source: boe
+    freq: daily
+    decimals: 2
+    params:
+      series: IUDMNPY     # British Gov't Securities 10Y nominal par yield
+      from: "01/Dec/2025"
+      collapse: false
 
   # ───────────────────────── China (OECD) ─────────────────────────────────
   - id: cn_cpi
@@ -154,3 +190,13 @@ series:
     decimals: 2
     params:
       series: IRSTCI01JPM156N
+
+  - id: jp_yield_10y
+    region: japan
+    indicator: yield_10y
+    label: 10Y JGB
+    source: fred
+    freq: monthly
+    decimals: 2
+    params:
+      series: IRLTLT01JPM156N

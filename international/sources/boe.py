@@ -71,11 +71,16 @@ def fetch_boe(spec, *, session) -> list[IntlObservation]:
             continue
     raw.sort(key=lambda o: o.period)
 
-    # Collapse daily-carried runs to level-change points.
-    out: list[IntlObservation] = []
-    for obs in raw:
-        if not out or out[-1].value != obs.value:
-            out.append(obs)
+    # Collapse daily-carried runs to level-change points (right for a policy
+    # rate; turn off via params.collapse=false for a yield, where every day
+    # is a genuine reading and YTD needs the exact year-end value).
+    if not params.get("collapse", True):
+        out = raw
+    else:
+        out = []
+        for obs in raw:
+            if not out or out[-1].value != obs.value:
+                out.append(obs)
     if not out:
         raise SourceError(f"{spec.id}: boe produced no observations")
     return out

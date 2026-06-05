@@ -14,8 +14,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from ..outputs import outputs_root
-from .config import INDICATOR_LABELS, INDICATOR_ORDER, REGION_LABELS, REGION_ORDER
-from .format import fmt_change, fmt_period, fmt_value
+from .config import (
+    INDICATOR_LABELS,
+    INDICATOR_ORDER,
+    REGION_LABELS,
+    REGION_ORDER,
+    YIELD_INDICATORS,
+)
+from .format import fmt_bps, fmt_change, fmt_period, fmt_value, ytd_change_bps
 from .model import IntlSeriesResult
 
 ET = ZoneInfo("America/New_York")
@@ -41,9 +47,10 @@ def render_dashboard(
 
 
 def _render_card(results: list[IntlSeriesResult], region: str) -> str:
-    in_region = [r for r in results if r.region == region]
-    if not in_region:
+    all_in_region = [r for r in results if r.region == region]
+    if not all_in_region:
         return ""
+    in_region = [r for r in all_in_region if r.indicator not in YIELD_INDICATORS]
     order = {ind: i for i, ind in enumerate(INDICATOR_ORDER)}
     in_region.sort(key=lambda r: order.get(r.indicator, 99))
 
@@ -65,11 +72,39 @@ def _render_card(results: list[IntlSeriesResult], region: str) -> str:
                 f"<div class='row nodata'><span class='lbl'>{label}</span>"
                 f"<span class='val'>—<span class='per'>{why}</span></span></div>"
             )
+    rows.extend(_yield_rows(all_in_region))
     return (
         f"<div class='card'><h2>{html.escape(REGION_LABELS.get(region, region))}</h2>"
         + "".join(rows)
         + "</div>"
     )
+
+
+def _yield_rows(in_region: list[IntlSeriesResult]) -> list[str]:
+    """2Y / 10Y gov't-yield rows with YTD-change-in-bps; missing maturities
+    render as a muted dash."""
+    by_ind = {r.indicator: r for r in in_region}
+    out = []
+    for ind, lab in (("yield_2y", "2Y gov't yield"), ("yield_10y", "10Y gov't yield")):
+        r = by_ind.get(ind)
+        if r and r.ok:
+            ytd = ytd_change_bps(r)
+            cls = "up" if (ytd or 0) > 0 else ("down" if (ytd or 0) < 0 else "")
+            ytd_html = (
+                f"<span class='delta {cls}'>YTD {html.escape(fmt_bps(ytd))}</span>"
+                if ytd is not None else ""
+            )
+            out.append(
+                f"<div class='row'><span class='lbl'>{lab}</span>"
+                f"<span class='val'>{html.escape(fmt_value(r))}{ytd_html}"
+                f"<span class='per'>{html.escape(fmt_period(r.latest.period))}</span></span></div>"
+            )
+        elif r is not None:
+            out.append(
+                f"<div class='row nodata'><span class='lbl'>{lab}</span>"
+                f"<span class='val'>—<span class='per'>no free source</span></span></div>"
+            )
+    return out
 
 
 _TEMPLATE = """\

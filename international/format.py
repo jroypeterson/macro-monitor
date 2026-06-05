@@ -32,6 +32,36 @@ def fmt_value(result: IntlSeriesResult) -> str:
     return f"{v:.{result.decimals}f}{result.unit}"
 
 
+def ytd_change_bps(result: IntlSeriesResult) -> float | None:
+    """Year-to-date change in basis points: latest value minus the last
+    observation of the prior calendar year (the year-end reference). None
+    when the series has no prior-year point to anchor against."""
+    lo = result.latest
+    if lo is None:
+        return None
+    try:
+        latest_year = int(lo.period[:4])
+    except ValueError:
+        return None
+    base = None
+    for o in result.observations:
+        try:
+            if int(o.period[:4]) < latest_year:
+                base = o  # keep the last prior-year reading
+        except ValueError:
+            continue
+    if base is None:
+        return None
+    return (lo.value - base.value) * 100.0
+
+
+def fmt_bps(bps: float | None) -> str:
+    if bps is None:
+        return ""
+    sign = "+" if bps >= 0 else "−"
+    return f"{sign}{abs(bps):.0f}bps"
+
+
 def fmt_change(result: IntlSeriesResult) -> str:
     """Small delta vs the prior observation, in the series' own units
     (percentage points for a rate). Empty string when no prior point."""

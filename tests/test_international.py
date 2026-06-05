@@ -147,6 +147,28 @@ def test_apply_yoy_matches_same_period_prior_year():
     assert all(o.period == "2026-01" for o in out)
 
 
+def test_ytd_change_bps_anchors_on_prior_year_end():
+    from macro_monitor.international.format import fmt_bps, ytd_change_bps
+    r = IntlSeriesResult(
+        spec_id="y", region="uk", indicator="yield_10y", label="10Y", unit="%",
+        source="boe", freq="daily", decimals=2,
+        observations=[
+            IntlObservation("2025-12-30", 4.46),  # prior-year-end anchor
+            IntlObservation("2026-01-02", 4.50),
+            IntlObservation("2026-06-03", 4.83),
+        ],
+    )
+    bps = ytd_change_bps(r)
+    assert round(bps) == 37  # (4.83 - 4.46) * 100
+    assert fmt_bps(bps) == "+37bps"
+    # No prior-year point -> None.
+    r2 = IntlSeriesResult(
+        spec_id="y2", region="uk", indicator="yield_10y", label="10Y", unit="%",
+        source="boe", freq="daily", observations=[IntlObservation("2026-01-02", 4.5)],
+    )
+    assert ytd_change_bps(r2) is None
+
+
 def test_fmt_period_variants():
     assert fmt_period("2025-12") == "Dec 2025"
     assert fmt_period("2026-Q1") == "Q1 2026"

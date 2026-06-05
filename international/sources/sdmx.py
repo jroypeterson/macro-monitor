@@ -27,7 +27,11 @@ def fetch_ecb(spec, *, session) -> list[IntlObservation]:
     flow, key = params.get("flow"), params.get("key")
     if not flow or not key:
         raise SourceError(f"{spec.id}: ecb params need 'flow' and 'key'")
-    query = {"format": "jsondata", "lastNObservations": params.get("last", 8)}
+    query = {"format": "jsondata"}
+    if params.get("start"):
+        query["startPeriod"] = params["start"]  # full history since date (for YTD)
+    else:
+        query["lastNObservations"] = params.get("last", 8)
     resp = get(session, f"{ECB_BASE}/{flow}/{key}", params=query)
     try:
         d = resp.json()

@@ -21,14 +21,22 @@ REGION_LABELS = {
     "china": "🇨🇳 China",
     "japan": "🇯🇵 Japan",
 }
-INDICATOR_ORDER = ["cpi_yoy", "core_cpi_yoy", "gdp_yoy", "unemployment", "policy_rate"]
+INDICATOR_ORDER = [
+    "cpi_yoy", "core_cpi_yoy", "gdp_yoy", "unemployment", "policy_rate",
+    "yield_2y", "yield_10y",
+]
 INDICATOR_LABELS = {
     "cpi_yoy": "CPI (YoY)",
     "core_cpi_yoy": "Core CPI (YoY)",
     "gdp_yoy": "GDP (YoY)",
     "unemployment": "Unemployment",
     "policy_rate": "Policy rate",
+    "yield_2y": "2Y gov't yield",
+    "yield_10y": "10Y gov't yield",
 }
+# Bond-yield indicators render as a combined "Gov't yield" line with YTD
+# change (in bps), handled separately from the single-value indicators above.
+YIELD_INDICATORS = ("yield_2y", "yield_10y")
 
 VALID_SOURCES = {"eurostat", "ecb", "oecd", "ons", "boe", "estat", "boj", "fred"}
 VALID_FREQ = {"monthly", "quarterly", "annual", "daily"}

@@ -12,13 +12,15 @@ from .config import (
     INDICATOR_ORDER,
     REGION_LABELS,
     REGION_ORDER,
+    YIELD_INDICATORS,
 )
-from .format import fmt_change, fmt_period, fmt_value
+from .format import fmt_bps, fmt_change, fmt_period, fmt_value, ytd_change_bps
 from .model import IntlSeriesResult
 
 
 def _ordered(results: list[IntlSeriesResult], region: str) -> list[IntlSeriesResult]:
-    in_region = [r for r in results if r.region == region]
+    in_region = [r for r in results if r.region == region
+                 and r.indicator not in YIELD_INDICATORS]
     order = {ind: i for i, ind in enumerate(INDICATOR_ORDER)}
     return sorted(in_region, key=lambda r: order.get(r.indicator, 99))
 
@@ -36,7 +38,31 @@ def _region_lines(results: list[IntlSeriesResult], region: str) -> list[str]:
         else:
             why = "needs API key" if "APP_ID" in (r.error or "") else "unavailable"
             lines.append(f"• {label}: _—  ({why})_")
+    yld = _yield_line(results, region)
+    if yld:
+        lines.append(yld)
     return lines
+
+
+def _yield_line(results: list[IntlSeriesResult], region: str) -> str | None:
+    """One combined gov't-bond line: '2Y x% (YTD ±Nbps) · 10Y y% (YTD ±Mbps)'.
+    Missing maturities render '—'; a region with no live yields shows the
+    no-free-source note."""
+    by_ind = {r.indicator: r for r in results if r.region == region}
+    parts: list[str] = []
+    any_ok = False
+    for ind, lab in (("yield_2y", "2Y"), ("yield_10y", "10Y")):
+        r = by_ind.get(ind)
+        if r and r.ok:
+            any_ok = True
+            ytd = ytd_change_bps(r)
+            ytd_str = f" _(YTD {fmt_bps(ytd)})_" if ytd is not None else ""
+            parts.append(f"{lab} *{fmt_value(r)}*{ytd_str}")
+        else:
+            parts.append(f"{lab} —")
+    if not any_ok:
+        return "• Gov't yield: _— (no free source)_"
+    return "• Gov't yield: " + "  ·  ".join(parts)
 
 
 def build_digest_blocks(
