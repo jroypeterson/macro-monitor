@@ -553,6 +553,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_fiscal)
 
     sp = sub.add_parser(
+        "drug-prices",
+        help="Build the drug-price-inflation (consumer vs producer) chart into readable/drug_prices/",
+    )
+    sp.set_defaults(func=cmd_drug_prices)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -976,6 +982,19 @@ def cmd_fiscal(args: argparse.Namespace) -> int:
 
     out = build()
     print(f"Rendered {len(out)} fiscal chart(s):")
+    for name, path in out.items():
+        print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
+    idx = path.parent / "index.html"
+    print(f"\nOpen the gallery: file://{idx.absolute()}")
+    return 0
+
+
+def cmd_drug_prices(args: argparse.Namespace) -> int:
+    """Build the drug-price-inflation chart into readable/drug_prices/."""
+    from .drugprices import build
+
+    out = build()
+    print(f"Rendered {len(out)} drug-price chart(s):")
     for name, path in out.items():
         print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
     idx = path.parent / "index.html"
