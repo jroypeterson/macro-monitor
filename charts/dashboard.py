@@ -110,6 +110,8 @@ _HTML_TEMPLATE = """\
   .headline-label {{ font-size: 0.9em; color: #555; }}
   .headline-value {{ font-variant-numeric: tabular-nums; font-weight: 600; color: #222; }}
   .also {{ font-size: 0.75em; color: #888; margin-left: 0.5em; }}
+  .basis {{ font-size: 0.62em; color: #999; font-weight: 400; margin-left: 0.3em;
+            text-transform: none; letter-spacing: 0; }}
   .chart-thumb {{ width: 100%; height: auto; max-height: 200px; object-fit: contain;
                   margin: 0.6em 0; border: 1px solid #eee; border-radius: 4px; }}
   .links {{ display: flex; gap: 0.5em; font-size: 0.8em; margin-top: 0.6em; }}
@@ -126,7 +128,10 @@ _HTML_TEMPLATE = """\
 <body>
 
 <h1>macro-monitor — current state</h1>
-<p class="subtitle">Latest values per Tier A family. Generated {generated_at}.</p>
+<p class="subtitle">Latest values per Tier A family. Generated {generated_at}.<br>
+Each figure is tagged with its basis — <b>y/y</b> (year-over-year) · <b>m/m</b> (month-over-month) ·
+<b>m/m ann.</b> (annualized monthly) · <b>q/q ann.</b> (annualized quarterly) ·
+<b>m/m chg</b> (level change, e.g. payrolls in thousands) · <b>level</b> (the raw level).</p>
 
 <div class="summary">
   <div class="stat">
@@ -182,6 +187,33 @@ def _fmt_value(value: float | None, transform: str) -> str:
     return f"{value:.2f}"
 
 
+# Short, human-readable basis for each transform — the figures are NOT all
+# y/y (CPI headline is annualized m/m, payrolls is the m/m change in
+# thousands, unemployment is a level, etc.), so every value is labelled.
+_BASIS_LABELS = {
+    "yoy_pct": "y/y",
+    "mom_pct": "m/m",
+    "annualized_mom": "m/m ann.",
+    "qoq_pct_saar": "q/q ann.",
+    "mom_chg": "m/m chg",
+    "raw": "level",
+}
+
+
+def _basis_label(transform: str) -> str:
+    return _BASIS_LABELS.get(transform, transform)
+
+
+def _value_with_basis(value: float | None, transform: str) -> str:
+    """Formatted value followed by a small muted basis tag (e.g. 'y/y')."""
+    if value is None:
+        return "—"
+    return (
+        f"{_fmt_value(value, transform)}"
+        f"<span class='basis'>{html.escape(_basis_label(transform))}</span>"
+    )
+
+
 def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     stale = payload.get("is_stale", False)
     from_cache = payload.get("from_fallback_cache", False)
@@ -193,10 +225,13 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     for h in payload.get("headline", []):
         label = html.escape(h.get("label", h.get("id", "?")))
         primary = h.get("primary", {})
-        value_str = _fmt_value(primary.get("value"), primary.get("transform", "raw"))
+        value_str = _value_with_basis(primary.get("value"), primary.get("transform", "raw"))
         also = h.get("also_display", [])
         also_str = (
-            " · ".join(_fmt_value(ad["value"], ad["transform"]) for ad in also if ad.get("value") is not None)
+            " · ".join(
+                f"{_fmt_value(ad['value'], ad['transform'])} {_basis_label(ad['transform'])}"
+                for ad in also if ad.get("value") is not None
+            )
         )
         also_html = f"<span class='also'>{html.escape(also_str)}</span>" if also_str else ""
         headline_rows.append(
@@ -215,7 +250,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
                 f"<div class='headline'>"
                 f"<span class='headline-label'>{html.escape(c.get('label', '?'))} "
                 f"<span class='hc-badge'>HC</span></span>"
-                f"<span class='headline-value'>{_fmt_value(tv.get('value'), tv.get('transform', 'raw'))}</span>"
+                f"<span class='headline-value'>{_value_with_basis(tv.get('value'), tv.get('transform', 'raw'))}</span>"
                 f"</div>"
             )
     for c in payload.get("components", []) or []:
@@ -223,7 +258,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
             hc_lines.append(
                 f"<div class='headline'>"
                 f"<span class='headline-label'>↳ {html.escape(c.get('label', '?'))}</span>"
-                f"<span class='headline-value'>{_fmt_value(c.get('value'), c.get('transform', 'raw'))}</span>"
+                f"<span class='headline-value'>{_value_with_basis(c.get('value'), c.get('transform', 'raw'))}</span>"
                 f"</div>"
             )
 
