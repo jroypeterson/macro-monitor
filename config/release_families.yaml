@@ -25,6 +25,7 @@ families:
     release_time_et: "08:30"
     source: fred
     fallback_source: bls               # used only if FRED ingest lag observed
+    topics: [inflation]
 
     # === Display ===
     display_name: "CPI"
@@ -177,6 +178,9 @@ families:
     release_time_et: "08:30"
     source: fred
     fallback_source: bls
+    # Carries nonfarm payrolls + avg hourly earnings → employment AND the
+    # (nominal) hourly-earnings read. Tier-A-mandated.
+    topics: [employment, real_hourly_earnings, wages]
 
     # === Display ===
     display_name: "Employment Situation"
@@ -333,6 +337,7 @@ families:
     release_time_et: "08:30"
     source: fred                       # BEA via FRED
     fallback_source: bea
+    topics: [inflation, consumer_spending]
 
     # === Display ===
     display_name: "PCE / Personal Income & Outlays"
@@ -444,6 +449,7 @@ families:
     release_time_et: "08:30"           # Thursdays
     source: fred
     fallback_source: bls
+    topics: [employment]
 
     # === Display ===
     display_name: "Initial Jobless Claims"
@@ -515,6 +521,7 @@ families:
     release_time_et: "08:30"
     source: fred
     fallback_source: bea
+    topics: [growth]
 
     # === Display ===
     display_name: "GDP"
@@ -608,6 +615,7 @@ families:
     release_time_et: "10:00"
     source: fred
     fallback_source: bls
+    topics: [employment, labor_demand]
 
     # === Display ===
     # JOLTS data lags ~2 months. Latest in early June 2026 is March 2026.
@@ -699,6 +707,7 @@ families:
     release_time_et: "08:30"
     source: fred
     fallback_source: bls
+    topics: [inflation]
 
     # === Display ===
     display_name: "PPI"
@@ -814,6 +823,7 @@ families:
     release_calendar_id: 9             # Advance Monthly Sales for Retail and Food Services
     release_time_et: "08:30"
     source: fred
+    topics: [consumer_spending]
 
     # === Display ===
     display_name: "Retail Sales"
@@ -884,6 +894,7 @@ families:
     release_time_et: "08:30"
     source: fred
     fallback_source: bls
+    topics: [employment, wages]
 
     # === Display ===
     display_name: "Employment Cost Index"
@@ -962,6 +973,7 @@ families:
     release_calendar_id: 14            # G.17 Industrial Production and Capacity Utilization
     release_time_et: "09:15"
     source: fred
+    topics: [manufacturing]
     display_name: "Industrial Production"
     period_label_format: "{month_name} {year}"
 
@@ -1017,6 +1029,7 @@ families:
     release_calendar_id: 17            # New Residential Construction (Census)
     release_time_et: "08:30"
     source: fred
+    topics: [housing]
     display_name: "Housing Starts & Permits"
     period_label_format: "{month_name} {year}"
 
@@ -1073,6 +1086,7 @@ families:
     release_calendar_id: 31            # Advance Durable Goods (M3 Manufacturers' Shipments, Inventories, Orders)
     release_time_et: "08:30"
     source: fred
+    topics: [manufacturing]
     display_name: "Durable Goods Orders"
     period_label_format: "{month_name} {year}"
 
@@ -1129,6 +1143,7 @@ families:
     release_calendar_id: 13            # International Trade in Goods and Services
     release_time_et: "08:30"
     source: fred
+    topics: [trade]
     display_name: "Trade Balance"
     period_label_format: "{month_name} {year}"
 
@@ -1178,6 +1193,9 @@ families:
     release_calendar_id: 26            # G.19 Consumer Credit
     release_time_et: "15:00"           # 3:00 PM ET — unusual, evening release
     source: fred
+    # Borrowing, not spending — intentionally NOT `consumer_spending`, so it
+    # stays Tier B (gated). Consumer SPENDING lives in pce + retail_sales.
+    topics: [consumer_credit]
     display_name: "Consumer Credit"
     period_label_format: "{month_name} {year}"
 
@@ -1233,6 +1251,7 @@ families:
     release_calendar_id: 35            # Productivity and Costs (BLS)
     release_time_et: "08:30"
     source: fred
+    topics: [productivity, wages]
     display_name: "Productivity & Unit Labor Costs"
     period_label_format: "Q{quarter} {year}"
 
@@ -1289,6 +1308,7 @@ families:
     release_calendar_id: 175           # University of Michigan: Consumer Sentiment
     release_time_et: "10:00"
     source: fred
+    topics: [sentiment]
     display_name: "UMich Consumer Sentiment"
     period_label_format: "{month_name} {year}"
 
@@ -1357,6 +1377,11 @@ families:
     release_calendar_id: 194           # FRED release_id: ADP National Employment Report
     release_time_et: "08:15"
     source: fred
+    # A private NFP PREVIEW, not the employment release — intentionally NOT
+    # tagged `employment` so the Tier-A mandate doesn't force it to A. The
+    # canonical employment read is the `payrolls` family; ADP stays Tier B
+    # (gated) so it doesn't double up on the headline every month.
+    topics: [labor_demand]
 
     # === Display ===
     display_name: "ADP National Employment Report"

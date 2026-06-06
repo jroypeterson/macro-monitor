@@ -29,6 +29,33 @@ _VALID_TIERS = {"A", "B", "C"}
 _VALID_FAMILY_TYPES = {"numeric", "event"}
 _VALID_CADENCES = {"weekly", "monthly", "quarterly", "per_meeting"}
 
+# Topics that mandate Tier A regardless of how a family was otherwise
+# scored. These are the releases the user cares most about — consumer
+# spending, employment, and real (inflation-adjusted) hourly earnings —
+# so a family declaring any of them must always post unconditionally
+# (Tier A), never sit behind the Tier B surprise gate. The mapping is
+# DATA-DRIVEN: declare a family's coverage in its `topics:` list and the
+# validator enforces the tier, rather than hardcoding family ids in code.
+TIER_A_MANDATED_TOPICS = {
+    "consumer_spending",
+    "employment",
+    "real_hourly_earnings",
+}
+# Known topic vocabulary (extend as families are added). Validated so a
+# typo'd topic can't silently fail to trigger the Tier-A mandate.
+_VALID_TOPICS = TIER_A_MANDATED_TOPICS | {
+    "inflation",
+    "wages",
+    "labor_demand",
+    "growth",
+    "housing",
+    "manufacturing",
+    "trade",
+    "consumer_credit",
+    "productivity",
+    "sentiment",
+}
+
 
 class SeriesSpec(BaseModel):
     """A single FRED series declaration."""
@@ -264,6 +291,10 @@ class FamilyConfig(BaseModel):
     release_time_et: str
     source: str
     fallback_source: str | None = None
+    # Economic topics this family covers (data-driven tiering input). Any
+    # family declaring a TIER_A_MANDATED_TOPICS topic must be tier A — the
+    # validator enforces this. See TIER_A_MANDATED_TOPICS / _VALID_TOPICS.
+    topics: list[str] = Field(default_factory=list)
 
     # Display
     display_name: str
@@ -288,6 +319,17 @@ class FamilyConfig(BaseModel):
     def _check_cadence(cls, v: str) -> str:
         if v not in _VALID_CADENCES:
             raise ValueError(f"cadence {v!r} not in {_VALID_CADENCES}")
+        return v
+
+    @field_validator("topics")
+    @classmethod
+    def _check_topics(cls, v: list[str]) -> list[str]:
+        for t in v:
+            if t not in _VALID_TOPICS:
+                raise ValueError(
+                    f"topic {t!r} is not a known topic. "
+                    f"Valid: {sorted(_VALID_TOPICS)}"
+                )
         return v
 
 
@@ -385,6 +427,17 @@ def validate_family(family: FamilyConfig) -> list[str]:
                 f"{family.display_name}: event families must have "
                 f"source: federal_reserve (got {family.source!r})"
             )
+
+    # Data-driven Tier-A mandate: any family covering consumer spending,
+    # employment, or real hourly earnings MUST be tier A (post
+    # unconditionally), never gated behind the Tier B surprise threshold.
+    mandated = set(family.topics) & TIER_A_MANDATED_TOPICS
+    if mandated and family.tier != "A":
+        errors.append(
+            f"{family.display_name}: declares Tier-A-mandated topic(s) "
+            f"{sorted(mandated)} but is tier {family.tier!r}; these "
+            f"families must be tier A (post unconditionally)"
+        )
 
     # Tier-A families must not have a tier_b_gate; Tier B must.
     if family.tier == "A" and family.tier_b_gate is not None:

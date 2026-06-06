@@ -119,6 +119,53 @@ def test_calendar_families_excludes_families_without_release_id(tmp_path: Path):
     assert "umich" not in calendar_families(families)
 
 
+def test_tier_a_mandated_topic_families_are_tier_a():
+    """Families covering consumer spending, employment, or real hourly
+    earnings must always be Tier A (post unconditionally). Lock the
+    data-driven mandate: every family tagged with such a topic is tier A."""
+    from macro_monitor.config import TIER_A_MANDATED_TOPICS
+
+    cfg = load_config(default_config_path())
+    mandated = [
+        (fid, f)
+        for fid, f in cfg.items()
+        if set(f.topics) & TIER_A_MANDATED_TOPICS
+    ]
+    assert mandated, "expected at least one Tier-A-mandated family"
+    for fid, f in mandated:
+        assert f.tier == "A", f"{fid} covers {f.topics} but is tier {f.tier}"
+
+    # The canonical consumer-spending + employment + real-hourly-earnings
+    # families specifically.
+    assert "consumer_spending" in cfg["pce"].topics
+    assert "consumer_spending" in cfg["retail_sales"].topics
+    assert "employment" in cfg["payrolls"].topics
+    assert "real_hourly_earnings" in cfg["payrolls"].topics
+
+
+def test_validator_rejects_mandated_topic_on_tier_b(tmp_path: Path):
+    """A family declaring a Tier-A-mandated topic but set to tier B must
+    fail validation — the mandate is enforced, not advisory."""
+    cfg = yaml.safe_load(default_config_path().read_text(encoding="utf-8"))
+    # housing is Tier B; mislabel it as covering consumer spending.
+    cfg["families"]["housing"]["topics"] = ["consumer_spending"]
+    path = tmp_path / "bad.yaml"
+    path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    families = load_config(path)
+    errors = validate_family(families["housing"])
+    assert any("consumer_spending" in e and "tier A" in e for e in errors)
+
+
+def test_validator_rejects_unknown_topic(tmp_path: Path):
+    cfg = yaml.safe_load(default_config_path().read_text(encoding="utf-8"))
+    cfg["families"]["cpi"]["topics"] = ["bogus_topic"]
+    path = tmp_path / "bad.yaml"
+    path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    with pytest.raises(Exception):  # field_validator rejects at load time
+        load_config(path)
+
+
 def test_validator_rejects_event_family_without_federal_reserve_source(tmp_path: Path):
     cfg = yaml.safe_load(default_config_path().read_text(encoding="utf-8"))
     cpi = cfg["families"]["cpi"]
