@@ -42,6 +42,54 @@ def _months_offset(series: pd.Series, target: pd.Timestamp, months: int) -> floa
     return _value_at(series, prior)
 
 
+def _value_near(
+    series: pd.Series, when: pd.Timestamp, tol_days: int = 10
+) -> float | None:
+    """Value at the observation CLOSEST to `when`, within `tol_days`.
+
+    Weekly series (e.g. gas prices) are stamped on Mondays, so a
+    calendar-offset target (target - 1 month / 1 year) rarely lands on an
+    exact observation date — an exact-match lookup returns None. This finds
+    the nearest non-null observation within a tolerance so weekly YoY / MoM
+    work without forcing the series onto a monthly grid.
+    """
+    valid = series.dropna()
+    if valid.empty:
+        return None
+    idx = valid.index
+    # Nearest index by absolute time distance.
+    deltas = (idx - when).to_series().abs()
+    nearest_pos = deltas.values.argmin()
+    nearest_date = idx[nearest_pos]
+    if abs((nearest_date - when).days) > tol_days:
+        return None
+    return float(valid.loc[nearest_date])
+
+
+@_register("yoy_pct_weekly")
+def yoy_pct_weekly(series: pd.Series, target: pd.Timestamp) -> float | None:
+    """Year-over-year % change for WEEKLY series — matches the nearest
+    observation ~52 weeks back (within a 10-day tolerance) instead of an
+    exact calendar-month index, so weekly data (gas prices) works."""
+    cur = _value_at(series, target)
+    prior = _value_near(series, target - pd.DateOffset(years=1))
+    if cur is None or prior is None or prior == 0:
+        return None
+    return 100.0 * (cur / prior - 1.0)
+
+
+@_register("mom_pct_weekly")
+def mom_pct_weekly(series: pd.Series, target: pd.Timestamp) -> float | None:
+    """~Month-over-month % change for WEEKLY series — matches the nearest
+    observation ~4 weeks back. (A true calendar month doesn't align to a
+    weekly grid; 4 weeks is the standard weekly-series convention.)"""
+    cur = _value_at(series, target)
+    prior = _value_near(series, target - pd.Timedelta(weeks=4))
+    if cur is None or prior is None or prior == 0:
+        return None
+    return 100.0 * (cur / prior - 1.0)
+
+
 @_register("raw")
 def raw(series: pd.Series, target: pd.Timestamp) -> float | None:
     return _value_at(series, target)

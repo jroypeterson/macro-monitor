@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "family_id": "gas_prices_(us_regular,_avg)",
+  "family_display_name": "Gas Prices (US Regular, avg)",
+  "period": "2026-06-01",
+  "period_label": "Week ending Jun 01, 2026",
+  "posted_at": "2026-06-06T16:52:06.702795+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-06T16:52:06.256772+00:00",
+  "latest_observation_period": "2026-06-01",
+  "expected_observation_period": "2026-06-01",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "GASREGW",
+      "label": "US Regular ($/gal)",
+      "primary": {
+        "transform": "raw",
+        "value": 4.305,
+        "raw_value": 4.305
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": 37.671889990406136
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": -3.301886792452835
+        }
+      ],
+      "prior_primary": null
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "GASREGW",
+    "anchor_transform": "yoy_pct_weekly",
+    "zscore": -1.3491097747311551,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "gas_5y_2026-06-01.png"
+  },
+  "agency_pdf_url": null
+}

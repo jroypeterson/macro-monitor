@@ -105,7 +105,14 @@ def _fmt_transformed(tv, display_unit: str | None = None) -> str:
     """
     if tv.value is None:
         return "—"
-    if tv.transform in {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}:
+    if tv.transform in {
+        "yoy_pct",
+        "mom_pct",
+        "annualized_mom",
+        "qoq_pct_saar",
+        "yoy_pct_weekly",
+        "mom_pct_weekly",
+    }:
         # always signed for direction clarity
         sign = "+" if tv.value >= 0 else ""
         return f"{sign}{tv.value:.2f}%"
@@ -138,6 +145,8 @@ _BASIS_BY_TRANSFORM = {
     "annualized_mom": "ann. rate",
     "mom_chg": "MoM chg",
     "qoq_pct_saar": "QoQ SAAR",
+    "yoy_pct_weekly": "YoY",
+    "mom_pct_weekly": "4wk",
     "raw": "(level)",
 }
 

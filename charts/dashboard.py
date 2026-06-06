@@ -173,7 +173,14 @@ def _fmt_pct(v: float | None) -> str:
 def _fmt_value(value: float | None, transform: str) -> str:
     if value is None:
         return "—"
-    if transform in {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}:
+    if transform in {
+        "yoy_pct",
+        "mom_pct",
+        "annualized_mom",
+        "qoq_pct_saar",
+        "yoy_pct_weekly",
+        "mom_pct_weekly",
+    }:
         sign = "+" if value >= 0 else ""
         return f"{sign}{value:.2f}%"
     if transform == "mom_chg":
@@ -196,6 +203,8 @@ _BASIS_LABELS = {
     "annualized_mom": "m/m ann.",
     "qoq_pct_saar": "q/q ann.",
     "mom_chg": "m/m chg",
+    "yoy_pct_weekly": "y/y",
+    "mom_pct_weekly": "4wk",
     "raw": "level",
 }
 

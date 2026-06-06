@@ -1459,6 +1459,80 @@ families:
       pdf_url_dated: null
       archive_path: "pdfs/archive/adp/{period}.pdf"
 
+  gas_prices:
+    # === Metadata ===
+    # EIA US Regular All Formulations retail gas price, weekly (Mondays).
+    # FRED release_id 183 = "Gasoline and Diesel Fuel Update" (EIA). The
+    # cost-of-gas read everyone feels at the pump; surfaced like the other
+    # macro cuts (dashboard card + poll pipeline). NOTE: GASREGW is the
+    # AVERAGE price; FRED does not publish a median retail gas series, so
+    # only the average is shipped here (median would need a different
+    # source — see TODO).
+    tier: B
+    family_type: numeric
+    cadence: weekly
+    release_calendar_id: 183
+    release_time_et: "17:00"           # EIA posts Monday afternoons
+    source: fred
+    topics: [inflation]
+
+    # === Display ===
+    display_name: "Gas Prices (US Regular, avg)"
+    period_label_format: "week ending {month_short} {day}, {year}"
+
+    # === Headline ===
+    # Weekly cadence → weekly-aware YoY (nearest obs ~52wk back) + a 4-week
+    # change (the weekly analogue of MoM). The level itself ($/gal) is the
+    # primary read.
+    headline:
+      - id: GASREGW
+        label: "US Regular ($/gal)"
+        primary_transform: raw
+        also_display: [yoy_pct_weekly, mom_pct_weekly]
+        basis: "level ($/gal)"
+
+    components: []
+
+    # === Context ===
+    # No trend table; the price level + YoY/4wk change tells the story.
+    context:
+      anchor_series: GASREGW
+      anchor_transform: yoy_pct_weekly
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: GASREGW, transform: raw, label: "US Regular ($/gal)"}
+        highlight_latest: true
+        filename: "gas_5y_{period}.png"
+      thread: []
+
+    # === Posting gate ===
+    # Tier B: previews + posts on a >=1.0sigma weekly surprise, so it
+    # doesn't spam #macro-and-markets every single week with a quiet print.
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - GASREGW
+      component_hash: []
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.eia.gov/petroleum/gasdiesel/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/gas_prices/{period}.pdf"
+
 # === Families to add in later Phase 1 sub-phases ===
 # fomc_decision:   (1e — family_type: event)
 # fomc_minutes:    (1e — family_type: event)

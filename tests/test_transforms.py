@@ -29,9 +29,42 @@ def monthly_series(values: list[float], start: str = "2020-01-01") -> pd.Series:
     return pd.Series(values, index=idx, dtype=float)
 
 
+def weekly_series(values: list[float], start: str = "2024-01-01") -> pd.Series:
+    """Mondays, like FRED weekly series (e.g. GASREGW gas prices)."""
+    idx = pd.date_range(start=start, periods=len(values), freq="W-MON")
+    return pd.Series(values, index=idx, dtype=float)
+
+
 def test_raw_returns_value_at_target():
     s = monthly_series([100.0, 101.0, 102.0])
     assert raw(s, pd.Timestamp("2020-02-01")) == 101.0
+
+
+def test_weekly_yoy_matches_nearest_obs_a_year_back():
+    # 60 weeks of data: target is the last; ~52 weeks earlier should match
+    # even though no observation lands exactly one calendar year back.
+    vals = [3.00 + 0.01 * i for i in range(60)]  # rising ~ $3.00 → $3.59
+    s = weekly_series(vals)
+    target = s.index[-1]
+    got = apply_transform("yoy_pct_weekly", s, target)
+    # cur vs the value ~52 weeks prior (index 7) → both known, positive YoY.
+    assert got is not None
+    assert got > 0
+
+
+def test_weekly_mom_uses_4_week_lookback():
+    # Flat then a step up in the last 4 weeks.
+    vals = [4.00] * 20 + [4.40]  # last obs jumps 10% vs 4 weeks back (4.00)
+    s = weekly_series(vals)
+    target = s.index[-1]
+    got = apply_transform("mom_pct_weekly", s, target)
+    assert got == pytest.approx(10.0, abs=0.001)
+
+
+def test_weekly_transforms_return_none_without_history():
+    s = weekly_series([4.00, 4.05])  # too short for a year-back lookup
+    target = s.index[-1]
+    assert apply_transform("yoy_pct_weekly", s, target) is None
 
 
 def test_raw_missing_period_returns_none():

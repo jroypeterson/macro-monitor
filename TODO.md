@@ -12,6 +12,12 @@ verified rather than copied from the roadmap.
 
 ## Quick / bounded (doc + small wiring)
 
+- [ ] **Gas prices — median series.** The `gas_prices` family ships the EIA
+  AVERAGE retail price (GASREGW, weekly). FRED does not publish a *median*
+  retail gas series, so a median+average split would need a different source
+  (EIA's own API, or a state-level aggregation). Average is shipped with
+  weekly YoY + 4wk change; revisit if a median feed is wanted.
+
 - [x] **`replay-day` command** — SHIPPED 2026-05-30. Looks up which numeric
   families had a FRED release on the given date (tight realtime `[date,date]`
   window) and re-runs the post-release pipeline for each, dry-run by default.
