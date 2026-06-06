@@ -44,10 +44,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Stage readable/ + outputs/ into the published site
         # readable/ first (brings the galleries: fiscal, drug_prices, market, ahead_of_curve),
@@ -59,10 +59,10 @@ jobs:
           cp -r outputs/. _site/
 
       - name: Upload the staged site as the Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
       - id: deployment
         name: Deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
