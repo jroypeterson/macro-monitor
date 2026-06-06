@@ -41,6 +41,52 @@ _OBS_START = "1854-01-01"
 # Suffix "" is the default "both" image the gallery shows first.
 BAND_VARIANTS = {"both": "", "bear": "_bear", "recession": "_rec", "none": "_none"}
 
+# Glossary of the terms used across this chartpack — rendered at the bottom of the
+# page so a reader new to Ellis's lens can decode the charts without leaving it.
+# (term, definition) pairs, kept static; HTML-escape-safe plain text.
+_GLOSSARY_TERMS: list[tuple[str, str]] = [
+    ("Year-over-year (YoY) rate of change",
+     "Each series is plotted as its percent change versus the same month one year "
+     "earlier, not the raw level. This is Ellis's core lens — turning points in the "
+     "<em>rate of change</em> tend to lead the level (and the market)."),
+    ("Acceleration / deceleration",
+     "The change in the YoY rate itself (its direction of travel). Ellis watches "
+     "whether growth is speeding up or slowing down, even while still positive — "
+     "deceleration is the early warning, not an outright decline."),
+    ("Real (vs nominal)",
+     "Inflation-adjusted. A nominal dollar series is divided by a price deflator so the "
+     "chart shows volume/quantity growth rather than price growth."),
+    ("Deflator",
+     "The price index used to convert a nominal ($) series into a real (inflation-"
+     "adjusted) one — e.g. the PCE price index for real consumer spending."),
+    ("S&amp;P 500 bear markets (grey bands)",
+     "Shaded peak-to-trough declines of roughly 20% or more in the S&amp;P 500, dated "
+     "from the index's monthly closes. They show how the macro rate-of-change led or "
+     "lagged equity drawdowns. Toggle on/off per chart or for all charts."),
+    ("NBER recessions (dotted red)",
+     "Official US recession periods as dated by the National Bureau of Economic "
+     "Research (FRED series USREC). Toggle on/off alongside the bear bands."),
+    ("Averages (1-yr · 10-yr · full history)",
+     "Each data chart's footnote lists the trailing mean of the plotted series over "
+     "the last year, the last ten years, and its full available history — context for "
+     "whether the latest reading is hot or cold versus its own past."),
+    ("Release schedule",
+     "Where shown, the date the next data point for that series is expected and the "
+     "reference period it will cover — so you know how stale the right edge is."),
+    ("Band toggles",
+     "The checkboxes above each chart (and the 'show on ALL charts' pair at the top) "
+     "switch the bear-market and recession overlays on or off by swapping the image."),
+]
+
+
+def _glossary_html() -> str:
+    rows = "".join(f"<dt>{term}</dt><dd>{defn}</dd>" for term, defn in _GLOSSARY_TERMS)
+    return (
+        '<section id="glossary" class="glossary"><h2>Glossary</h2>'
+        f'<dl>{rows}</dl>'
+        '<p class="back"><a href="#top">↑ back to index</a></p></section>'
+    )
+
 
 def _load_yaml(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -89,6 +135,7 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
             f'{foot_html}'
             f'<p class="back"><a href="#top">↑ back to index</a></p></section>'
         )
+    toc_items.append('<li><a href="#glossary">Glossary of terms</a></li>')
     toc = f'<nav class="toc"><strong>Charts on this page</strong><ol>{"".join(toc_items)}</ol></nav>'
     summary_html = ""
     if takeaways:
@@ -137,6 +184,12 @@ def _render_gallery_html(figs: list[FigureSpec], rendered: dict[str, Path],
  ul.foot li {{ margin: .15rem 0; }}
  .back {{ font-size: .8rem; margin-top: .6rem; }}
  .back a {{ color: #999; text-decoration: none; }}
+ .glossary {{ background: #f7f8fa; border: 1px solid #e2e2e2; border-radius: 8px;
+              padding: 1rem 1.4rem; margin-top: 3rem; }}
+ .glossary h2 {{ margin: 0 0 .6rem; font-size: 1.1rem; }}
+ .glossary dl {{ margin: 0; }}
+ .glossary dt {{ font-weight: 600; color: #1F4E79; margin: .7rem 0 .15rem; font-size: .92rem; }}
+ .glossary dd {{ margin: 0 0 .2rem; padding-left: 0; color: #444; font-size: .86rem; }}
 </style></head><body>
 <a id="top"></a>
 <h1>Ahead of the Curve — Charts</h1>
@@ -150,6 +203,7 @@ grey bands = S&amp;P 500 bear markets · dotted red = NBER recessions · {genera
 {toc}
 {summary_html}
 {''.join(cards)}
+{_glossary_html()}
 <script>
 function suffix(base){{
   var bear = document.querySelector('.bear[data-base="'+base+'"]').checked;

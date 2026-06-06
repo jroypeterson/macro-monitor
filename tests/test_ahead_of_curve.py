@@ -270,3 +270,16 @@ def test_unit_override_index_series(tmp_path):
     assert unit == "index"
     assert _fmt_value(72.3, "index") == "72.3"
     assert _fmt_value(2.1, "pct") == "2.1%"
+
+
+def test_gallery_renders_glossary(tmp_path):
+    # The bottom-of-page glossary is injected regardless of which figures render,
+    # so an empty-figure render still carries it (no network needed).
+    from macro_monitor.ahead_of_curve import build
+    out = tmp_path / "index.html"
+    build._render_gallery_html([], {}, out, "data through 2026-06-05", {}, "", [])
+    html = out.read_text(encoding="utf-8")
+    assert 'id="glossary"' in html
+    assert "Glossary of terms" in html            # TOC link
+    assert "Year-over-year (YoY) rate of change" in html
+    assert "S&amp;P 500 bear markets" in html
