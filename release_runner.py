@@ -49,6 +49,9 @@ class HeadlineSeriesResult:
     also_display: list[TransformedValue]
     prior_primary: TransformedValue | None  # the same primary_transform one period prior
     display_unit: str | None = None
+    # Optional explicit basis label (see config.SeriesSpec.basis). None
+    # means the publisher derives it from primary.transform.
+    basis: str | None = None
 
 
 @dataclass
@@ -58,6 +61,7 @@ class ComponentSeriesResult:
     transformed: TransformedValue
     tags: list[str]
     display_unit: str | None = None
+    basis: str | None = None
 
 
 @dataclass
@@ -74,6 +78,7 @@ class ComputedSeriesResult:
     prior_primary: TransformedValue | None
     tags: list[str]
     display_unit: str | None = None
+    basis: str | None = None
 
 
 @dataclass
@@ -310,6 +315,7 @@ def compute_release(
                 also_display=also_display,
                 prior_primary=prior_primary,
                 display_unit=s.display_unit,
+                basis=s.basis,
             )
         )
 
@@ -328,6 +334,7 @@ def compute_release(
                 transformed=tv,
                 tags=list(s.tags),
                 display_unit=s.display_unit,
+                basis=s.basis,
             )
         )
 
@@ -370,6 +377,7 @@ def compute_release(
                 prior_primary=prior_primary,
                 tags=list(cs.tags),
                 display_unit=cs.display_unit,
+                basis=cs.basis,
             )
         )
 

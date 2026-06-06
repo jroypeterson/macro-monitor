@@ -44,6 +44,12 @@ class SeriesSpec(BaseModel):
     # when rendering mom_chg etc. Common values: "K" (thousands), "M"
     # (millions), "$B" (billions). None means use the raw number.
     display_unit: str | None = None
+    # Optional explicit basis label clarifying WHAT the printed number is —
+    # a YoY rate, a level, a 3mo-average, a proportion, etc. When None the
+    # publisher derives a default from primary_transform (see
+    # publishers.slack.basis_label). Set this to override the default, e.g.
+    # UNRATE is `raw` but the basis should read "(level)" not just a bare %.
+    basis: str | None = None
 
     @field_validator("primary_transform")
     @classmethod
@@ -89,6 +95,8 @@ class ComputedSeriesSpec(BaseModel):
     also_display: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     display_unit: str | None = None
+    # See SeriesSpec.basis — explicit per-metric basis label override.
+    basis: str | None = None
 
     @field_validator("method")
     @classmethod

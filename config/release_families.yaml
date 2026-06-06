@@ -39,10 +39,12 @@ families:
         label: "Headline"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
       - id: CPILFESL
         label: "Core"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
 
     # === Series shown only in the THREAD ===
     components:
@@ -189,11 +191,13 @@ families:
         primary_transform: mom_chg     # the "+175K" people read
         also_display: [yoy_pct]
         display_unit: "K"              # FRED gives thousands of persons
+        basis: "MoM chg"              # the +K is a month-over-month change
       - id: UNRATE
         label: "Unemployment rate"
         primary_transform: raw         # already a percent, stationary
         also_display: []
         display_unit: "%"
+        basis: "level"               # a rate level, not a change
 
     # === Components (thread) ===
     components:
@@ -341,10 +345,12 @@ families:
         label: "Headline PCE"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
       - id: PCEPILFE
         label: "Core PCE"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
 
     # === Components (thread) ===
     # Consumer-capacity context: income, real spending, savings, real DPI.
@@ -524,6 +530,7 @@ families:
         primary_transform: raw         # the series IS the QoQ SAAR percent
         also_display: []
         display_unit: "%"
+        basis: "QoQ SAAR"            # raw default would wrongly read "(level)"
 
     # === Components (thread) ===
     # GDPC1 is included so the long-history chart can show GDP YoY against
@@ -617,10 +624,12 @@ families:
         label: "Job openings"
         primary_transform: raw
         also_display: []
+        basis: "level"
       - id: JTSQUR
         label: "Quits rate"
         primary_transform: raw
         display_unit: "%"
+        basis: "rate"
 
     # === Components (thread) ===
     components:
@@ -702,10 +711,12 @@ families:
         label: "Headline (Final Demand)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
       - id: PPIFES
         label: "Core (Final Demand less Food & Energy)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
+        basis: "MoM annualized"
 
     # === Components ===
     # HC-investor producer-price cuts: provider output prices (hospitals,

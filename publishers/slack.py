@@ -126,16 +126,56 @@ def _fmt_transformed(tv, display_unit: str | None = None) -> str:
     return f"{tv.value:,.2f}"
 
 
+# Map of transform name → the basis label that disambiguates what the
+# printed % (or level) actually means to a reader skimming the channel.
+# A bare "4.30%" is ambiguous (a YoY rate? a level? a MoM change?); the
+# basis label removes that ambiguity. Per-series config can override this
+# default via SeriesSpec.basis (e.g. UNRATE is `raw` but should read
+# "(level)" rather than the generic raw default).
+_BASIS_BY_TRANSFORM = {
+    "yoy_pct": "YoY",
+    "mom_pct": "MoM",
+    "annualized_mom": "ann. rate",
+    "mom_chg": "MoM chg",
+    "qoq_pct_saar": "QoQ SAAR",
+    "raw": "(level)",
+}
+
+
+def basis_label(transform: str, basis: str | None = None) -> str:
+    """Return an explicit basis label clarifying WHAT a headline number is.
+
+    Derives a sensible default from the series' `primary_transform`
+    (yoy_pct→"YoY", mom_pct→"MoM", raw→"(level)", …). A per-series
+    `basis` override (config.SeriesSpec.basis) always wins so a series
+    like UNRATE — which is `raw` but is really a proportion — can read
+    "(level)" or "rate" instead of the bland default. Unknown transforms
+    with no override fall back to the transform name itself rather than
+    silently dropping the basis.
+    """
+    if basis:
+        return basis
+    return _BASIS_BY_TRANSFORM.get(transform, transform)
+
+
 def _format_headline_line(h, display_unit: str | None = None) -> str:
-    """One-line summary of a headline series."""
+    """One-line summary of a headline series.
+
+    Appends an explicit basis label after the primary value so the reader
+    knows what the number is (a YoY rate, a level, a MoM change, …) — e.g.
+    `Nonfarm payrolls: +172K (+0.32% YoY)` reads the +172K as a MoM change
+    and the YoY in the parens, `Unemployment rate: 4.30% (level)` reads the
+    rate as a level, not a change.
+    """
     primary_str = _fmt_transformed(h.primary, display_unit)
+    basis = basis_label(h.primary.transform, getattr(h, "basis", None))
+    primary_with_basis = f"{primary_str} {basis}"
     also_parts = []
     for ad in h.also_display:
-        label_map = {"yoy_pct": "YoY", "mom_pct": "MoM", "annualized_mom": "ann."}
-        label = label_map.get(ad.transform, ad.transform)
+        label = basis_label(ad.transform)
         also_parts.append(f"{_fmt_transformed(ad, None)} {label}")
     suffix = f" ({', '.join(also_parts)})" if also_parts else ""
-    return f"{h.label}: {primary_str}{suffix}"
+    return f"{h.label}: {primary_with_basis}{suffix}"
 
 
 def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | None]) -> str | None:
