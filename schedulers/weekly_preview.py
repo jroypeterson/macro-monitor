@@ -155,6 +155,104 @@ def build_preview_payload_with_failures(
     return text, blocks, failed
 
 
+def build_reminder_payload(
+    families: dict[str, FamilyConfig],
+    client: FREDClient,
+    today: date | None = None,
+) -> tuple[str, list[dict], list[str]]:
+    """Day-before heads-up: every release (ALL tiers) scheduled for TOMORROW.
+
+    Returns (text_fallback, blocks, failed_family_ids). Unlike the weekly
+    preview's 4-week lookahead — which is Tier A only — this reminder shows
+    every tier so a Tier B print (housing, durable goods, consumer credit,
+    ADP, …) the user cares about isn't silently dropped the night before.
+    """
+    if today is None:
+        today = datetime.now(ET).date()
+    tomorrow = today + timedelta(days=1)
+
+    releases, failed = fetch_scheduled_releases(
+        families=families, client=client, start=tomorrow, end=tomorrow
+    )
+
+    text = _build_reminder_text(tomorrow, releases, failed)
+    blocks = _build_reminder_blocks(tomorrow, releases, failed)
+    return text, blocks, failed
+
+
+def _build_reminder_text(
+    day: date,
+    releases: list[ScheduledRelease],
+    failed: list[str] | None = None,
+) -> str:
+    weekday = day.strftime("%A")
+    lines = [f"🔔 RELEASING TOMORROW ({weekday} {day.month}/{day.day}) — all tiers"]
+    if not releases:
+        lines.append("  (no scheduled macro releases tomorrow)")
+    else:
+        for r in releases:
+            lines.append(f"  {_fmt_event_line(r)}")
+    if failed:
+        lines.append("")
+        lines.append(
+            f"⚠️ {len(failed)} family/families' FRED calendar fetch failed "
+            f"(see #status-reports)"
+        )
+    return "\n".join(lines)
+
+
+def _build_reminder_blocks(
+    day: date,
+    releases: list[ScheduledRelease],
+    failed: list[str] | None = None,
+) -> list[dict]:
+    blocks: list[dict] = []
+    weekday = day.strftime("%A")
+    blocks.append(
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"🔔 Releasing tomorrow — {weekday} {day.month}/{day.day}",
+                "emoji": True,
+            },
+        }
+    )
+    if not releases:
+        body = "_(no scheduled macro releases tomorrow)_"
+    else:
+        body = "\n".join(f"• {_fmt_event_line(r)}" for r in releases)
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body}})
+
+    if failed:
+        blocks.append(
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"⚠️ {len(failed)} family/families' FRED calendar "
+                            f"failed; see #status-reports."
+                        ),
+                    }
+                ],
+            }
+        )
+    blocks.append(
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "_All tiers shown. FOMC events surface in their own family._",
+                }
+            ],
+        }
+    )
+    return blocks
+
+
 # ---------------------------------------------------------------------------
 # Renderers
 # ---------------------------------------------------------------------------

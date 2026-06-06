@@ -1,0 +1,43 @@
+name: Release reminder
+
+# Daily "macro data releasing tomorrow" heads-up to #macro-and-markets,
+# ALL tiers (Tier A + Tier B). Fires ~13:00 UTC daily so the user gets a
+# full day's notice of tomorrow's prints. Reuses the same secrets as the
+# weekly preview / release polling — no new secrets.
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # 13:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  reminder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        # Repo root IS the macro_monitor package (contains __init__.py).
+        # python -m macro_monitor.cli needs a directory NAMED macro_monitor
+        # findable on sys.path — symlink the repo into /tmp under that name.
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Post release reminder
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli release-reminder --post

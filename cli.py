@@ -282,6 +282,62 @@ def cmd_weekly_preview(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_release_reminder(args: argparse.Namespace) -> int:
+    """Post a 'macro data releasing tomorrow' heads-up to #macro (all tiers).
+
+    Mirrors weekly-preview's infra but scoped to tomorrow only and ALL
+    tiers (not Tier A only) so a Tier B print the user watches isn't
+    dropped the night before. Defaults to dry-run; --post sends.
+    """
+    path = Path(args.config) if args.config else default_config_path()
+    families = load_config(path)
+    validate_all_or_raise(families)
+
+    from .collectors.fred import FREDClient
+    from .publishers.slack import SlackPublisher
+    from .schedulers.weekly_preview import build_reminder_payload
+
+    client = FREDClient()
+    print("Fetching tomorrow's release calendar from FRED…", file=sys.stderr)
+    text, blocks, failed = build_reminder_payload(families=families, client=client)
+
+    if failed:
+        print(f"\n⚠️ {len(failed)} family/families' FRED fetch failed:", file=sys.stderr)
+        for f in failed:
+            print(f"   {f.split(':')[0]}", file=sys.stderr)
+
+    if args.dry_run:
+        print("\n=== RELEASE REMINDER (DRY-RUN) ===", file=sys.stderr)
+        print("\n--- TEXT FALLBACK ---", file=sys.stderr)
+        print(text, file=sys.stderr)
+        print(f"\n--- {len(blocks)} BLOCK KIT BLOCKS ---", file=sys.stderr)
+        print("\n  Use --post to publish to #macro.", file=sys.stderr)
+        return 0
+
+    publisher = SlackPublisher(dry_run=False)
+    from slack_sdk import WebClient
+    from slack_sdk.errors import SlackApiError
+
+    try:
+        resp = WebClient(token=publisher.bot_token).chat_postMessage(
+            channel=publisher.channel_id, text=text, blocks=blocks
+        )
+        print(
+            f"Posted release reminder to {resp['channel']} ts={resp['ts']}",
+            file=sys.stderr,
+        )
+    except SlackApiError as e:
+        print(f"  ⚠️ Post failed: {e.response.get('error')}", file=sys.stderr)
+        return 1
+
+    if failed and publisher.status_reports_webhook:
+        publisher._alert_status_reports(
+            f"release-reminder: {len(failed)} family/families' FRED calendar failed:\n"
+            + "\n".join(f"  • {f}" for f in failed)
+        )
+    return 0
+
+
 def families_releasing_on(target, families, client):
     """Return (matched_family_ids, failed) for numeric families whose FRED
     release calendar shows a release on `target` (a `datetime.date`).
@@ -421,6 +477,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_weekly_preview)
+
+    sp = sub.add_parser(
+        "release-reminder",
+        help="Post a 'releasing tomorrow' heads-up to #macro (all tiers; defaults to dry-run)",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.set_defaults(func=cmd_release_reminder)
 
     sp = sub.add_parser(
         "replay-day",

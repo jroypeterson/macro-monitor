@@ -135,6 +135,7 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 .github/workflows/
   release_polling.yml      */15 11-18 UTC Mon-Fri (covers ET morning + 14:00 FOMC)
   weekly_preview.yml       Sunday 07:00 ET (this week + next 4 weeks)
+  release_reminder.yml     Daily 13:00 UTC — "releasing tomorrow" heads-up (all tiers)
   heartbeat.yml            Daily 08:00 ET to #status-reports
   annual_calendar.yml      Jan 1 + Apr/Jul/Oct 1 (quarterly refresh)
   calendar_backfill.yml    Sunday 21:00 ET — rolling 90-day Google Calendar push
