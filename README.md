@@ -141,7 +141,19 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
   reconciliation.yml       Daily 17:00 ET — catch-up poll, surface stale series
   research_digest.yml      Daily 08:30 ET — Fed/macro research RSS + Gmail digest
   global_macro.yml         Sunday 08:00 ET — international "Global macro" digest + dashboard
+  pages_deploy.yml         On push to outputs/** or readable/** — deploys the public site
 ```
+
+### Public site (GitHub Pages)
+
+`pages_deploy.yml` publishes **`outputs/` + `readable/`** to
+`https://jroypeterson.github.io/macro-monitor/`. The landing page
+(`outputs/index.html`) is a card hub with live links to every view: the
+current-state dashboard, annual calendar, the **Global macro** dashboard, the
+**`fiscal`** (federal spending + healthcare wedge) and **`drug-prices`** charts
+(`cli fiscal` / `cli drug-prices` → `readable/fiscal/`, `readable/drug_prices/`),
+the **market** + **ahead-of-the-curve** galleries, and cross-links to the 13
+healthcare/biopharma views on the sibling `hc-macro-policy-pages` site.
 
 All workflows are idempotent. `release_polling`, `reconciliation`, and
 `research_digest` commit their state DBs back to the repo so ledgers
