@@ -86,7 +86,7 @@ _HTML_TEMPLATE = """\
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>macro-monitor — current state</title>
+<title>macro-monitor — US current state</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
           max-width: 1400px; margin: 1em auto; padding: 0 1em; color: #222; background: #fafafa; }}
@@ -127,7 +127,7 @@ _HTML_TEMPLATE = """\
 </head>
 <body>
 
-<h1>macro-monitor — current state</h1>
+<h1>macro-monitor — US current state</h1>
 <p class="subtitle">Latest values per Tier A family. Generated {generated_at}.<br>
 Each figure is tagged with its basis — <b>y/y</b> (year-over-year) · <b>m/m</b> (month-over-month) ·
 <b>m/m ann.</b> (annualized monthly) · <b>q/q ann.</b> (annualized quarterly) ·
