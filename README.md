@@ -53,7 +53,7 @@ See Appendix B of the plan for the full table. Highlights:
 | Slack `#status-reports` | Daily Tier B heartbeat; operator alerts on failure |
 | Google Calendar (`floridabusinessman@gmail.com`) | Tier A release events on the dedicated "Macro Calendar" (shared earnings-agent service account; no user OAuth) |
 | Local: `outputs/archive/<family>/<period>.{json,html}` | Per-period structured snapshot + browsable HTML report |
-| Local: `outputs/dashboard/index.html` (Phase 1.5) | Static "current state" page, regenerated each release |
+| Local: `outputs/dashboard/index.html` (Phase 1.5) | Static "US current state" page, regenerated each release |
 | Local: `outputs/calendar/<year>_macro_calendar.html` | Annual schedule grid |
 | Local: `pdfs/` (gitignored) | Best-effort agency-source PDF mirror |
 
