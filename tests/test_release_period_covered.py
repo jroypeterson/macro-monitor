@@ -1,10 +1,13 @@
-"""Tests for the cadence + covered-period labels on upcoming-release lines.
+"""Tests for the cadence + covered-period + last-YoY labels on
+upcoming-release lines.
 
-Each scheduled-release line now carries the series' cadence (always) and
-the period the next release is expected to cover (when derivable). The
-covered period is NOT a guessed release-to-data lag — it advances the
-family's actual last-published period one cadence step — so these tests
-lock the period math, the line rendering, and the outputs/latest reader.
+Each scheduled-release line now carries the series' cadence (always), the
+period the next release is expected to cover, and the last YoY reading
+(both when derivable). The covered period is NOT a guessed release-to-data
+lag — it advances the family's actual last-published period one cadence
+step; the YoY is read from the last-published headline — so these tests
+lock the period math, the YoY extraction, the line rendering, and the
+outputs/latest reader.
 """
 
 from __future__ import annotations
@@ -15,8 +18,9 @@ from datetime import date
 from macro_monitor.schedulers.weekly_preview import (
     ScheduledRelease,
     _fmt_event_line,
+    _last_yoy_reading,
     _next_period_covered,
-    load_covered_periods,
+    load_preview_extras,
 )
 
 
@@ -63,30 +67,98 @@ def test_next_period_malformed_key_returns_none():
     assert _next_period_covered("garbage", "monthly") is None
 
 
+# --- last YoY extraction -------------------------------------------------
+
+def test_last_yoy_from_also_display():
+    # CPI: primary is annualized_mom, YoY lives in also_display.
+    headline = [
+        {
+            "primary": {"transform": "annualized_mom", "value": 7.95},
+            "also_display": [
+                {"transform": "yoy_pct", "value": 3.7792},
+                {"transform": "mom_pct", "value": 0.64},
+            ],
+        }
+    ]
+    assert _last_yoy_reading(headline) == "+3.78% YoY"
+
+
+def test_last_yoy_from_primary_transform():
+    headline = [{"primary": {"transform": "yoy_pct", "value": -1.234}}]
+    assert _last_yoy_reading(headline) == "-1.23% YoY"
+
+
+def test_last_yoy_none_for_level_series():
+    # Unemployment rate / claims / trade balance: no YoY anywhere.
+    headline = [
+        {
+            "primary": {"transform": "raw", "value": 4.30},
+            "also_display": [{"transform": "mom_chg", "value": 0.1}],
+        }
+    ]
+    assert _last_yoy_reading(headline) is None
+
+
+def test_last_yoy_empty_headline():
+    assert _last_yoy_reading([]) is None
+
+
 # --- line rendering ------------------------------------------------------
 
 def test_event_line_always_shows_cadence():
     line = _fmt_event_line(_rel("CPI", "monthly"))
     assert "· monthly" in line
-    assert "covers" not in line  # no covered map → cadence only, no guess
+    assert "covers" not in line  # no extras → cadence only, no guess
+    assert "last" not in line
 
 
-def test_event_line_shows_covered_when_present():
-    covered = {"CPI": "May 2026"}
-    line = _fmt_event_line(_rel("CPI", "monthly"), covered)
-    assert "· monthly · covers May 2026" in line
+def test_event_line_shows_covered_and_yoy_when_present():
+    extras = {"CPI": {"covers": "May 2026", "yoy": "+3.78% YoY"}}
+    line = _fmt_event_line(_rel("CPI", "monthly"), extras)
+    assert "· monthly · covers May 2026 · last +3.78% YoY" in line
 
 
-def test_event_line_omits_covered_when_family_absent():
-    # A covered map that doesn't include this family → cadence only.
-    line = _fmt_event_line(_rel("Trade Balance", "monthly"), {"CPI": "May 2026"})
+def test_event_line_covered_without_yoy():
+    # A level series may have covers but no yoy.
+    extras = {"Trade Balance": {"covers": "April 2026"}}
+    line = _fmt_event_line(_rel("Trade Balance", "monthly"), extras)
+    assert "· covers April 2026" in line
+    assert "last" not in line
+
+
+def test_event_line_omits_all_when_family_absent():
+    line = _fmt_event_line(_rel("Trade Balance", "monthly"), {"CPI": {"covers": "May 2026"}})
     assert "· monthly" in line
     assert "covers" not in line
+    assert "last" not in line
 
 
 # --- outputs/latest reader ----------------------------------------------
 
-def test_load_covered_periods_reads_and_advances(tmp_path):
+def test_load_preview_extras_reads_period_and_yoy(tmp_path):
+    families = {"cpi": _FamStub("CPI", "monthly")}
+    latest = tmp_path / "latest"
+    latest.mkdir()
+    (latest / "cpi.json").write_text(
+        json.dumps(
+            {
+                "family_display_name": "CPI",
+                "period": "2026-04",
+                "headline": [
+                    {
+                        "primary": {"transform": "annualized_mom", "value": 7.95},
+                        "also_display": [{"transform": "yoy_pct", "value": 3.7792}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = load_preview_extras(families, outputs_dir=tmp_path)
+    assert out == {"CPI": {"covers": "May 2026", "yoy": "+3.78% YoY"}}
+
+
+def test_load_preview_extras_period_only_for_level_series(tmp_path):
     families = {"trade_balance": _FamStub("Trade Balance", "monthly")}
     latest = tmp_path / "latest"
     latest.mkdir()
@@ -94,16 +166,16 @@ def test_load_covered_periods_reads_and_advances(tmp_path):
         json.dumps({"family_display_name": "Trade Balance", "period": "2026-03"}),
         encoding="utf-8",
     )
-    out = load_covered_periods(families, outputs_dir=tmp_path)
-    assert out == {"Trade Balance": "April 2026"}
+    out = load_preview_extras(families, outputs_dir=tmp_path)
+    assert out == {"Trade Balance": {"covers": "April 2026"}}
 
 
-def test_load_covered_periods_missing_dir_is_empty():
+def test_load_preview_extras_missing_dir_is_empty():
     families = {"x": _FamStub("X", "monthly")}
-    assert load_covered_periods(families, outputs_dir="C:/nonexistent/path/xyz") == {}
+    assert load_preview_extras(families, outputs_dir="C:/nonexistent/path/xyz") == {}
 
 
-def test_load_covered_periods_skips_unknown_family(tmp_path):
+def test_load_preview_extras_skips_unknown_family(tmp_path):
     # A latest file for a family not in config is ignored (no crash).
     families = {"cpi": _FamStub("CPI", "monthly")}
     latest = tmp_path / "latest"
@@ -112,7 +184,7 @@ def test_load_covered_periods_skips_unknown_family(tmp_path):
         json.dumps({"family_display_name": "Ghost Series", "period": "2026-03"}),
         encoding="utf-8",
     )
-    assert load_covered_periods(families, outputs_dir=tmp_path) == {}
+    assert load_preview_extras(families, outputs_dir=tmp_path) == {}
 
 
 class _FamStub:

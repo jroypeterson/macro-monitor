@@ -239,14 +239,14 @@ def cmd_weekly_preview(args: argparse.Namespace) -> int:
     from .publishers.slack import SlackPublisher
     from .schedulers.weekly_preview import (
         build_preview_payload_with_failures,
-        load_covered_periods,
+        load_preview_extras,
     )
 
     client = FREDClient()
     print("Fetching release calendars from FRED…", file=sys.stderr)
-    covered = load_covered_periods(families)
+    extras = load_preview_extras(families)
     text, blocks, failed = build_preview_payload_with_failures(
-        families=families, client=client, covered=covered
+        families=families, client=client, extras=extras
     )
 
     if failed:
@@ -299,13 +299,13 @@ def cmd_release_reminder(args: argparse.Namespace) -> int:
 
     from .collectors.fred import FREDClient
     from .publishers.slack import SlackPublisher
-    from .schedulers.weekly_preview import build_reminder_payload, load_covered_periods
+    from .schedulers.weekly_preview import build_reminder_payload, load_preview_extras
 
     client = FREDClient()
     print("Fetching tomorrow's release calendar from FRED…", file=sys.stderr)
-    covered = load_covered_periods(families)
+    extras = load_preview_extras(families)
     text, blocks, failed = build_reminder_payload(
-        families=families, client=client, covered=covered
+        families=families, client=client, extras=extras
     )
 
     if failed:

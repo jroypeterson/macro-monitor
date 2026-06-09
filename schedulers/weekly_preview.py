@@ -132,15 +132,45 @@ def _next_period_covered(period_key: str, cadence: str) -> str | None:
     return None
 
 
-def load_covered_periods(
+def _last_yoy_reading(headline: list[dict]) -> str | None:
+    """Format the most recent YoY reading from a family's FIRST headline
+    series (the topline metric). Checks the primary transform first, then
+    `also_display`, for a `yoy_pct` value. Returns None when the headline
+    carries no YoY at all — levels like the unemployment rate, weekly
+    jobless claims, or a $ trade balance — so the caller shows no YoY
+    rather than a misleading one.
+    """
+    if not headline:
+        return None
+    h0 = headline[0] or {}
+    primary = h0.get("primary") or {}
+    if primary.get("transform") == "yoy_pct" and primary.get("value") is not None:
+        return f"{primary['value']:+.2f}% YoY"
+    for d in h0.get("also_display") or []:
+        if d.get("transform") == "yoy_pct" and d.get("value") is not None:
+            return f"{d['value']:+.2f}% YoY"
+    return None
+
+
+def load_preview_extras(
     families: dict[str, FamilyConfig],
     outputs_dir=None,
-) -> dict[str, str]:
-    """Map family `display_name` → the period label its NEXT release is
-    expected to cover, derived from the last-published period in
-    outputs/latest/. Keyed on display_name (stable across the config key vs
-    the slugified latest-file name). Families without a published latest
-    file are omitted so the caller shows cadence only — no fabricated period.
+) -> dict[str, dict]:
+    """Map family `display_name` → `{'covers': <period label>, 'yoy':
+    <last YoY reading>}` for the upcoming-release preview lines, in a single
+    pass over outputs/latest/. Both keys are optional/omitted when not
+    derivable:
+
+      - `covers`: the last-published period advanced one cadence step (the
+        honest, lag-agnostic "period this release will cover"). Omitted when
+        the family has never published.
+      - `yoy`: the most recent YoY reading from the first headline series.
+        Omitted for level series with no YoY (unemployment rate, claims, the
+        trade balance, …).
+
+    Keyed on display_name (stable across the config key vs the slugified
+    latest-file name). A family with neither piece is dropped entirely so the
+    caller falls back to cadence-only — never a fabricated value.
     """
     import json
     from pathlib import Path
@@ -152,20 +182,26 @@ def load_covered_periods(
         return {}
 
     cadence_by_name = {f.display_name: f.cadence for f in families.values()}
-    out: dict[str, str] = {}
+    out: dict[str, dict] = {}
     for jf in sorted(latest_dir.glob("*.json")):
         try:
             data = json.loads(jf.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
         name = data.get("family_display_name")
-        period = data.get("period")
-        cadence = cadence_by_name.get(name)
-        if not name or not period or not cadence:
+        if not name or name not in cadence_by_name:
             continue
-        label = _next_period_covered(period, cadence)
-        if label:
-            out[name] = label
+        extra: dict[str, str] = {}
+        period = data.get("period")
+        if period:
+            label = _next_period_covered(period, cadence_by_name[name])
+            if label:
+                extra["covers"] = label
+        yoy = _last_yoy_reading(data.get("headline") or [])
+        if yoy:
+            extra["yoy"] = yoy
+        if extra:
+            out[name] = extra
     return out
 
 
@@ -173,13 +209,13 @@ def build_preview_payload(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> tuple[str, list[dict]]:
     """Build the week-ahead preview message: text + Block Kit blocks.
 
     Returns (text_fallback, blocks). The text fallback is also used for
-    the dry-run preview. `covered` maps display_name → covered-period label
-    (see load_covered_periods); when None, only cadence is shown.
+    the dry-run preview. `extras` maps display_name → {'covers', 'yoy'}
+    (see load_preview_extras); when None, only cadence is shown.
     """
     if today is None:
         today = datetime.now(ET).date()
@@ -201,8 +237,8 @@ def build_preview_payload(
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
 
-    text = _build_text(today, this_week_end, this_week, lookahead, failed, covered)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, covered)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras)
     return text, blocks
 
 
@@ -210,7 +246,7 @@ def build_preview_payload_with_failures(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> tuple[str, list[dict], list[str]]:
     """Same as build_preview_payload but also returns the list of families
     whose FRED calendar fetch failed (so the CLI can surface to
@@ -230,8 +266,8 @@ def build_preview_payload_with_failures(
     )
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
-    text = _build_text(today, this_week_end, this_week, lookahead, failed, covered)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, covered)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras)
     return text, blocks, failed
 
 
@@ -239,7 +275,7 @@ def build_reminder_payload(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> tuple[str, list[dict], list[str]]:
     """Day-before heads-up: every release (ALL tiers) scheduled for TOMORROW.
 
@@ -247,8 +283,8 @@ def build_reminder_payload(
     preview's 4-week lookahead — which is Tier A only — this reminder shows
     every tier so a Tier B print (housing, durable goods, consumer credit,
     ADP, …) the user cares about isn't silently dropped the night before.
-    `covered` maps display_name → covered-period label (cadence is always
-    shown; the period only when derivable).
+    `extras` maps display_name → {'covers', 'yoy'} (cadence is always shown;
+    the period + last YoY only when derivable).
     """
     if today is None:
         today = datetime.now(ET).date()
@@ -258,8 +294,8 @@ def build_reminder_payload(
         families=families, client=client, start=tomorrow, end=tomorrow
     )
 
-    text = _build_reminder_text(tomorrow, releases, failed, covered)
-    blocks = _build_reminder_blocks(tomorrow, releases, failed, covered)
+    text = _build_reminder_text(tomorrow, releases, failed, extras)
+    blocks = _build_reminder_blocks(tomorrow, releases, failed, extras)
     return text, blocks, failed
 
 
@@ -267,7 +303,7 @@ def _build_reminder_text(
     day: date,
     releases: list[ScheduledRelease],
     failed: list[str] | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> str:
     weekday = day.strftime("%A")
     lines = [f"🔔 RELEASING TOMORROW ({weekday} {day.month}/{day.day}) — all tiers"]
@@ -275,7 +311,7 @@ def _build_reminder_text(
         lines.append("  (no scheduled macro releases tomorrow)")
     else:
         for r in releases:
-            lines.append(f"  {_fmt_event_line(r, covered)}")
+            lines.append(f"  {_fmt_event_line(r, extras)}")
     if failed:
         lines.append("")
         lines.append(
@@ -289,7 +325,7 @@ def _build_reminder_blocks(
     day: date,
     releases: list[ScheduledRelease],
     failed: list[str] | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
     weekday = day.strftime("%A")
@@ -306,7 +342,7 @@ def _build_reminder_blocks(
     if not releases:
         body = "_(no scheduled macro releases tomorrow)_"
     else:
-        body = "\n".join(f"• {_fmt_event_line(r, covered)}" for r in releases)
+        body = "\n".join(f"• {_fmt_event_line(r, extras)}" for r in releases)
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body}})
 
     if failed:
@@ -332,8 +368,8 @@ def _build_reminder_blocks(
                     "type": "mrkdwn",
                     "text": (
                         "_All tiers shown. Each line: cadence · period the "
-                        "release covers (when known). FOMC events surface in "
-                        "their own family._"
+                        "release covers · last YoY reading (shown when known). "
+                        "FOMC events surface in their own family._"
                     ),
                 }
             ],
@@ -348,13 +384,14 @@ def _build_reminder_blocks(
 
 
 def _fmt_event_line(
-    r: ScheduledRelease, covered: dict[str, str] | None = None
+    r: ScheduledRelease, extras: dict[str, dict] | None = None
 ) -> str:
     """One event line, e.g.:
-    'Tue 5/29  8:30 ET — CPI [Tier A] · monthly · covers May 2026'.
+    'Tue 5/29  8:30 ET — CPI [Tier A] · monthly · covers May 2026 · last +3.78% YoY'.
 
-    Cadence (how often it prints) is always shown; the covered period is
-    appended only when derivable for that family (see load_covered_periods).
+    Cadence (how often it prints) is always shown; the covered period and
+    the last YoY reading are appended only when derivable for that family
+    (see load_preview_extras).
     """
     weekday = r.release_date.strftime("%a")
     # Windows strftime doesn't support %-m / %-d; build manually.
@@ -363,9 +400,11 @@ def _fmt_event_line(
         f"{weekday} {date_str}  {r.release_time_et} ET — "
         f"{r.display_name} [Tier {r.tier}] · {r.cadence}"
     )
-    cov = (covered or {}).get(r.display_name)
-    if cov:
-        line += f" · covers {cov}"
+    info = (extras or {}).get(r.display_name) or {}
+    if info.get("covers"):
+        line += f" · covers {info['covers']}"
+    if info.get("yoy"):
+        line += f" · last {info['yoy']}"
     return line
 
 
@@ -375,7 +414,7 @@ def _build_text(
     this_week: list[ScheduledRelease],
     lookahead: list[ScheduledRelease],
     failed: list[str] | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> str:
     lines = []
     lines.append("📅 THIS WEEK in macro")
@@ -383,7 +422,7 @@ def _build_text(
         lines.append("  (no Tier A or B releases scheduled)")
     else:
         for r in this_week:
-            lines.append(f"  {_fmt_event_line(r, covered)}")
+            lines.append(f"  {_fmt_event_line(r, extras)}")
 
     lines.append("")
     lines.append("🔭 LOOKING AHEAD — next 4 weeks (Tier A only)")
@@ -420,7 +459,7 @@ def _build_blocks(
     lookahead: list[ScheduledRelease],
     lookahead_end: date,
     failed: list[str] | None = None,
-    covered: dict[str, str] | None = None,
+    extras: dict[str, dict] | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
 
@@ -436,7 +475,7 @@ def _build_blocks(
     )
 
     this_week_md = "\n".join(
-        f"• {_fmt_event_line(r, covered)}" for r in this_week
+        f"• {_fmt_event_line(r, extras)}" for r in this_week
     ) or "_(no Tier A or B releases scheduled)_"
     blocks.append(
         {
