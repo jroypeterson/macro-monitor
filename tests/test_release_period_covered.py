@@ -24,7 +24,7 @@ from macro_monitor.schedulers.weekly_preview import (
 )
 
 
-def _rel(display_name, cadence, *, tier="A", d=date(2026, 6, 10)):
+def _rel(display_name, cadence, *, tier="A", d=date(2026, 6, 10), priority=False):
     return ScheduledRelease(
         family_id=display_name.lower().replace(" ", "_"),
         display_name=display_name,
@@ -33,6 +33,7 @@ def _rel(display_name, cadence, *, tier="A", d=date(2026, 6, 10)):
         release_date=d,
         release_time_et="08:30",
         fred_release_id=1,
+        priority=priority,
     )
 
 
@@ -133,6 +134,17 @@ def test_event_line_omits_all_when_family_absent():
     assert "last" not in line
 
 
+def test_event_line_priority_gets_star():
+    line = _fmt_event_line(_rel("Retail Sales", "monthly", priority=True))
+    assert line.startswith("⭐ ")
+    assert "Retail Sales [Tier A]" in line
+
+
+def test_event_line_non_priority_no_star():
+    line = _fmt_event_line(_rel("CPI", "monthly", priority=False))
+    assert "⭐" not in line
+
+
 # --- outputs/latest reader ----------------------------------------------
 
 def test_load_preview_extras_reads_period_and_yoy(tmp_path):
@@ -187,8 +199,36 @@ def test_load_preview_extras_skips_unknown_family(tmp_path):
     assert load_preview_extras(families, outputs_dir=tmp_path) == {}
 
 
+# --- priority flag wiring (config.topics → ScheduledRelease.priority) ----
+
+def test_fetch_sets_priority_from_mandated_topics():
+    from macro_monitor.collectors.fred import ReleaseDate
+    from macro_monitor.config import default_config_path, load_config
+    from macro_monitor.schedulers.weekly_preview import fetch_scheduled_releases
+
+    families = load_config(default_config_path())
+    day = date(2026, 6, 10)
+
+    class _AllOnDay:
+        def get_release_dates(self, release_id, **kw):
+            return [ReleaseDate(release_id=release_id, date=day)]
+
+    releases, _ = fetch_scheduled_releases(
+        families=families, client=_AllOnDay(), start=day, end=day
+    )
+    by_name = {r.display_name: r.priority for r in releases}
+    # Mandated-topic families → priority True
+    assert by_name["Employment Situation"] is True   # employment + real_hourly_earnings
+    assert by_name["Retail Sales"] is True            # consumer_spending
+    assert by_name["PCE / Personal Income & Outlays"] is True  # consumer_spending
+    # Tier-A-for-other-reasons + Tier-B families → priority False
+    assert by_name["CPI"] is False                    # inflation only
+    assert by_name["GDP"] is False                    # growth only
+    assert by_name["Housing Starts & Permits"] is False
+
+
 class _FamStub:
-    """Minimal stand-in for FamilyConfig — load_covered_periods only reads
+    """Minimal stand-in for FamilyConfig — load_preview_extras only reads
     .display_name and .cadence."""
 
     def __init__(self, display_name, cadence):

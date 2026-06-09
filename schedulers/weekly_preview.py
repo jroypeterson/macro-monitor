@@ -16,7 +16,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from ..collectors.fred import FREDClient, FREDError, ReleaseDate
-from ..config import FamilyConfig, calendar_families
+from ..config import TIER_A_MANDATED_TOPICS, FamilyConfig, calendar_families
 
 ET = ZoneInfo("America/New_York")
 
@@ -32,6 +32,11 @@ class ScheduledRelease:
     release_date: date
     release_time_et: str   # e.g. "08:30"
     fred_release_id: int
+    # True when the family covers a TIER_A_MANDATED_TOPIC (consumer
+    # spending / employment / real hourly earnings) — the releases JP cares
+    # most about. Surfaced as a ⭐ on the preview line. Defaulted so older
+    # construction sites / tests don't need to pass it.
+    priority: bool = False
 
     def datetime_et(self) -> datetime:
         h, m = self.release_time_et.split(":")
@@ -75,6 +80,7 @@ def fetch_scheduled_releases(
             failed.append(f"{family_id} (rel_id={family.release_calendar_id}): {exc}")
             continue
 
+        is_priority = bool(set(family.topics) & TIER_A_MANDATED_TOPICS)
         for rd in dates:
             if start <= rd.date <= end:
                 out.append(
@@ -86,6 +92,7 @@ def fetch_scheduled_releases(
                         release_date=rd.date,
                         release_time_et=family.release_time_et,
                         fred_release_id=family.release_calendar_id,
+                        priority=is_priority,
                     )
                 )
 
@@ -367,8 +374,9 @@ def _build_reminder_blocks(
                 {
                     "type": "mrkdwn",
                     "text": (
-                        "_All tiers shown. Each line: cadence · period the "
-                        "release covers · last YoY reading (shown when known). "
+                        "_⭐ = priority release (consumer spending / employment "
+                        "/ real hourly earnings). All tiers shown. Each line: "
+                        "cadence · period covered · last YoY (when known). "
                         "FOMC events surface in their own family._"
                     ),
                 }
@@ -387,17 +395,19 @@ def _fmt_event_line(
     r: ScheduledRelease, extras: dict[str, dict] | None = None
 ) -> str:
     """One event line, e.g.:
-    'Tue 5/29  8:30 ET — CPI [Tier A] · monthly · covers May 2026 · last +3.78% YoY'.
+    '⭐ Tue 5/29  8:30 ET — Retail Sales [Tier A] · monthly · covers May 2026 · last +4.87% YoY'.
 
-    Cadence (how often it prints) is always shown; the covered period and
-    the last YoY reading are appended only when derivable for that family
-    (see load_preview_extras).
+    A leading ⭐ marks a priority release (consumer spending / employment /
+    real hourly earnings — the topics JP cares most about). Cadence is
+    always shown; the covered period and last YoY are appended when
+    derivable for that family (see load_preview_extras).
     """
     weekday = r.release_date.strftime("%a")
     # Windows strftime doesn't support %-m / %-d; build manually.
     date_str = f"{r.release_date.month}/{r.release_date.day}"
+    star = "⭐ " if r.priority else ""
     line = (
-        f"{weekday} {date_str}  {r.release_time_et} ET — "
+        f"{star}{weekday} {date_str}  {r.release_time_et} ET — "
         f"{r.display_name} [Tier {r.tier}] · {r.cadence}"
     )
     info = (extras or {}).get(r.display_name) or {}
@@ -537,6 +547,6 @@ def _build_blocks(
             }
         )
 
-    blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": "_Tier A only in 4-week lookahead. FOMC events surface in their own family._"}]})
+    blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": "_⭐ = priority release (consumer spending / employment / real hourly earnings). Tier A only in 4-week lookahead. FOMC events surface in their own family._"}]})
 
     return blocks
