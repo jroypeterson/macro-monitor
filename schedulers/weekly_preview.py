@@ -10,6 +10,7 @@ Run via: `python -m macro_monitor.cli weekly-preview [--post]`
 
 from __future__ import annotations
 
+import calendar as _calendar
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -92,15 +93,93 @@ def fetch_scheduled_releases(
     return out, failed
 
 
+# ---------------------------------------------------------------------------
+# "Period covered" derivation
+#
+# A future release's reference period can't be guessed from a fixed
+# release-to-data lag — that lag varies by series (CPI/payrolls cover the
+# prior month; trade balance / JOLTS / consumer credit lag two months). So
+# instead of fabricating a period, we take each family's ACTUAL last-published
+# period from outputs/latest/<id>.json and advance it exactly one cadence
+# step. If a family has never published (no latest file) we omit the period
+# and show cadence only — never a guess.
+# ---------------------------------------------------------------------------
+
+
+def _next_period_covered(period_key: str, cadence: str) -> str | None:
+    """Advance a last-published `period_key` one cadence step and format it
+    the same way `release_runner.period_label` does. Returns None for
+    cadences without a period concept (e.g. per_meeting) or a malformed key.
+    """
+    try:
+        if cadence == "monthly":
+            y, m = (int(x) for x in period_key.split("-")[:2])
+            m += 1
+            if m == 13:
+                m, y = 1, y + 1
+            return f"{_calendar.month_name[m]} {y}"
+        if cadence == "quarterly":
+            y_str, q_str = period_key.split("-Q")
+            y, q = int(y_str), int(q_str) + 1
+            if q == 5:
+                q, y = 1, y + 1
+            return f"Q{q} {y}"
+        if cadence == "weekly":
+            d = date.fromisoformat(period_key) + timedelta(days=7)
+            return f"Week ending {d.strftime('%b %d, %Y')}"
+    except (ValueError, IndexError):
+        return None
+    return None
+
+
+def load_covered_periods(
+    families: dict[str, FamilyConfig],
+    outputs_dir=None,
+) -> dict[str, str]:
+    """Map family `display_name` → the period label its NEXT release is
+    expected to cover, derived from the last-published period in
+    outputs/latest/. Keyed on display_name (stable across the config key vs
+    the slugified latest-file name). Families without a published latest
+    file are omitted so the caller shows cadence only — no fabricated period.
+    """
+    import json
+    from pathlib import Path
+
+    if outputs_dir is None:
+        outputs_dir = Path(__file__).resolve().parents[1] / "outputs"
+    latest_dir = Path(outputs_dir) / "latest"
+    if not latest_dir.is_dir():
+        return {}
+
+    cadence_by_name = {f.display_name: f.cadence for f in families.values()}
+    out: dict[str, str] = {}
+    for jf in sorted(latest_dir.glob("*.json")):
+        try:
+            data = json.loads(jf.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        name = data.get("family_display_name")
+        period = data.get("period")
+        cadence = cadence_by_name.get(name)
+        if not name or not period or not cadence:
+            continue
+        label = _next_period_covered(period, cadence)
+        if label:
+            out[name] = label
+    return out
+
+
 def build_preview_payload(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
+    covered: dict[str, str] | None = None,
 ) -> tuple[str, list[dict]]:
     """Build the week-ahead preview message: text + Block Kit blocks.
 
     Returns (text_fallback, blocks). The text fallback is also used for
-    the dry-run preview.
+    the dry-run preview. `covered` maps display_name → covered-period label
+    (see load_covered_periods); when None, only cadence is shown.
     """
     if today is None:
         today = datetime.now(ET).date()
@@ -122,8 +201,8 @@ def build_preview_payload(
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
 
-    text = _build_text(today, this_week_end, this_week, lookahead, failed)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, covered)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, covered)
     return text, blocks
 
 
@@ -131,6 +210,7 @@ def build_preview_payload_with_failures(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
+    covered: dict[str, str] | None = None,
 ) -> tuple[str, list[dict], list[str]]:
     """Same as build_preview_payload but also returns the list of families
     whose FRED calendar fetch failed (so the CLI can surface to
@@ -150,8 +230,8 @@ def build_preview_payload_with_failures(
     )
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
-    text = _build_text(today, this_week_end, this_week, lookahead, failed)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, covered)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, covered)
     return text, blocks, failed
 
 
@@ -159,6 +239,7 @@ def build_reminder_payload(
     families: dict[str, FamilyConfig],
     client: FREDClient,
     today: date | None = None,
+    covered: dict[str, str] | None = None,
 ) -> tuple[str, list[dict], list[str]]:
     """Day-before heads-up: every release (ALL tiers) scheduled for TOMORROW.
 
@@ -166,6 +247,8 @@ def build_reminder_payload(
     preview's 4-week lookahead — which is Tier A only — this reminder shows
     every tier so a Tier B print (housing, durable goods, consumer credit,
     ADP, …) the user cares about isn't silently dropped the night before.
+    `covered` maps display_name → covered-period label (cadence is always
+    shown; the period only when derivable).
     """
     if today is None:
         today = datetime.now(ET).date()
@@ -175,8 +258,8 @@ def build_reminder_payload(
         families=families, client=client, start=tomorrow, end=tomorrow
     )
 
-    text = _build_reminder_text(tomorrow, releases, failed)
-    blocks = _build_reminder_blocks(tomorrow, releases, failed)
+    text = _build_reminder_text(tomorrow, releases, failed, covered)
+    blocks = _build_reminder_blocks(tomorrow, releases, failed, covered)
     return text, blocks, failed
 
 
@@ -184,6 +267,7 @@ def _build_reminder_text(
     day: date,
     releases: list[ScheduledRelease],
     failed: list[str] | None = None,
+    covered: dict[str, str] | None = None,
 ) -> str:
     weekday = day.strftime("%A")
     lines = [f"🔔 RELEASING TOMORROW ({weekday} {day.month}/{day.day}) — all tiers"]
@@ -191,7 +275,7 @@ def _build_reminder_text(
         lines.append("  (no scheduled macro releases tomorrow)")
     else:
         for r in releases:
-            lines.append(f"  {_fmt_event_line(r)}")
+            lines.append(f"  {_fmt_event_line(r, covered)}")
     if failed:
         lines.append("")
         lines.append(
@@ -205,6 +289,7 @@ def _build_reminder_blocks(
     day: date,
     releases: list[ScheduledRelease],
     failed: list[str] | None = None,
+    covered: dict[str, str] | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
     weekday = day.strftime("%A")
@@ -221,7 +306,7 @@ def _build_reminder_blocks(
     if not releases:
         body = "_(no scheduled macro releases tomorrow)_"
     else:
-        body = "\n".join(f"• {_fmt_event_line(r)}" for r in releases)
+        body = "\n".join(f"• {_fmt_event_line(r, covered)}" for r in releases)
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body}})
 
     if failed:
@@ -245,7 +330,11 @@ def _build_reminder_blocks(
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": "_All tiers shown. FOMC events surface in their own family._",
+                    "text": (
+                        "_All tiers shown. Each line: cadence · period the "
+                        "release covers (when known). FOMC events surface in "
+                        "their own family._"
+                    ),
                 }
             ],
         }
@@ -258,15 +347,26 @@ def _build_reminder_blocks(
 # ---------------------------------------------------------------------------
 
 
-def _fmt_event_line(r: ScheduledRelease) -> str:
-    """One event line: 'Tue 5/29 8:30 ET — CPI [Tier A]'."""
+def _fmt_event_line(
+    r: ScheduledRelease, covered: dict[str, str] | None = None
+) -> str:
+    """One event line, e.g.:
+    'Tue 5/29  8:30 ET — CPI [Tier A] · monthly · covers May 2026'.
+
+    Cadence (how often it prints) is always shown; the covered period is
+    appended only when derivable for that family (see load_covered_periods).
+    """
     weekday = r.release_date.strftime("%a")
     # Windows strftime doesn't support %-m / %-d; build manually.
     date_str = f"{r.release_date.month}/{r.release_date.day}"
-    return (
+    line = (
         f"{weekday} {date_str}  {r.release_time_et} ET — "
-        f"{r.display_name} [Tier {r.tier}]"
+        f"{r.display_name} [Tier {r.tier}] · {r.cadence}"
     )
+    cov = (covered or {}).get(r.display_name)
+    if cov:
+        line += f" · covers {cov}"
+    return line
 
 
 def _build_text(
@@ -275,6 +375,7 @@ def _build_text(
     this_week: list[ScheduledRelease],
     lookahead: list[ScheduledRelease],
     failed: list[str] | None = None,
+    covered: dict[str, str] | None = None,
 ) -> str:
     lines = []
     lines.append("📅 THIS WEEK in macro")
@@ -282,7 +383,7 @@ def _build_text(
         lines.append("  (no Tier A or B releases scheduled)")
     else:
         for r in this_week:
-            lines.append(f"  {_fmt_event_line(r)}")
+            lines.append(f"  {_fmt_event_line(r, covered)}")
 
     lines.append("")
     lines.append("🔭 LOOKING AHEAD — next 4 weeks (Tier A only)")
@@ -319,6 +420,7 @@ def _build_blocks(
     lookahead: list[ScheduledRelease],
     lookahead_end: date,
     failed: list[str] | None = None,
+    covered: dict[str, str] | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
 
@@ -334,7 +436,7 @@ def _build_blocks(
     )
 
     this_week_md = "\n".join(
-        f"• {_fmt_event_line(r)}" for r in this_week
+        f"• {_fmt_event_line(r, covered)}" for r in this_week
     ) or "_(no Tier A or B releases scheduled)_"
     blocks.append(
         {
