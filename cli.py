@@ -226,6 +226,33 @@ def cmd_post_release(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
 
+        # Ride-along: if this release drives any Ahead-of-the-Curve chart(s),
+        # post them (rebuilt with the new data point) into the release thread.
+        # Non-fatal — chart delivery must never break a landed release post.
+        if family.release_calendar_id is not None:
+            try:
+                from .ahead_of_curve.post import post_for_release
+
+                aoc_posted = post_for_release(
+                    family.release_calendar_id,
+                    thread_ts=published.main_ts,
+                    channel=published.main_channel,
+                    dry_run=False,
+                    publisher=publisher,
+                )
+                if aoc_posted:
+                    print(
+                        f"  Posted {len(aoc_posted)} Ahead-of-the-Curve chart(s) "
+                        f"to the thread: {aoc_posted}",
+                        file=sys.stderr,
+                    )
+            except Exception as e:  # noqa: BLE001 — ride-along is best-effort
+                print(
+                    f"  ⚠️ Ahead-of-the-Curve ride-along failed (non-fatal): "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+
     return 0
 
 
