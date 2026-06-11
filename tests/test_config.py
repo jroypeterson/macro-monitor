@@ -21,6 +21,19 @@ from macro_monitor.config import (
 )
 
 
+def test_no_headline_is_a_bare_level():
+    """Every raw/level headline must carry a rate-of-change `also_display`
+    (YoY/MoM/pp context) so the channel never shows a bare level — except GDP,
+    whose `raw` series IS the QoQ-SAAR growth rate (already a rate of change)."""
+    cfg = load_config(default_config_path())
+    offenders = []
+    for fid, fam in cfg.items():
+        for h in fam.headline:
+            if h.primary_transform == "raw" and not h.also_display and fid != "gdp":
+                offenders.append(f"{fam.display_name}/{h.label}")
+    assert offenders == [], f"bare-level headlines (need also_display): {offenders}"
+
+
 def test_default_config_loads_and_validates():
     cfg = load_config(default_config_path())
     assert "cpi" in cfg

@@ -20,8 +20,22 @@ from macro_monitor.transforms import (
     mom_pct,
     qoq_pct_saar,
     raw,
+    yoy_chg,
     yoy_pct,
 )
+
+
+def test_yoy_chg_level_difference():
+    # 13 months: a rate going 4.0 -> ... -> 4.3; YoY change at month 13 = +0.3.
+    s = monthly_series([4.0] + [4.1] * 11 + [4.3])
+    assert yoy_chg(s, s.index[-1]) == pytest.approx(0.3)
+    # Insufficient history (< 12 months back) → None, never a wrong number.
+    assert yoy_chg(s, s.index[5]) is None
+
+
+def test_yoy_chg_registered():
+    s = monthly_series([1.0] * 12 + [2.5])
+    assert apply_transform("yoy_chg", s, s.index[-1]) == pytest.approx(1.5)
 
 
 def monthly_series(values: list[float], start: str = "2020-01-01") -> pd.Series:

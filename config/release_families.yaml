@@ -199,7 +199,7 @@ families:
       - id: UNRATE
         label: "Unemployment rate"
         primary_transform: raw         # already a percent, stationary
-        also_display: []
+        also_display: [mom_chg, yoy_chg]   # pp change context, not a bare level
         display_unit: "%"
         basis: "level"               # a rate level, not a change
 
@@ -460,7 +460,8 @@ families:
       - id: ICSA
         label: "Initial claims"
         primary_transform: raw        # already a count; already stationary
-        also_display: []
+        also_display: [yoy_pct_weekly, mom_pct_weekly]   # % context, not a bare count
+        basis: "level"
 
     # === Components (thread) ===
     components:
@@ -631,11 +632,12 @@ families:
       - id: JTSJOL
         label: "Job openings"
         primary_transform: raw
-        also_display: []
+        also_display: [yoy_pct, mom_chg]   # % + level-change context
         basis: "level"
       - id: JTSQUR
         label: "Quits rate"
         primary_transform: raw
+        also_display: [mom_chg, yoy_chg]   # pp change context, not a bare rate
         display_unit: "%"
         basis: "rate"
 
@@ -985,7 +987,9 @@ families:
       - id: TCU
         label: "Capacity Utilization"
         primary_transform: raw
+        also_display: [mom_chg, yoy_chg]   # pp change context, not a bare level
         display_unit: "%"
+        basis: "level"
 
     components: []
 
@@ -1151,6 +1155,8 @@ families:
       - id: BOPGSTB
         label: "Trade balance (goods & services, $M)"
         primary_transform: raw
+        also_display: [mom_chg, yoy_chg]   # $M level-change context (YoY % of a deficit is meaningless)
+        basis: "level"
 
     components: []
 
@@ -1316,6 +1322,8 @@ families:
       - id: UMCSENT
         label: "Consumer Sentiment Index"
         primary_transform: raw
+        also_display: [yoy_pct, mom_chg]   # % + level-change context, not a bare index
+        basis: "level"
 
     components:
       - id: MICH

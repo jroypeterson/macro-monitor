@@ -71,3 +71,39 @@ def test_default_basis_used_when_no_override():
     h = _headline("Total comp", "yoy_pct", 3.50)
     line = _format_headline_line(h, h.display_unit)
     assert line == "Total comp: +3.50% YoY"
+
+
+# --- yoy_chg level-change context (fixing the "bare level" series) --------
+
+def test_yoy_chg_basis_label():
+    assert basis_label("yoy_chg") == "YoY chg"
+
+
+def test_yoy_chg_is_signed():
+    from macro_monitor.publishers.slack import _fmt_transformed
+    pos = TransformedValue(transform="yoy_chg", value=0.20)
+    neg = TransformedValue(transform="yoy_chg", value=-0.30)
+    assert _fmt_transformed(pos, None) == "+0.2"
+    assert _fmt_transformed(neg, None) == "-0.3"
+    # pp display unit (latent capability for a primary on a rate series)
+    assert _fmt_transformed(TransformedValue(transform="yoy_chg", value=0.2), "pp") == "+0.20pp"
+
+
+def test_rate_level_series_carries_change_context():
+    # Unemployment rate is a level; it now reads with pp-change context in
+    # parens instead of a bare "4.30% level".
+    h = _headline(
+        "Unemployment rate", "raw", 4.30, basis="level", unit="%",
+        also=[("mom_chg", -0.10), ("yoy_chg", 0.20)],
+    )
+    line = _format_headline_line(h, h.display_unit)
+    assert line == "Unemployment rate: 4.30% level (-0.1 MoM chg, +0.2 YoY chg)"
+
+
+def test_index_level_series_carries_yoy_and_mom():
+    h = _headline(
+        "Consumer Sentiment Index", "raw", 49.80, basis="level",
+        also=[("yoy_pct", -8.30), ("mom_chg", 1.2)],
+    )
+    line = _format_headline_line(h, h.display_unit)
+    assert line == "Consumer Sentiment Index: 49.80 level (-8.30% YoY, +1.2 MoM chg)"

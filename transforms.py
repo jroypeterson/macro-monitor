@@ -141,6 +141,20 @@ def mom_chg(series: pd.Series, target: pd.Timestamp) -> float | None:
     return float(cur - prior)
 
 
+@_register("yoy_chg")
+def yoy_chg(series: pd.Series, target: pd.Timestamp) -> float | None:
+    """Level change year-over-year. For a rate/level series (unemployment,
+    capacity utilization, a quits rate) this is the meaningful "context"
+    metric — the change in percentage points / units — where a YoY *percent*
+    of a rate would be confusing (a % change of a %). Pairs with mom_chg as
+    the short-horizon move."""
+    cur = _value_at(series, target)
+    prior = _months_offset(series, target, 12)
+    if cur is None or prior is None:
+        return None
+    return float(cur - prior)
+
+
 @_register("qoq_pct_saar")
 def qoq_pct_saar(series: pd.Series, target: pd.Timestamp) -> float | None:
     cur = _value_at(series, target)

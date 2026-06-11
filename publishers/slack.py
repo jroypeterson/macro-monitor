@@ -116,12 +116,15 @@ def _fmt_transformed(tv, display_unit: str | None = None) -> str:
         # always signed for direction clarity
         sign = "+" if tv.value >= 0 else ""
         return f"{sign}{tv.value:.2f}%"
-    if tv.transform == "mom_chg":
+    if tv.transform in {"mom_chg", "yoy_chg"}:
+        # Level changes are always signed for direction clarity.
         sign = "+" if tv.value >= 0 else ""
         if display_unit == "K":
             return f"{sign}{tv.value:,.0f}K"
         if display_unit == "M":
             return f"{sign}{tv.value:,.2f}M"
+        if display_unit == "pp":
+            return f"{sign}{tv.value:,.2f}pp"
         return f"{sign}{tv.value:,.1f}"
     # raw — strip unit-aware formatting
     if display_unit == "%":
@@ -144,6 +147,7 @@ _BASIS_BY_TRANSFORM = {
     "mom_pct": "MoM",
     "annualized_mom": "ann. rate",
     "mom_chg": "MoM chg",
+    "yoy_chg": "YoY chg",
     "qoq_pct_saar": "QoQ SAAR",
     "yoy_pct_weekly": "YoY",
     "mom_pct_weekly": "4wk",

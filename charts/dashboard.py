@@ -183,7 +183,7 @@ def _fmt_value(value: float | None, transform: str) -> str:
     }:
         sign = "+" if value >= 0 else ""
         return f"{sign}{value:.2f}%"
-    if transform == "mom_chg":
+    if transform in {"mom_chg", "yoy_chg"}:
         sign = "+" if value >= 0 else ""
         if abs(value) >= 1000:
             return f"{sign}{value:,.0f}"
@@ -203,6 +203,7 @@ _BASIS_LABELS = {
     "annualized_mom": "m/m ann.",
     "qoq_pct_saar": "q/q ann.",
     "mom_chg": "m/m chg",
+    "yoy_chg": "y/y chg",
     "yoy_pct_weekly": "y/y",
     "mom_pct_weekly": "4wk",
     "raw": "level",
