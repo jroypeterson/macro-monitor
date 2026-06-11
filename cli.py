@@ -61,7 +61,7 @@ def cmd_post_release(args: argparse.Namespace) -> int:
     family = families[args.family]
 
     # Lazy imports — keep `validate-config` fast.
-    from .charts.timeseries import render_family_charts
+    from .charts.timeseries import provenance_label, render_family_charts
     from .collectors.fred import FREDClient
     from .outputs import outputs_root, write_release_artifacts
     from .release_runner import compute_release
@@ -99,10 +99,11 @@ def cmd_post_release(args: argparse.Namespace) -> int:
             family_charts=family.charts,
             fetched_series=fetched,
             target_period=target_period,
-            period_key=result.period,
             output_dir=charts_dir,
+            period_key=result.period,
             family_display_name=family.display_name,
             period_label=result.period_label,
+            provenance=provenance_label(family.source, family.agency.release_page),
         )
         print(f"  rendered {len(chart_paths)} chart(s):")
         for name, p in chart_paths.items():

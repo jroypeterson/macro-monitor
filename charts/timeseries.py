@@ -20,6 +20,57 @@ from .style import (
     DEFAULT_FIGSIZE,
 )
 
+# Friendly names for the data PROVIDER (the API we pull from) and the
+# original AGENCY (the body that publishes the data), derived from a family's
+# `source` and `agency.release_page`. Used to stamp a provenance footer on
+# every chart so a reader always knows where the data came from AND that the
+# chart is macro-monitor-rendered (not an agency graphic lifted as a PNG).
+_SOURCE_NAMES = {"fred": "FRED", "yf": "Yahoo Finance", "yfinance": "Yahoo Finance"}
+_AGENCY_DOMAINS = {
+    "bls.gov": "BLS",
+    "bea.gov": "BEA",
+    "census.gov": "Census Bureau",
+    "federalreserve.gov": "Federal Reserve",
+    "conference-board.org": "Conference Board",
+    "umich.edu": "U. Michigan",
+    "adpemploymentreport.com": "ADP",
+    "eia.gov": "EIA",
+    "treasurydirect.gov": "Treasury",
+    "cms.gov": "CMS",
+}
+
+
+def _agency_from_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    for dom, name in _AGENCY_DOMAINS.items():
+        if host == dom or host.endswith("." + dom):
+            return name
+    return None
+
+
+def provenance_label(source: str, agency_url: str | None = None) -> str:
+    """One-line provenance footer: where the data comes from + that the chart
+    is macro-monitor-rendered. e.g. 'Data: BLS via FRED · Chart by
+    macro-monitor'. macro-monitor charts are always self-rendered from the
+    source series — never an agency PNG — which is exactly what the 'Chart by
+    macro-monitor' tag asserts."""
+    src = _SOURCE_NAMES.get((source or "").lower(), (source or "source").upper())
+    agency = _agency_from_url(agency_url)
+    data = f"Data: {agency} via {src}" if agency and agency != src else f"Data: {src}"
+    return f"{data} · Chart by macro-monitor"
+
+
+def _stamp_provenance(fig, provenance: str | None) -> None:
+    if provenance:
+        fig.text(0.995, 0.004, provenance, ha="right", va="bottom",
+                 fontsize=6.5, color="#9a9a9a")
+
 
 def render_chart(
     spec: ChartSpec,
@@ -27,12 +78,15 @@ def render_chart(
     target_period: pd.Timestamp,
     output_path: Path,
     title: str | None = None,
+    provenance: str | None = None,
 ) -> Path:
     """Render a single ChartSpec to a PNG file.
 
     `fetched_series` is a {series_id: pd.Series} dict already pulled from
     FRED. Each series in `spec.series` must be present.
     `target_period` is the latest point on the chart (the release period).
+    `provenance`, when given, is stamped as a small footer (see
+    provenance_label) so the data source + made-by-macro-monitor is on-chart.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -49,7 +103,7 @@ def render_chart(
     if spec.type == "panes":
         # Discard the single-axes figure we created; panes builds its own.
         plt.close(fig)
-        return _render_panes(spec, fetched_series, start, target_period, output_path, title)
+        return _render_panes(spec, fetched_series, start, target_period, output_path, title, provenance)
 
     if spec.type == "line":
         _render_line_into(spec.series, spec.highlight_latest, fetched_series, start, target_period, ax)
@@ -84,6 +138,7 @@ def render_chart(
     ax.legend(loc="best")
     fig.autofmt_xdate()
     fig.tight_layout()
+    _stamp_provenance(fig, provenance)
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
 
@@ -220,6 +275,7 @@ def _render_panes(
     end: pd.Timestamp,
     output_path: Path,
     title: str | None,
+    provenance: str | None = None,
 ) -> Path:
     """Multi-pane chart — one PNG, N matplotlib subplots stacked vertically
     (or horizontally). Used for HC employment (absolute + 12mo change in
@@ -270,6 +326,7 @@ def _render_panes(
 
     fig.autofmt_xdate()
     fig.tight_layout(rect=[0, 0, 1, 0.97] if title else None)
+    _stamp_provenance(fig, provenance)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
@@ -285,9 +342,13 @@ def render_family_charts(
     output_dir: Path,
     family_display_name: str,
     period_label: str,
+    provenance: str | None = None,
 ) -> dict[str, Path]:
     """Render every chart declared by a family. Returns {chart_name: path}
     keyed by `'main'` for the main chart and chart `.name` for each thread chart.
+
+    `provenance` (see provenance_label) is stamped on every chart so the data
+    source + made-by-macro-monitor is visible on the image itself.
     """
     rendered: dict[str, Path] = {}
 
@@ -299,6 +360,7 @@ def render_family_charts(
         target_period=target_period,
         output_path=main_path,
         title=f"{family_display_name} — {period_label}",
+        provenance=provenance,
     )
 
     # Thread charts
@@ -311,6 +373,7 @@ def render_family_charts(
             target_period=target_period,
             output_path=path,
             title=f"{family_display_name} — {chart.name or ''} — {period_label}".strip(" —"),
+            provenance=provenance,
         )
 
     return rendered
