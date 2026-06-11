@@ -2,8 +2,8 @@
 > Macro **and** top-down market data. Core: a disciplined US macro release feed to Slack `#macro-and-markets` (Tier A indicators — CPI, payrolls, PCE, GDP, claims, JOLTS, PPI, ECI, FOMC — within ~1h of publication, with charts + long-history context + HC sub-cuts). Plus a growing top-down market-data layer (below).
 
 **Scope (3 layers):**
-1. **Macro releases & cycle** — the release feed + leading-indicator context (the original project).
-2. **`ahead_of_curve/`** — Joseph Ellis "Ahead of the Curve" chart recreation (23 figures).
+1. **Macro releases & cycle** — the release feed + leading-indicator context (the original project). Each release post carries on-chart provenance (`Data: <agency> via FRED · Chart by macro-monitor`); the day-before reminder + weekly preview lines show cadence · period covered · last YoY, with a ⭐ on consumer/employment/real-hourly priority releases.
+2. **`ahead_of_curve/`** — Joseph Ellis "Ahead of the Curve" chart recreation (23 figures). On each driving data release (CPI/Employment/PCE/GDP/IP/UMich) the relevant figure(s) auto-post to `#macro-and-markets` as a threaded reply (`ahead_of_curve/post.py`).
 3. **Top-down market data** — `damodaran/` (risk-free, ERP, valuation multiples by market) + `market/` (Ken French factors, AQR factor premia, Shiller CAPE). Mirror/inventory now; charts later.
 
 - **Status:** live
