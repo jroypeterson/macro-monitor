@@ -9,8 +9,14 @@ from __future__ import annotations
 
 import pytest
 
+from datetime import datetime, timezone
+
 from macro_monitor.predmarkets import client, config, rundown as RD
+from macro_monitor.predmarkets import history as HIST
+from macro_monitor.predmarkets import discovery as DISC
 from macro_monitor.predmarkets.client import Resolved
+
+_UTC = timezone.utc
 
 
 # ---- client parsing ----
@@ -165,3 +171,96 @@ def test_liquidity_flag_bands():
     assert config.liquidity_flag(300_000) == "🟢"
     assert config.liquidity_flag(50_000) == "🟡"
     assert config.liquidity_flag(2_000) == "🔴"
+
+
+# ---- history + movers ----
+
+def test_history_record_roundtrip_and_same_day_overwrite(tmp_path):
+    p = tmp_path / "h.json"
+    now = datetime(2026, 6, 12, tzinfo=_UTC)
+    HIST.record([_resolved("recession", "macro", False, [("Yes", 0.18)])], now, path=p)
+    assert HIST.load(p)["recession"][-1]["outcomes"] == [["Yes", 0.18]]
+    # same UTC day → overwrite, not append
+    HIST.record([_resolved("recession", "macro", False, [("Yes", 0.20)])], now, path=p)
+    snaps = HIST.load(p)["recession"]
+    assert len(snaps) == 1 and snaps[-1]["outcomes"] == [["Yes", 0.20]]
+
+
+def test_movers_wow_detected_above_threshold():
+    now = datetime(2026, 6, 12, tzinfo=_UTC)
+    r = _resolved("recession", "macro", False, [("Yes", 0.18)])
+    hist = {"recession": [{"date": "2026-06-05", "title": "x", "volume": 1,
+                           "outcomes": [["Yes", 0.10]]}]}
+    ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
+    assert len(ms) == 1 and ms[0].period == "WoW" and round(ms[0].delta_pp) == 8
+    # below threshold → nothing
+    assert HIST.movers([r], now, hist=hist, threshold_pp=10) == []
+
+
+def test_movers_yoy_detected():
+    now = datetime(2026, 6, 12, tzinfo=_UTC)
+    r = _resolved("recession", "macro", False, [("Yes", 0.18)])
+    hist = {"recession": [{"date": "2025-06-13", "title": "x", "volume": 1,
+                           "outcomes": [["Yes", 0.50]]}]}
+    ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
+    assert ms and ms[0].period == "YoY" and round(ms[0].delta_pp) == -32
+
+
+def test_movers_multi_outcome_matches_by_label():
+    now = datetime(2026, 6, 12, tzinfo=_UTC)
+    r = _resolved("midterms", "macro", False, [("Dems Sweep", 0.44), ("R Sweep", 0.17)])
+    hist = {"midterms": [{"date": "2026-06-05", "title": "x", "volume": 1,
+                          "outcomes": [["Dems Sweep", 0.30], ["R Sweep", 0.16]]}]}
+    ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
+    assert len(ms) == 1 and ms[0].outcome == "Dems Sweep" and round(ms[0].delta_pp) == 14
+
+
+# ---- discovery ----
+
+def test_discovery_seeds_first_run_then_surfaces_new(tmp_path, monkeypatch):
+    p = tmp_path / "seen.json"
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "FDA approves NewDrug Z?", "slug": "newdrug-z"}])
+    # first run seeds silently
+    assert DISC.discover_new(datetime(2026, 6, 12, tzinfo=_UTC), path=p) == []
+    assert p.exists()
+    # a genuinely new, non-tracked, relevant market appears next week
+    monkeypatch.setattr(DISC.client, "search_events", lambda term: [
+        {"title": "FDA approves NewDrug Z?", "slug": "newdrug-z"},
+        {"title": "Avian flu outbreak declared in 2027?", "slug": "avian-2027"},
+    ])
+    monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: {
+        "title": "Avian flu outbreak declared in 2027?", "slug": slug, "closed": False,
+        "volume": 50_000, "endDate": "2027-12-31",
+        "markets": [{"outcomes": '["Yes","No"]', "outcomePrices": '["0.07","0.93"]'}]})
+    out = DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p)
+    assert len(out) == 1 and out[0].lane == "healthcare" and out[0].lead_label == "Yes"
+
+
+def test_discovery_skips_low_volume(tmp_path, monkeypatch):
+    p = tmp_path / "seen.json"
+    p.write_text("[]", encoding="utf-8")  # not first run
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "Recession in Canada in 2027?", "slug": "ca-rec"}])
+    monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: {
+        "title": "Recession in Canada in 2027?", "slug": slug, "closed": False,
+        "volume": 500, "endDate": "2027-12-31",
+        "markets": [{"outcomes": '["Yes","No"]', "outcomePrices": '["0.2","0.8"]'}]})
+    assert DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p, min_volume=10_000) == []
+
+
+def test_rundown_renders_movers_and_new_markets():
+    now = datetime(2026, 6, 12, tzinfo=_UTC)
+    mv = [HIST.Mover("recession", "US recession", "macro", "Yes", 0.10, 0.18, 8.0, "WoW")]
+    nm = [DISC.NewMarket("Avian flu outbreak 2027?", "https://polymarket.com/event/x",
+                         "healthcare", 50_000, "2027-12-31", "Yes", 0.07)]
+    rd = RD.build(_sample(), now, movers=mv, new_markets=nm)
+    txt = RD.render_text(rd)
+    assert "NOTABLE MOVES" in txt and "NEWLY-OPENED" in txt
+    blocks = RD.build_blocks(rd)
+    assert len(blocks) <= 50
+    for b in blocks:
+        if b.get("type") == "section":
+            assert len(b["text"]["text"]) <= 3000
+    html = RD.render_html(rd)
+    assert "Notable moves" in html and "Newly-opened" in html

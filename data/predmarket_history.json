@@ -1,0 +1,412 @@
+{
+ "recession": [
+  {
+   "date": "2026-06-12",
+   "title": "US recession by end of 2026?",
+   "volume": 1554135.6620079987,
+   "outcomes": [
+    [
+     "Yes",
+     0.185
+    ]
+   ]
+  }
+ ],
+ "rate_cuts": [
+  {
+   "date": "2026-06-12",
+   "title": "How many Fed rate cuts in 2026?",
+   "volume": 34203990.08373282,
+   "outcomes": [
+    [
+     "0 (0 bps)",
+     0.7705
+    ],
+    [
+     "1 (25 bps)",
+     0.155
+    ],
+    [
+     "2 (50 bps)",
+     0.0355
+    ],
+    [
+     "3 (75 bps)",
+     0.0195
+    ],
+    [
+     "4 (100 bps)",
+     0.0075
+    ],
+    [
+     "12+ (300+ bps)",
+     0.006
+    ],
+    [
+     "5 (125 bps)",
+     0.0045
+    ],
+    [
+     "6 (150 bps)",
+     0.0045
+    ],
+    [
+     "7 (175 bps)",
+     0.0035
+    ],
+    [
+     "8 (200 bps)",
+     0.0035
+    ],
+    [
+     "9 (225 bps)",
+     0.0025
+    ],
+    [
+     "10 (250 bps)",
+     0.0025
+    ],
+    [
+     "11 (275 bps)",
+     0.0025
+    ]
+   ]
+  }
+ ],
+ "fed_meeting": [
+  {
+   "date": "2026-06-12",
+   "title": "Fed Decision in June?",
+   "volume": 88733001.99616368,
+   "outcomes": [
+    [
+     "No change",
+     0.9925
+    ],
+    [
+     "25 bps decrease",
+     0.0045
+    ],
+    [
+     "25 bps increase",
+     0.0025
+    ],
+    [
+     "50+ bps decrease",
+     0.0015
+    ],
+    [
+     "50+ bps increase",
+     0.0005
+    ]
+   ]
+  }
+ ],
+ "midterms": [
+  {
+   "date": "2026-06-12",
+   "title": "Balance of Power: 2026 Midterms",
+   "volume": 7683280.599372026,
+   "outcomes": [
+    [
+     "Democrats Sweep",
+     0.435
+    ],
+    [
+     "R Senate, D House",
+     0.345
+    ],
+    [
+     "Republicans Sweep",
+     0.175
+    ],
+    [
+     "D Senate, R House",
+     0.0195
+    ],
+    [
+     "Other",
+     0.008
+    ]
+   ]
+  }
+ ],
+ "shutdown": [
+  {
+   "date": "2026-06-12",
+   "title": "Another US government shutdown & House Winner 2026?",
+   "volume": 325705.0966720001,
+   "outcomes": [
+    [
+     "Shutdown & Democratic Party",
+     0.8135
+    ],
+    [
+     "Shutdown & Republican Party",
+     0.1885
+    ]
+   ]
+  }
+ ],
+ "new_pandemic": [
+  {
+   "date": "2026-06-12",
+   "title": "New pandemic in 2026?",
+   "volume": 724968.8725079983,
+   "outcomes": [
+    [
+     "Yes",
+     0.095
+    ]
+   ]
+  }
+ ],
+ "hantavirus": [
+  {
+   "date": "2026-06-12",
+   "title": "Hantavirus pandemic in 2026?",
+   "volume": 15206606.670829823,
+   "outcomes": [
+    [
+     "Yes",
+     0.0365
+    ]
+   ]
+  }
+ ],
+ "ebola": [
+  {
+   "date": "2026-06-12",
+   "title": "Ebola pandemic in 2026?",
+   "volume": 455585.687488,
+   "outcomes": [
+    [
+     "Yes",
+     0.075
+    ]
+   ]
+  }
+ ],
+ "measles_2026": [
+  {
+   "date": "2026-06-12",
+   "title": "Measles cases in U.S. in 2026?",
+   "volume": 7710210.717088978,
+   "outcomes": [
+    [
+     "\u21913k",
+     0.84
+    ],
+    [
+     "\u21914k",
+     0.355
+    ],
+    [
+     "\u21915k",
+     0.2
+    ],
+    [
+     "\u21917.5k",
+     0.155
+    ],
+    [
+     "\u219110k",
+     0.0775
+    ],
+    [
+     "\u219112.5k",
+     0.075
+    ]
+   ]
+  }
+ ],
+ "covid_variant": [
+  {
+   "date": "2026-06-12",
+   "title": "New COVID variant of concern before 2027?",
+   "volume": 241256.12582900043,
+   "outcomes": [
+    [
+     "Yes",
+     0.145
+    ]
+   ]
+  }
+ ],
+ "cdc_level4": [
+  {
+   "date": "2026-06-12",
+   "title": "CDC issues Level 4 warning by December 31?",
+   "volume": 71851.12894099997,
+   "outcomes": [
+    [
+     "Yes",
+     0.235
+    ]
+   ]
+  }
+ ],
+ "rfk_out": [
+  {
+   "date": "2026-06-12",
+   "title": "RFK Jr. Out by December 31?",
+   "volume": 19156.87571999999,
+   "outcomes": [
+    [
+     "Yes",
+     0.59
+    ]
+   ]
+  }
+ ],
+ "fda_commissioner": [
+  {
+   "date": "2026-06-12",
+   "title": "Who will Trump announce as next FDA commissioner?",
+   "volume": 12475.263194,
+   "outcomes": [
+    [
+     "Kyle Diamantas",
+     0.435
+    ],
+    [
+     "No announcement by December 31",
+     0.2135
+    ],
+    [
+     "Sara Brenner",
+     0.173
+    ],
+    [
+     "Brett Giroir",
+     0.1135
+    ],
+    [
+     "Grace Graham",
+     0.073
+    ],
+    [
+     "Stephen Hahn",
+     0.04
+    ]
+   ]
+  }
+ ],
+ "retatrutide": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Retatrutide this year?",
+   "volume": 569501.959199999,
+   "outcomes": [
+    [
+     "Yes",
+     0.115
+    ]
+   ]
+  }
+ ],
+ "olezarsen": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Ionis' Olezarsen?",
+   "volume": 2186.2277849999996,
+   "outcomes": [
+    [
+     "Yes",
+     0.925
+    ]
+   ]
+  }
+ ],
+ "zoryve": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Arcutis' Zoryve cream?",
+   "volume": 4126.085624999999,
+   "outcomes": [
+    [
+     "Yes",
+     0.89
+    ]
+   ]
+  }
+ ],
+ "welireg": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Merck's Welireg + Keytruda or Keytruda Qlex?",
+   "volume": 299.5400669999999,
+   "outcomes": [
+    [
+     "Yes",
+     0.86
+    ]
+   ]
+  }
+ ],
+ "unicycive": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Unicycive's Oxylanthanum carbonate?",
+   "volume": 3539.5878799999996,
+   "outcomes": [
+    [
+     "Yes",
+     0.73
+    ]
+   ]
+  }
+ ],
+ "arcalyst": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Arcalyst technology transfer?",
+   "volume": 2333.010203,
+   "outcomes": [
+    [
+     "Yes",
+     0.755
+    ]
+   ]
+  }
+ ],
+ "daraxonrasib": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Daraxonrasib this year?",
+   "volume": 66.18380099999999,
+   "outcomes": [
+    [
+     "Yes",
+     0.705
+    ]
+   ]
+  }
+ ],
+ "veligrotug": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves Viridian Therapeutics' Veligrotug?",
+   "volume": 2666.268207999999,
+   "outcomes": [
+    [
+     "Yes",
+     0.69
+    ]
+   ]
+  }
+ ],
+ "tebipenem": [
+  {
+   "date": "2026-06-12",
+   "title": "FDA approves GSK & Spero Therapeutics' Tebipenem HBr?",
+   "volume": 4081.9125419999987,
+   "outcomes": [
+    [
+     "Yes",
+     0.595
+    ]
+   ]
+  }
+ ]
+}

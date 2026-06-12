@@ -1113,13 +1113,24 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
     """Resolve the curated prediction markets (Polymarket), render the 3-lane
     rundown, write the readable panel, and (with --post) post to
     #prediction-markets. Defaults to dry-run."""
+    from datetime import datetime, timezone
     from .predmarkets.config import TRACKED
     from .predmarkets.client import resolve_all
     from .predmarkets import rundown as RD
+    from .predmarkets import history as HIST
+    from .predmarkets import discovery as DISC
     from .predmarkets.post import write_readable, post_slack
 
+    now = datetime.now(timezone.utc)
     resolved = resolve_all(TRACKED)
-    rd = RD.build(resolved)
+    HIST.record(resolved, now)                       # append today's snapshot
+    movers = HIST.movers(resolved, now)              # WoW/YoY large shifts
+    try:
+        new_markets = DISC.discover_new(now)         # newly-opened relevant markets
+    except Exception as e:                            # discovery is best-effort
+        print(f"[warn] discovery failed: {type(e).__name__}: {e}", file=sys.stderr)
+        new_markets = []
+    rd = RD.build(resolved, now, movers=movers, new_markets=new_markets)
     print(RD.render_text(rd))
     out = write_readable(RD.render_html(rd))
     print(f"\nReadable panel: file://{out.absolute()}", file=sys.stderr)

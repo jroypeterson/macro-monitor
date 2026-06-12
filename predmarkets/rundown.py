@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 
 from .config import TRACKED, liquidity_flag
 from .client import Resolved
+from .history import Mover
+from .discovery import NewMarket
 
 # Compact aliases for the aggregated top-line (headline markets only).
 _SHORT = {
@@ -48,6 +50,19 @@ def _line(r: Resolved) -> str:
     return f"{flag} *{r.label}* — {body}  ({_vol(r.volume)})"
 
 
+def _move_line(m: Mover) -> str:
+    arrow = "📈" if m.delta_pp > 0 else "📉"
+    sign = "+" if m.delta_pp > 0 else "−"
+    who = m.label if m.outcome.lower() == "yes" else f"{m.label} ({m.outcome})"
+    return (f"{arrow} *{who}* — {round(m.old * 100)}% → {round(m.new * 100)}% "
+            f"({sign}{abs(round(m.delta_pp))}pp {m.period})")
+
+
+def _new_line(n: NewMarket) -> str:
+    tag = "💊" if n.lane == "healthcare" else "📊"
+    return f"{tag} *{n.title}* — {n.lead_label} {round(n.lead_prob * 100)}%  ({_vol(n.volume)})"
+
+
 @dataclass
 class Rundown:
     generated: datetime
@@ -56,6 +71,8 @@ class Rundown:
     hc_policy: list[Resolved] = field(default_factory=list)
     biotech: list[Resolved] = field(default_factory=list)
     aggregated: list[str] = field(default_factory=list)
+    movers: list[Mover] = field(default_factory=list)
+    new_markets: list[NewMarket] = field(default_factory=list)
 
     @property
     def live_count(self) -> int:
@@ -68,10 +85,12 @@ class Rundown:
 _POLICY_KEYS = {"rfk_out", "fda_commissioner"}
 
 
-def build(resolved: list[Resolved], now: datetime | None = None) -> Rundown:
+def build(resolved: list[Resolved], now: datetime | None = None, *,
+          movers: list[Mover] | None = None,
+          new_markets: list[NewMarket] | None = None) -> Rundown:
     now = now or datetime.now(timezone.utc)
     by_key = {r.key: r for r in resolved}
-    rd = Rundown(generated=now)
+    rd = Rundown(generated=now, movers=list(movers or []), new_markets=list(new_markets or []))
     for r in resolved:
         if r.lane == "macro":
             rd.macro.append(r)
@@ -104,6 +123,9 @@ def render_text(rd: Rundown) -> str:
     out = [f"Prediction Markets — {rd.generated:%Y-%m-%d}"]
     if rd.aggregated:
         out.append("  " + "  ·  ".join(rd.aggregated))
+    if rd.movers:
+        out.append("\nNOTABLE MOVES")
+        out.extend("  " + _move_line(m).replace("*", "") for m in rd.movers)
     def block(title, rows):
         if rows:
             out.append(f"\n{title}")
@@ -112,6 +134,9 @@ def render_text(rd: Rundown) -> str:
     block("HEALTHCARE — pandemics & public health", rd.hc_pandemic)
     block("HEALTHCARE — policy", rd.hc_policy)
     block("BIOTECH — FDA-approval catalysts (thin liquidity; directional)", rd.biotech)
+    if rd.new_markets:
+        out.append("\nNEWLY-OPENED RELEVANT MARKETS")
+        out.extend("  " + _new_line(n).replace("*", "") for n in rd.new_markets)
     return "\n".join(out)
 
 
@@ -146,6 +171,8 @@ def build_blocks(rd: Rundown) -> list[dict]:
     ]
     if rd.aggregated:
         blocks.append(_section("*At a glance:*  " + "   ".join(rd.aggregated)))
+    if rd.movers:
+        blocks.append(_section("*📈 Notable moves*\n" + "\n".join(_move_line(m) for m in rd.movers)))
     blocks.append({"type": "divider"})
     blocks += _section_lines("📊 Macro", rd.macro)
     blocks += _section_lines("🦠 Healthcare — pandemics & public health", rd.hc_pandemic)
@@ -154,6 +181,9 @@ def build_blocks(rd: Rundown) -> list[dict]:
     if rd.biotech:
         blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
             "text": "_Biotech approval markets are thin — read as directional, not calibrated._"}]})
+    if rd.new_markets:
+        blocks.append(_section("*🆕 Newly-opened relevant markets*\n"
+                               + "\n".join(_new_line(n) for n in rd.new_markets)))
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
         "text": f"data: Polymarket Gamma · {rd.live_count} live markets · {rd.generated:%Y-%m-%d %H:%M UTC}"}]})
     return blocks
@@ -183,6 +213,23 @@ def render_html(rd: Rundown) -> str:
             return ""
         return f"<h2>{title}</h2><table>{_html_rows(rows)}</table>"
     agg = ("<p class='agg'>" + "  ·  ".join(rd.aggregated) + "</p>") if rd.aggregated else ""
+    movers_html = ""
+    if rd.movers:
+        rows = "\n".join(
+            f"<tr><td>{'📈' if m.delta_pp > 0 else '📉'} {m.label}"
+            f"{'' if m.outcome.lower() == 'yes' else ' (' + m.outcome + ')'}</td>"
+            f"<td>{round(m.old * 100)}% → {round(m.new * 100)}%</td>"
+            f"<td class='dim'>{'+' if m.delta_pp > 0 else '−'}{abs(round(m.delta_pp))}pp {m.period}</td></tr>"
+            for m in rd.movers)
+        movers_html = f"<h2>📈 Notable moves</h2><table>{rows}</table>"
+    new_html = ""
+    if rd.new_markets:
+        rows = "\n".join(
+            f'<tr><td>{"💊" if n.lane == "healthcare" else "📊"} '
+            f'<a href="{n.url}" target="_blank">{n.title}</a></td>'
+            f'<td>{n.lead_label} {round(n.lead_prob * 100)}%</td>'
+            f'<td class="dim">{_vol(n.volume)}</td></tr>' for n in rd.new_markets)
+        new_html = f"<h2>🆕 Newly-opened relevant markets</h2><table>{rows}</table>"
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prediction Markets — macro_monitor</title>
@@ -197,9 +244,11 @@ def render_html(rd: Rundown) -> str:
 <h1>🔮 Prediction Markets</h1>
 <p class="sub">Forward-looking crowd odds · Polymarket · 🟢 &gt;$250k 🟡 &gt;$25k 🔴 thin · {rd.generated:%Y-%m-%d %H:%M UTC}</p>
 {agg}
+{movers_html}
 {tbl("📊 Macro", rd.macro)}
 {tbl("🦠 Healthcare — pandemics &amp; public health", rd.hc_pandemic)}
 {tbl("🏛️ Healthcare — policy", rd.hc_policy)}
 {tbl("💊 Biotech — FDA-approval catalysts <span class='sub'>(thin liquidity — directional)</span>", rd.biotech)}
+{new_html}
 <footer>{rd.live_count} live markets · source: Polymarket Gamma API · see PREDICTION_MARKETS.md</footer>
 </body></html>"""
