@@ -364,6 +364,10 @@ families:
         label: "Personal income"
         primary_transform: yoy_pct
         also_display: [mom_pct]
+      - id: PCE
+        label: "Nominal PCE"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
       - id: PCEC96
         label: "Real PCE"
         primary_transform: yoy_pct
@@ -422,6 +426,18 @@ families:
           highlight_latest: true
           filename: "consumer_capacity_{period}.png"
 
+        - name: real_pce
+          # Dedicated real-PCE graph (JP's ask). Real vs nominal PCE YoY makes
+          # the inflation wedge in consumer spending visible at a glance — when
+          # the lines diverge, price (not volume) is carrying nominal spending.
+          type: line
+          lookback_years: 5
+          series:
+            - {id: PCE, transform: yoy_pct, label: "Nominal PCE YoY"}
+            - {id: PCEC96, transform: yoy_pct, label: "Real PCE YoY"}
+          highlight_latest: true
+          filename: "real_pce_{period}.png"
+
     tier_b_gate: null
 
     dedupe:
@@ -430,6 +446,7 @@ families:
         - PCEPILFE
       component_hash:
         - PI
+        - PCE
         - PCEC96
         - PSAVERT
         - DSPIC96
