@@ -11,6 +11,7 @@
 | 1 | **Polymarket** (Gamma API) | ✅ yes | none | Narrative/tail-risk + **ticker-level FDA approval catalysts** + geopolitics | **Build v1** |
 | 2 | **Kalshi** (read endpoints) | ✅ yes | none for reads | Data-release-pegged econ (CPI/GDP/jobs/fed-funds) + 98-series Health + 2,022 Politics | **Build v2** |
 | 3 | **Metaculus** | ✅ yes | none | *Judgmental* long-horizon forecasts (not money-weighted) — complement, different signal | Optional later |
+| — | **Endpoint Arena** | ❌ private (401) | yes | Clinical-trial / drug-approval / data-readout markets — most on-thesis | Skip — pilot/paper-only, revisit |
 | — | **PredictIt** | ⚠️ partial | none | Politics only; most *accurate* (Vanderbilt 93%) but tiny + capped; limited feed | Skip unless pure-politics accuracy wanted |
 | — | **Robinhood Prediction Markets** | ❌ no public data API | — | = **Kalshi contracts** today (distribution deal) | Skip for data (adds nothing over Kalshi) |
 | — | **IBKR ForecastTrader** (Kalshi+CME+ForecastEx) | ❌ Pro-only API | RSA/Pro | Trading venue; aggregates 3 exchanges | Skip — **JP on IBKR Lite (no API)** |
@@ -41,6 +42,10 @@
 - **Volume:** ~$6B/30d, 52.6% US share — **but ~87% is sports.** US CFTC-regulated DCM.
 - **Coverage:** deepest *data-release-pegged* econ contracts — CPI (MoM/YoY/core), PCE, unemployment, payrolls, GDP, fed-funds path meeting-by-meeting, T-bills, new-home sales (`KXNHSALES`), building permits (`KXBUILDPERMS`), gas (`KXCPIGAS`), central-bank decisions by country (`KXCBDECISION*`). Health category (COVID variants/waves, FDA pill approvals, "drug ads on TV"). 
 - **Why second:** its econ contracts map 1:1 onto macro_monitor's existing release families → layer the implied distribution onto the day-before CPI/jobs reminder. Vanderbilt accuracy 78%.
+- **HC/biotech caveat (scan 2026-06-12):** Kalshi has *cataloged* lots of biotech/FDA contracts (under **"Science and Technology"**, not Health — Health is dead COVID-era series) — Beam/Intellia/Verve/Compass drug apps, a generic `KXFDAAPPROVE`, ACA repeal/extension, FDA-commissioner — but **every one is currently 0-volume with no last price** (listed, not trading). So for HC/biotech there's no live Kalshi *signal* yet; treat as a watch-list and auto-promote on volume>0. The live HC/biotech signal today is **Polymarket-only**.
+
+### Endpoint Arena — drug-focused, not usable yet
+Clinical-trial prediction market (drug approvals + data readouts) — the most on-thesis platform for biopharma. But **pilot / paper-trading only**, and its API is **private** (`endpointarena.com/api/v1/markets` → 401; no public docs). Nothing to integrate now; **revisit once it exits pilot** and lists real-money markets. `endpointarena.com/method`.
 
 ### 3. Metaculus — optional complement
 - Public API (no auth) for community/expert **judgmental** forecasts — NOT money-weighted prices. Different signal: "what calibrated forecasters think" vs "what money thinks." Good for long-horizon macro/geopolitical/health questions where money markets are thin. Lower priority.
@@ -66,9 +71,16 @@
 ## Regulatory durability caveat
 Congress is actively weighing (mid-2026) **restricting election/policy betting** on Kalshi/Polymarket over insider-trading concerns (CNBC/Axios, May–Jun 2026). The **political/policy** markets are the ones most at risk of being curtailed; macro (Fed/CPI/recession) and the FDA-approval catalysts are lower-risk. Build the integration so a category can be dropped without breaking the rest.
 
+## Design decisions (JP, 2026-06-12)
+- **Surface: BOTH** — a readable HTML panel in the macro hub **and** a Slack post to the **new `#prediction-markets` channel** (JP created it to collect everything).
+- **3 lanes:** (1) **Macro** {recession, # rate cuts, Fed meeting, shutdown, S&P} · (2) **Healthcare** {FDA drug-approval catalysts, FDA commissioner, RFK, pandemics/measles, HC policy} · (3) **Aggregated** — a compact top-line pulling the single headline number from each lane.
+- **Healthcare lane stays in macro_monitor for now**; if it gets differentiated/robust, split it out later. The **biotech FDA-catalyst markets ALSO route to the biotech catalyst lane** (PROJECT_TRIAGE #13/#14) — dual-purpose.
+- Curated, reviewable market list: **`PREDMARKET_HC_WATCHLIST.md`** (JP picks what enters the weekly rundown).
+
 ## Build plan (sequenced)
-- **v1 — Polymarket panel:** keyless Gamma client → curated set {US recession, # rate cuts, Fed meeting, gov shutdown, S&P target} **+ a healthcare lane {FDA approvals, FDA commissioner, RFK, pandemic}** → readable HTML in the macro hub (+ optional weekly Slack section). Weight/annotate by volume (confidence).
-- **v2 — Kalshi econ overlay:** keyless read client → implied distribution for upcoming CPI/jobs/GDP, shown *next to* the existing release-reminder lines.
-- **later — Metaculus** (judgmental complement) / **PredictIt** (pure-politics calibration) / **Robinhood-Rothera** (re-check) only if a gap appears.
+- **v1 — Polymarket client + 3-lane rundown** → readable HTML hub panel + Slack `#prediction-markets`. Annotate every market with volume (confidence); the live HC/biotech signal is Polymarket-only today. Curated set per `PREDMARKET_HC_WATCHLIST.md`.
+- **v2 — Kalshi:** (a) econ overlay onto the existing CPI/jobs/GDP release reminders; (b) watch the cataloged-but-untraded HC/biotech contracts and **auto-promote any with volume>0** into the rundown.
+- **biotech routing:** the FDA-approval lane feeds both macro_monitor's HC rundown and the future biotech catalyst channel.
+- **later — Metaculus** (judgmental complement) / **PredictIt** (pure-politics calibration) / **Endpoint Arena** (when it exits pilot) / **Robinhood-Rothera** (re-check) only if a gap appears.
 
 Pointer added to root `CAPABILITIES.md`.
