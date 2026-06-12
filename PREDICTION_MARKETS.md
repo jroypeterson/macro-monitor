@@ -78,7 +78,7 @@ Congress is actively weighing (mid-2026) **restricting election/policy betting**
 - Curated, reviewable market list: **`PREDMARKET_HC_WATCHLIST.md`** (JP picks what enters the weekly rundown).
 
 ## Build plan (sequenced)
-- **v1 — Polymarket client + 3-lane rundown** → readable HTML hub panel + Slack `#prediction-markets`. Annotate every market with volume (confidence); the live HC/biotech signal is Polymarket-only today. Curated set per `PREDMARKET_HC_WATCHLIST.md`.
+- **v1 — Polymarket client + 3-lane rundown — ✅ SHIPPED 2026-06-12.** `predmarkets/` package (keyless Gamma `client.py` resolving each curated market by search+title-match → highest-volume active event; `rundown.py` → text/Block Kit/HTML; `post.py` → readable panel + bot-token Slack post). CLI `pred-markets` (dry-run default, `--post` to send). Readable panel `readable/prediction_markets/` linked from the hub; weekly `prediction_markets.yml` (Mon 08:00 ET). 11 tests. Markets annotated by volume (🟢/🟡/🔴). **Activation steps:** invite the Slack bot (ClaudeBot) to **#prediction-markets** and ensure `SLACK_BOT_TOKEN` (+ optional `SLACK_PREDMARKET_CHANNEL_ID`) secrets are set — until the bot is in-channel, `--post` degrades to dry-run + writes the panel.
 - **v2 — Kalshi:** (a) econ overlay onto the existing CPI/jobs/GDP release reminders; (b) watch the cataloged-but-untraded HC/biotech contracts and **auto-promote any with volume>0** into the rundown.
 - **biotech routing:** the FDA-approval lane feeds both macro_monitor's HC rundown and the future biotech catalyst channel.
 - **later — Metaculus** (judgmental complement) / **PredictIt** (pure-politics calibration) / **Endpoint Arena** (when it exits pilot) / **Robinhood-Rothera** (re-check) only if a gap appears.

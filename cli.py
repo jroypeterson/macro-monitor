@@ -658,6 +658,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_drug_prices)
 
     sp = sub.add_parser(
+        "pred-markets",
+        help="Resolve curated Polymarket odds → 3-lane rundown → readable panel + #prediction-markets",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.set_defaults(func=cmd_pred_markets)
+
+    sp = sub.add_parser(
         "overview",
         help="Post the channel overview (pinnable 'what this channel is' message) to #macro",
     )
@@ -1098,6 +1106,31 @@ def cmd_drug_prices(args: argparse.Namespace) -> int:
         print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
     idx = path.parent / "index.html"
     print(f"\nOpen the gallery: file://{idx.absolute()}")
+    return 0
+
+
+def cmd_pred_markets(args: argparse.Namespace) -> int:
+    """Resolve the curated prediction markets (Polymarket), render the 3-lane
+    rundown, write the readable panel, and (with --post) post to
+    #prediction-markets. Defaults to dry-run."""
+    from .predmarkets.config import TRACKED
+    from .predmarkets.client import resolve_all
+    from .predmarkets import rundown as RD
+    from .predmarkets.post import write_readable, post_slack
+
+    resolved = resolve_all(TRACKED)
+    rd = RD.build(resolved)
+    print(RD.render_text(rd))
+    out = write_readable(RD.render_html(rd))
+    print(f"\nReadable panel: file://{out.absolute()}", file=sys.stderr)
+    misses = [r.label for r in (rd.macro + rd.hc_pandemic + rd.hc_policy + rd.biotech) if not r.ok]
+    if misses:
+        print(f"[warn] {len(misses)} market(s) had no live data: {', '.join(misses)}", file=sys.stderr)
+    _, info = post_slack(
+        RD.build_blocks(rd), f"Prediction Markets — {rd.generated:%Y-%m-%d}",
+        dry_run=args.dry_run,
+    )
+    print(f"Slack: {info}", file=sys.stderr)
     return 0
 
 

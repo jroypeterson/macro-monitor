@@ -1,0 +1,63 @@
+name: Prediction markets
+
+# Weekly forward-looking crowd-odds rundown to #prediction-markets (Polymarket:
+# macro / healthcare-pandemics / biotech FDA-approval catalysts) + refresh the
+# readable/prediction_markets panel. Monday 08:00 ET (week-ahead).
+# 08:00 EDT = 12:00 UTC, 08:00 EST = 13:00 UTC — both listed for DST.
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"   # 08:00 EDT (summer), Monday
+    - cron: "0 13 * * 1"   # 08:00 EST (winter), Monday
+  workflow_dispatch: {}
+
+jobs:
+  pred-markets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT; exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "08" ]; then
+            echo "Outside 08:00 ET (now $ET_HOUR ET); skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post prediction-market rundown
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_PREDMARKET_CHANNEL_ID: ${{ secrets.SLACK_PREDMARKET_CHANNEL_ID }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli pred-markets --post
+
+      - name: Commit refreshed prediction-markets panel
+        if: steps.dst_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add readable/prediction_markets/index.html || true
+          git diff --cached --quiet || git commit -m "pred-markets: refresh prediction-markets panel [skip ci]"
+          git push || true
