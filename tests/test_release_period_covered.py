@@ -220,7 +220,7 @@ def test_fetch_sets_priority_from_mandated_topics():
     # Mandated-topic families → priority True
     assert by_name["Employment Situation"] is True   # employment + real_hourly_earnings
     assert by_name["Retail Sales"] is True            # consumer_spending
-    assert by_name["PCE / Personal Income & Outlays"] is True  # consumer_spending
+    assert by_name["Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income & Outlays"] is True  # consumer_spending
     # Tier-A-for-other-reasons + Tier-B families → priority False
     assert by_name["CPI"] is False                    # inflation only
     assert by_name["GDP"] is False                    # growth only

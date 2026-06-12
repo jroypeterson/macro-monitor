@@ -340,44 +340,52 @@ families:
     topics: [inflation, consumer_spending]
 
     # === Display ===
-    display_name: "PCE / Personal Income & Outlays"
+    display_name: "Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income & Outlays"
     period_label_format: "{month_name} {year}"
 
     # === Headline ===
-    # Same pattern as CPI: display YoY+MoM, anchor on annualized_mom.
+    # Consumer spending LEADS the headline — it's the metric JP cares most
+    # about, and this family is Tier A (declares the consumer_spending topic,
+    # which the validator hard-enforces to Tier A). Real spending first (the
+    # inflation-adjusted signal), then nominal, then the two PCE price indices
+    # (inflation). Labels are spelled out in full with the abbreviation in
+    # parens so "PCE" can't be misread as price-index vs spending.
     headline:
+      - id: PCEC96
+        label: "Real consumer spending — Real Personal Consumption Expenditures (real PCE)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+        basis: "YoY, inflation-adjusted"
+      - id: PCE
+        label: "Nominal consumer spending — Personal Consumption Expenditures (nominal PCE)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+        basis: "YoY, current dollars"
       - id: PCEPI
-        label: "Headline PCE"
+        label: "Headline PCE price index — Personal Consumption Expenditures inflation (PCEPI)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
         basis: "MoM annualized"
       - id: PCEPILFE
-        label: "Core PCE"
+        label: "Core PCE price index — ex food & energy (PCEPILFE)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
         basis: "MoM annualized"
 
     # === Components (thread) ===
-    # Consumer-capacity context: income, real spending, savings, real DPI.
+    # Consumer-capacity context: income, savings, real disposable income.
+    # (Real + nominal consumer spending were promoted to the headline above.)
     components:
       - id: PI
-        label: "Personal income"
-        primary_transform: yoy_pct
-        also_display: [mom_pct]
-      - id: PCE
-        label: "Nominal PCE"
-        primary_transform: yoy_pct
-        also_display: [mom_pct]
-      - id: PCEC96
-        label: "Real PCE"
+        label: "Personal income (PI)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
       - id: PSAVERT
-        label: "Personal saving rate"
+        label: "Personal saving rate (PSAVERT)"
         primary_transform: raw
         display_unit: "%"
       - id: DSPIC96
-        label: "Real disposable personal income"
+        label: "Real disposable personal income (real DPI)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
 
@@ -392,62 +400,66 @@ families:
       zscore_kind: delta
 
     # === Charts ===
+    # MAIN chart leads with consumer spending (JP's top priority), not the
+    # price index. Real vs nominal Personal Consumption Expenditures YoY — the
+    # gap between the lines is inflation's drag on spending. The PCE price-index
+    # (inflation) charts move to the thread.
     charts:
       main:
         type: line
         lookback_years: 5
         series:
-          - {id: PCEPI, transform: yoy_pct, label: "Headline PCE YoY"}
-          - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE YoY"}
-        reference_lines:
-          - {value: 2.0, label: "2% Fed target", style: dashed}
+          - {id: PCEC96, transform: yoy_pct, label: "Real consumer spending (real PCE), YoY"}
+          - {id: PCE, transform: yoy_pct, label: "Nominal consumer spending (PCE), YoY"}
         highlight_latest: true
-        filename: "pce_5y_{period}.png"
+        filename: "pce_consumer_spending_{period}.png"
 
       thread:
+        - name: inflation
+          # PCE price index (inflation) — the conventional PCE chart, vs the
+          # Fed's 2% target. Demoted from main to thread; consumer spending now
+          # leads.
+          type: line
+          lookback_years: 5
+          series:
+            - {id: PCEPI, transform: yoy_pct, label: "Headline PCE price index (PCEPI), YoY"}
+            - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE price index (PCEPILFE), YoY"}
+          reference_lines:
+            - {value: 2.0, label: "2% Fed target", style: dashed}
+          highlight_latest: true
+          filename: "pce_inflation_{period}.png"
+
         - name: long_history
           type: line
           lookback_years: 25
           series:
-            - {id: PCEPI, transform: yoy_pct, label: "Headline PCE YoY"}
-            - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE YoY"}
+            - {id: PCEPI, transform: yoy_pct, label: "Headline PCE price index (PCEPI), YoY"}
+            - {id: PCEPILFE, transform: yoy_pct, label: "Core PCE price index (PCEPILFE), YoY"}
           reference_lines:
             - {value: 2.0, label: "2% Fed target", style: dashed}
           filename: "pce_25y_{period}.png"
 
         - name: consumer_capacity
-          # Real DPI is the cleanest "consumer ability to spend" measure;
-          # pairs naturally with the future V/MA/WMT transcript module.
+          # Real disposable income is the cleanest "consumer ability to spend"
+          # measure; pairs naturally with the future V/MA/WMT transcript module.
           type: line
           lookback_years: 5
           series:
-            - {id: DSPIC96, transform: yoy_pct, label: "Real DPI YoY"}
-            - {id: PCEC96, transform: yoy_pct, label: "Real PCE YoY"}
+            - {id: DSPIC96, transform: yoy_pct, label: "Real disposable personal income (real DPI), YoY"}
+            - {id: PCEC96, transform: yoy_pct, label: "Real consumer spending (real PCE), YoY"}
           highlight_latest: true
           filename: "consumer_capacity_{period}.png"
-
-        - name: real_pce
-          # Dedicated real-PCE graph (JP's ask). Real vs nominal PCE YoY makes
-          # the inflation wedge in consumer spending visible at a glance — when
-          # the lines diverge, price (not volume) is carrying nominal spending.
-          type: line
-          lookback_years: 5
-          series:
-            - {id: PCE, transform: yoy_pct, label: "Nominal PCE YoY"}
-            - {id: PCEC96, transform: yoy_pct, label: "Real PCE YoY"}
-          highlight_latest: true
-          filename: "real_pce_{period}.png"
 
     tier_b_gate: null
 
     dedupe:
       headline_hash:
+        - PCEC96
+        - PCE
         - PCEPI
         - PCEPILFE
       component_hash:
         - PI
-        - PCE
-        - PCEC96
         - PSAVERT
         - DSPIC96
 

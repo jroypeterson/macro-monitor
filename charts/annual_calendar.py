@@ -226,7 +226,7 @@ ABBREVIATIONS = {
     "Retail Sales": "Retail",
     "GDP": "GDP",
     "Employment Cost Index": "ECI",
-    "PCE / Personal Income & Outlays": "PCE",
+    "Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income & Outlays": "PCE",
     # Tier B
     "Industrial Production": "IndPro",
     "Housing Starts & Permits": "Housing",
