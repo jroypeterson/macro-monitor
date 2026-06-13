@@ -20,21 +20,74 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 from ..config import FamilyConfig
 from ..outputs import family_slug, outputs_root
 
 ET = ZoneInfo("America/New_York")
 
+# US Treasury curve, FRED daily constant-maturity series. Close-of-day levels
+# (NOT intraday — sigma-alert owns live yields); the dashboard is a prior-close
+# current-state view, so the daily FRED series is the right basis.
+_CURVE_SERIES = [("DGS2", "2-Year"), ("DGS10", "10-Year"), ("DGS30", "30-Year")]
+
+
+def fetch_treasury_curve(client=None) -> list[dict] | None:
+    """Best-effort fetch of the US Treasury curve (2/10/30) from FRED.
+
+    Returns a list of {label, level, chg_1d_bp, ytd_bp, asof} dicts, or None
+    if the curve can't be fetched (the dashboard then renders no panel rather
+    than failing). Never raises — the dashboard must always render.
+    """
+    try:
+        if client is None:
+            from ..collectors.fred import FREDClient
+            client = FREDClient()
+        today = datetime.now(ET).date()
+        start = f"{today.year - 1}-01-01"
+        year_start = pd.Timestamp(year=today.year, month=1, day=1)
+        rows: list[dict] = []
+        for series_id, label in _CURVE_SERIES:
+            s = client.get_observations(series_id, observation_start=start).dropna()
+            if s.empty:
+                continue
+            level = float(s.iloc[-1])
+            chg_1d_bp = (level - float(s.iloc[-2])) * 100 if len(s) >= 2 else None
+            # YTD = vs the last close of the prior calendar year.
+            prior = s[s.index < year_start]
+            ytd_bp = (level - float(prior.iloc[-1])) * 100 if not prior.empty else None
+            rows.append({
+                "label": label,
+                "level": level,
+                "chg_1d_bp": chg_1d_bp,
+                "ytd_bp": ytd_bp,
+                "asof": s.index[-1].strftime("%Y-%m-%d"),
+            })
+        return rows or None
+    except Exception:  # noqa: BLE001 — curve panel is optional; never break the dashboard
+        return None
+
 
 def render_dashboard(
     families: dict[str, FamilyConfig],
     output_path: Path | None = None,
+    curve: list[dict] | None = None,
+    fetch_curve: bool = True,
 ) -> Path:
     """Render the dashboard HTML to outputs/dashboard/index.html (or
-    `output_path` if provided). Returns the written path."""
+    `output_path` if provided). Returns the written path.
+
+    The US Treasury curve (2/10/30) is fetched best-effort from FRED unless
+    `curve` is supplied or `fetch_curve` is False (tests pass these to stay
+    offline). A failed/empty fetch simply omits the panel.
+    """
     if output_path is None:
         output_path = outputs_root() / "dashboard" / "index.html"
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if curve is None and fetch_curve:
+        curve = fetch_treasury_curve()
 
     latest_dir = outputs_root() / "latest"
     family_cards: list[str] = []
@@ -75,6 +128,7 @@ def render_dashboard(
         families_with_data=stats["with_data"],
         families_stale=stats["stale"],
         stale_class=" warn" if stats["stale"] else "",
+        curve_panel=_render_curve_panel(curve),
         cards="\n".join(family_cards),
     )
     output_path.write_text(body_html, encoding="utf-8")
@@ -113,7 +167,17 @@ _HTML_TEMPLATE = """\
   .basis {{ font-size: 0.62em; color: #999; font-weight: 400; margin-left: 0.3em;
             text-transform: none; letter-spacing: 0; }}
   .chart-thumb {{ width: 100%; height: auto; max-height: 200px; object-fit: contain;
-                  margin: 0.6em 0; border: 1px solid #eee; border-radius: 4px; }}
+                  margin: 0.6em 0; border: 1px solid #eee; border-radius: 4px;
+                  cursor: zoom-in; }}
+  /* Click-to-zoom lightbox: hidden until an img is clicked (see <script>). */
+  .lightbox {{ display: none; position: fixed; inset: 0; z-index: 1000;
+               background: rgba(0,0,0,0.85); cursor: zoom-out;
+               align-items: center; justify-content: center; padding: 2vh 2vw; }}
+  .lightbox.open {{ display: flex; }}
+  .lightbox img {{ max-width: 96vw; max-height: 96vh; object-fit: contain;
+                   border-radius: 4px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); }}
+  .lightbox .close {{ position: absolute; top: 1rem; right: 1.4rem; color: #fff;
+                      font-size: 2rem; line-height: 1; cursor: pointer; }}
   .links {{ display: flex; gap: 0.5em; font-size: 0.8em; margin-top: 0.6em; }}
   .links a {{ color: #1F4E79; text-decoration: none; padding: 0.2em 0.5em;
               background: #f0f4f8; border-radius: 3px; }}
@@ -123,6 +187,19 @@ _HTML_TEMPLATE = """\
                   padding: 0.1em 0.4em; border-radius: 3px; margin-left: 0.5em; }}
   .hc-badge {{ display: inline-block; background: #E8F0E0; color: #2D5016; font-size: 0.7em;
                padding: 0.1em 0.4em; border-radius: 3px; margin-left: 0.4em; }}
+  .curve {{ background: white; border: 1px solid #e0e0e0; border-radius: 6px;
+            padding: 1em; margin-bottom: 1.5em; }}
+  .curve h2 {{ font-size: 1.05em; margin: 0 0 0.1em 0; color: #1F4E79; }}
+  .curve .period {{ font-size: 0.8em; color: #888; margin-bottom: 0.7em; }}
+  .curve-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1em; }}
+  .tenor {{ border: 1px solid #eee; border-radius: 5px; padding: 0.6em 0.8em; }}
+  .tenor .t-label {{ font-size: 0.8em; color: #666; }}
+  .tenor .t-level {{ font-size: 1.5em; font-weight: 600; color: #222;
+                     font-variant-numeric: tabular-nums; }}
+  .tenor .t-chg {{ font-size: 0.82em; font-variant-numeric: tabular-nums; }}
+  /* Bond convention: a yield RISE is a price-negative event → red. */
+  .t-up {{ color: #C00000; }}
+  .t-down {{ color: #2D7D2D; }}
 </style>
 </head>
 <body>
@@ -148,6 +225,8 @@ Each figure is tagged with its basis — <b>y/y</b> (year-over-year) · <b>m/m</
   </div>
 </div>
 
+{curve_panel}
+
 <div class="grid">
 {cards}
 </div>
@@ -155,8 +234,28 @@ Each figure is tagged with its basis — <b>y/y</b> (year-over-year) · <b>m/m</
 <div class="footer">
   Generated by <code>macro_monitor.charts.dashboard</code>.
   Each card links to the per-release HTML report and the agency PDF.
-  Future GitHub Pages deploy = <code>git push</code> of <code>outputs/</code>.
+  Click any chart to zoom. Future GitHub Pages deploy = <code>git push</code> of <code>outputs/</code>.
 </div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged chart">
+  <span class="close" aria-hidden="true">&times;</span>
+  <img id="lightbox-img" alt="enlarged chart">
+</div>
+<script>
+(function () {{
+  var box = document.getElementById('lightbox');
+  var boxImg = document.getElementById('lightbox-img');
+  function close() {{ box.classList.remove('open'); boxImg.removeAttribute('src'); }}
+  document.querySelectorAll('img.chart-thumb').forEach(function (img) {{
+    img.addEventListener('click', function () {{
+      boxImg.src = img.getAttribute('src');
+      box.classList.add('open');
+    }});
+  }});
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {{ if (e.key === 'Escape') close(); }});
+}})();
+</script>
 
 </body>
 </html>
@@ -168,6 +267,43 @@ def _fmt_pct(v: float | None) -> str:
         return "—"
     sign = "+" if v >= 0 else ""
     return f"{sign}{v:.2f}%"
+
+
+def _fmt_bp(bp: float | None) -> tuple[str, str]:
+    """Return (text, css-class) for a basis-point change, colored bond-style
+    (a yield rise is price-negative → red)."""
+    if bp is None:
+        return "—", ""
+    sign = "+" if bp >= 0 else ""
+    cls = "t-up" if bp > 0 else ("t-down" if bp < 0 else "")
+    return f"{sign}{bp:.0f} bp", cls
+
+
+def _render_curve_panel(curve: list[dict] | None) -> str:
+    """Render the US Treasury curve (2/10/30) panel, or '' if no data."""
+    if not curve:
+        return ""
+    asof = max((r.get("asof", "") for r in curve), default="")
+    tenors = []
+    for r in curve:
+        d1_txt, d1_cls = _fmt_bp(r.get("chg_1d_bp"))
+        ytd_txt, ytd_cls = _fmt_bp(r.get("ytd_bp"))
+        tenors.append(
+            f"<div class='tenor'>"
+            f"<div class='t-label'>{html.escape(r['label'])}</div>"
+            f"<div class='t-level'>{r['level']:.2f}%</div>"
+            f"<div class='t-chg'>1d <span class='{d1_cls}'>{d1_txt}</span> · "
+            f"YTD <span class='{ytd_cls}'>{ytd_txt}</span></div>"
+            f"</div>"
+        )
+    return (
+        f"<div class='curve' id='treasury-curve'>"
+        f"<h2>US Treasury curve — 2 / 10 / 30-Year</h2>"
+        f"<div class='period'>Constant-maturity close · FRED (DGS2/DGS10/DGS30) · "
+        f"as of {html.escape(asof)}. Rising yield shown red (price-negative).</div>"
+        f"<div class='curve-grid'>" + "".join(tenors) + "</div>"
+        f"</div>"
+    )
 
 
 def _fmt_value(value: float | None, transform: str) -> str:
@@ -301,7 +437,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
         )
 
     return (
-        f"<div class='{card_class}'>"
+        f"<div class='{card_class}' id='fam-{html.escape(family_id)}'>"
         f"<h2>{html.escape(family.display_name)}{stale_badge}{cache_badge}</h2>"
         f"<div class='period'>{html.escape(period_label)}</div>"
         + "".join(headline_rows)
@@ -314,7 +450,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
 
 def _render_card_no_data(family_id: str, family: FamilyConfig) -> str:
     return (
-        f"<div class='card nodata'>"
+        f"<div class='card nodata' id='fam-{html.escape(family_id)}'>"
         f"<h2>{html.escape(family.display_name)}</h2>"
         f"<div class='period'>no data yet — first release post will populate</div>"
         f"</div>"

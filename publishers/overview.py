@@ -8,6 +8,12 @@ changes — re-post and re-pin.
 from __future__ import annotations
 
 from ..config import FamilyConfig
+from ..outputs import family_slug
+
+# Published US current-state dashboard. Each family renders a card anchored
+# at #fam-<slug> (see charts/dashboard.py), so an overview line can deep-link
+# straight to the card holding that family's latest data.
+_DASHBOARD_URL = "https://jroypeterson.github.io/macro-monitor/dashboard/"
 
 # Cadence-by-day descriptions, keyed by family_id. Tight enough to read
 # on mobile; matches the v5 plan §5 release windows.
@@ -49,7 +55,9 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
         out = []
         for fid, fam in items:
             window = RELEASE_WINDOWS.get(fid, f"{fam.cadence} · {fam.release_time_et} ET")
-            out.append(f"• *{fam.display_name}* — {window}")
+            # Deep-link the family name to its card on the current-state dashboard.
+            anchor = f"{_DASHBOARD_URL}#fam-{family_slug(fam.display_name)}"
+            out.append(f"• *<{anchor}|{fam.display_name}>* — {window}")
         return out
 
     tier_a_lines = _lines(tier_a)
