@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PCE / Personal Income &amp; Outlays — April 2026</title>
+<title>Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income &amp; Outlays — April 2026</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
           max-width: 900px; margin: 2em auto; padding: 0 1em; color: #222; }
@@ -28,30 +28,32 @@
 </head>
 <body>
 
-<h1>PCE / Personal Income &amp; Outlays <span class="period-label">— April 2026</span></h1>
+<h1>Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income &amp; Outlays <span class="period-label">— April 2026</span></h1>
 
 <div class="freshness">
   <strong>Source:</strong> fred ·
-  <strong>Fetched:</strong> 2026-06-09T18:30:37.048507+00:00 ·
+  <strong>Fetched:</strong> 2026-06-13T21:05:48.423171+00:00 ·
   <strong>Latest observation:</strong> 2026-04 ·
   <strong>Expected:</strong> 2026-04 ·
   <strong>Stale:</strong> no
 </div>
 
 <h2>Headline</h2>
-<table><thead><tr><th>Series</th><th>Primary</th><th>Also</th><th>Prior</th></tr></thead><tbody><tr><td><strong>Headline PCE</strong> <small style='color:#888'>(PCEPI)</small></td><td class='num'>4.90%</td><td>yoy_pct 3.77% · mom_pct 0.40%</td><td class='num'>8.28%</td></tr>
-<tr><td><strong>Core PCE</strong> <small style='color:#888'>(PCEPILFE)</small></td><td class='num'>2.91%</td><td>yoy_pct 3.29% · mom_pct 0.24%</td><td class='num'>3.60%</td></tr></tbody></table>
+<table><thead><tr><th>Series</th><th>Primary</th><th>Also</th><th>Prior</th></tr></thead><tbody><tr><td><strong>Real consumer spending — Real Personal Consumption Expenditures (real PCE)</strong> <small style='color:#888'>(PCEC96)</small></td><td class='num'>2.10%</td><td>mom_pct 0.11%</td><td class='num'>2.13%</td></tr>
+<tr><td><strong>Nominal consumer spending — Personal Consumption Expenditures (nominal PCE)</strong> <small style='color:#888'>(PCE)</small></td><td class='num'>5.94%</td><td>mom_pct 0.51%</td><td class='num'>5.73%</td></tr>
+<tr><td><strong>Headline PCE price index — Personal Consumption Expenditures inflation (PCEPI)</strong> <small style='color:#888'>(PCEPI)</small></td><td class='num'>4.90%</td><td>yoy_pct 3.77% · mom_pct 0.40%</td><td class='num'>8.28%</td></tr>
+<tr><td><strong>Core PCE price index — ex food &amp; energy (PCEPILFE)</strong> <small style='color:#888'>(PCEPILFE)</small></td><td class='num'>2.91%</td><td>yoy_pct 3.29% · mom_pct 0.24%</td><td class='num'>3.60%</td></tr></tbody></table>
 
 <h2>Context</h2><p><strong>Anchor:</strong> PCEPI (annualized_mom) · <strong>delta z-score vs 5y:</strong> -1.18σ</p><table><thead><tr><th>Trend</th><th>Stat</th><th>Value</th></tr></thead><tbody><tr><td>3mo annualized</td><td>annualized_mom</td><td class='num'>6.02%</td></tr>
 <tr><td>6mo annualized</td><td>annualized_mom</td><td class='num'>4.80%</td></tr></tbody></table>
 
-<h2>Components (thread)</h2><table><thead><tr><th>Series</th><th>Transform</th><th>Value</th></tr></thead><tbody><tr><td>Personal income <small style='color:#888'>(PI)</small> </td><td>yoy_pct</td><td class='num'>2.54%</td></tr>
-<tr><td>Real PCE <small style='color:#888'>(PCEC96)</small> </td><td>yoy_pct</td><td class='num'>2.10%</td></tr>
-<tr><td>Personal saving rate <small style='color:#888'>(PSAVERT)</small> </td><td>raw</td><td class='num'>2.60</td></tr>
-<tr><td>Real disposable personal income <small style='color:#888'>(DSPIC96)</small> </td><td>yoy_pct</td><td class='num'>-1.10%</td></tr></tbody></table>
+<h2>Components (thread)</h2><table><thead><tr><th>Series</th><th>Transform</th><th>Value</th></tr></thead><tbody><tr><td>Personal income (PI) <small style='color:#888'>(PI)</small> </td><td>yoy_pct</td><td class='num'>2.54%</td></tr>
+<tr><td>Personal saving rate (PSAVERT) <small style='color:#888'>(PSAVERT)</small> </td><td>raw</td><td class='num'>2.60</td></tr>
+<tr><td>Real disposable personal income (real DPI) <small style='color:#888'>(DSPIC96)</small> </td><td>yoy_pct</td><td class='num'>-1.10%</td></tr></tbody></table>
 
 <h2>Charts</h2>
-<div class='chart'><h3 style='font-size:1em;color:#555'>main</h3><img src='../../charts/pce_5y_2026-04.png' alt='main'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>main</h3><img src='../../charts/pce_consumer_spending_2026-04.png' alt='main'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>inflation</h3><img src='../../charts/pce_inflation_2026-04.png' alt='inflation'></div>
 <div class='chart'><h3 style='font-size:1em;color:#555'>long_history</h3><img src='../../charts/pce_25y_2026-04.png' alt='long_history'></div>
 <div class='chart'><h3 style='font-size:1em;color:#555'>consumer_capacity</h3><img src='../../charts/consumer_capacity_2026-04.png' alt='consumer_capacity'></div>
 

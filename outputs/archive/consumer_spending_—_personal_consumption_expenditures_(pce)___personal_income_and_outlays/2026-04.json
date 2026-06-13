@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "family_id": "consumer_spending_\u2014_personal_consumption_expenditures_(pce)___personal_income_and_outlays",
+  "family_display_name": "Consumer Spending \u2014 Personal Consumption Expenditures (PCE) / Personal Income & Outlays",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-06-13T21:05:53.310221+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-13T21:05:48.423171+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "PCEC96",
+      "label": "Real consumer spending \u2014 Real Personal Consumption Expenditures (real PCE)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.0988757759820897,
+        "raw_value": 16792.1
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.10730829075777937
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 2.1322584769756014
+      }
+    },
+    {
+      "id": "PCE",
+      "label": "Nominal consumer spending \u2014 Personal Consumption Expenditures (nominal PCE)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 5.943199784058928,
+        "raw_value": 21979.4
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.5080413200843292
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 5.730793405212009
+      }
+    },
+    {
+      "id": "PCEPI",
+      "label": "Headline PCE price index \u2014 Personal Consumption Expenditures inflation (PCEPI)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 4.901981577738623,
+        "raw_value": 130.902
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.7669441141498172
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.3995981009502714
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 8.27536669717006
+      }
+    },
+    {
+      "id": "PCEPILFE",
+      "label": "Core PCE price index \u2014 ex food & energy (PCEPILFE)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 2.905266504498072,
+        "raw_value": 129.63
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.289190610508208
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.23894031131834748
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 3.6040326641939346
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "PI",
+      "label": "Personal income (PI)",
+      "transform": "yoy_pct",
+      "value": 2.537882130838698,
+      "tags": []
+    },
+    {
+      "id": "PSAVERT",
+      "label": "Personal saving rate (PSAVERT)",
+      "transform": "raw",
+      "value": 2.6,
+      "tags": []
+    },
+    {
+      "id": "DSPIC96",
+      "label": "Real disposable personal income (real DPI)",
+      "transform": "yoy_pct",
+      "value": -1.1046219854518702,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "PCEPI",
+    "anchor_transform": "annualized_mom",
+    "zscore": -1.1794324454267597,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 6.022820647710336,
+        "window_months": 3,
+        "stat": "annualized_mom"
+      },
+      {
+        "label": "6mo annualized",
+        "value": 4.796901204843462,
+        "window_months": 6,
+        "stat": "annualized_mom"
+      }
+    ]
+  },
+  "charts": {
+    "main": "pce_consumer_spending_2026-04.png",
+    "inflation": "pce_inflation_2026-04.png",
+    "long_history": "pce_25y_2026-04.png",
+    "consumer_capacity": "consumer_capacity_2026-04.png"
+  },
+  "agency_pdf_url": null
+}
