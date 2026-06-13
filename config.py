@@ -52,6 +52,7 @@ _VALID_TOPICS = TIER_A_MANDATED_TOPICS | {
     "manufacturing",
     "trade",
     "consumer_credit",
+    "construction",
     "productivity",
     "sentiment",
 }

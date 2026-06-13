@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "family_id": "mortgage_rates_(30yr_and_15yr_fixed)",
+  "family_display_name": "Mortgage Rates (30yr & 15yr fixed)",
+  "period": "2026-06-11",
+  "period_label": "Week ending Jun 11, 2026",
+  "posted_at": "2026-06-13T22:28:52.780981+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-13T22:28:51.741235+00:00",
+  "latest_observation_period": "2026-06-11",
+  "expected_observation_period": "2026-06-11",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "MORTGAGE30US",
+      "label": "30-year fixed mortgage rate",
+      "primary": {
+        "transform": "raw",
+        "value": 6.52,
+        "raw_value": 6.52
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": -4.678362573099415
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": 2.515723270440229
+        }
+      ],
+      "prior_primary": null
+    },
+    {
+      "id": "MORTGAGE15US",
+      "label": "15-year fixed mortgage rate",
+      "primary": {
+        "transform": "raw",
+        "value": 5.84,
+        "raw_value": 5.84
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": -2.1775544388609736
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": 2.2767075306479923
+        }
+      ],
+      "prior_primary": null
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "MORTGAGE30US",
+    "anchor_transform": "yoy_pct_weekly",
+    "zscore": 0.155070510622771,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "mortgage_5y_2026-06-11.png"
+  },
+  "agency_pdf_url": null
+}

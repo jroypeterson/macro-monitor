@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "family_id": "existing_home_sales",
+  "family_display_name": "Existing Home Sales",
+  "period": "2026-05",
+  "period_label": "May 2026",
+  "posted_at": "2026-06-13T22:28:57.829101+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-13T22:28:57.320443+00:00",
+  "latest_observation_period": "2026-05",
+  "expected_observation_period": "2026-05",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "EXHOSLUSM495S",
+      "label": "Existing home sales (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 3.2178217821782207,
+        "raw_value": 4170000.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 3.2178217821782207
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": null
+      }
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "EXHOSLUSM495S",
+    "anchor_transform": "yoy_pct",
+    "zscore": null,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "existing_home_sales_10y_2026-05.png"
+  },
+  "agency_pdf_url": null
+}

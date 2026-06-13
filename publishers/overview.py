@@ -31,6 +31,10 @@ RELEASE_WINDOWS: dict[str, str] = {
     # Tier B
     "industrial_production": "monthly · mid-month 9:15 ET · Federal Reserve G.17",
     "housing": "monthly · mid-month 8:30 ET · Census",
+    "mortgage_rates": "weekly · Thursday 12:00 ET · Freddie Mac PMMS",
+    "existing_home_sales": "monthly · ~3rd week 10:00 ET · NAR",
+    "new_home_sales": "monthly · ~4th week 10:00 ET · Census",
+    "construction_spending": "monthly · 1st business day 10:00 ET · Census",
     "durable_goods": "monthly · end-month 8:30 ET · Census",
     "trade_balance": "monthly · early-month 8:30 ET · BEA",
     "consumer_credit": "monthly · 15:00 ET · Federal Reserve G.19",

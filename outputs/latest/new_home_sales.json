@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "family_id": "new_home_sales",
+  "family_display_name": "New Home Sales",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-06-13T22:29:04.718122+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-13T22:29:04.233432+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "HSN1F",
+      "label": "New single-family home sales (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": -11.26961483594865,
+        "raw_value": 622.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": -6.184012066365008
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 1.0670731707317138
+      }
+    }
+  ],
+  "components": [],
+  "context": {
+    "anchor_series": "HSN1F",
+    "anchor_transform": "yoy_pct",
+    "zscore": -0.9758395749228668,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "new_home_sales_10y_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "family_id": "construction_spending",
+  "family_display_name": "Construction Spending",
+  "period": "2026-04",
+  "period_label": "April 2026",
+  "posted_at": "2026-06-13T22:29:10.711345+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-06-13T22:29:09.338998+00:00",
+  "latest_observation_period": "2026-04",
+  "expected_observation_period": "2026-04",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "TTLCONS",
+      "label": "Total construction spending (annualized)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 0.8803124303440102,
+        "raw_value": 2172397.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.36604736300829277
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 0.6335643585992035
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "TLPRVCONS",
+      "label": "Private construction",
+      "transform": "yoy_pct",
+      "value": 0.006160155504275622,
+      "tags": []
+    },
+    {
+      "id": "TLNRESCONS",
+      "label": "Nonresidential construction",
+      "transform": "yoy_pct",
+      "value": 0.2745928623498983,
+      "tags": []
+    }
+  ],
+  "context": {
+    "anchor_series": "TTLCONS",
+    "anchor_transform": "yoy_pct",
+    "zscore": 0.19963995381061597,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "construction_10y_2026-04.png"
+  },
+  "agency_pdf_url": null
+}

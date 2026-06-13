@@ -1570,6 +1570,281 @@ families:
       pdf_url_dated: null
       archive_path: "pdfs/archive/gas_prices/{period}.pdf"
 
+  mortgage_rates:
+    # === Metadata ===
+    # Freddie Mac Primary Mortgage Market Survey (PMMS), weekly (Thursdays).
+    # FRED release_id 190. The rate households actually feel — drives housing
+    # demand + refinancing. Levels (%), like a yield: the level is the primary
+    # read, with a weekly-aware YoY and 4-week change alongside.
+    tier: B
+    family_type: numeric
+    cadence: weekly
+    release_calendar_id: 190
+    release_time_et: "12:00"           # Freddie Mac posts Thursday late morning
+    source: fred
+    topics: [housing]
+
+    # === Display ===
+    display_name: "Mortgage Rates (30yr & 15yr fixed)"
+    period_label_format: "week ending {month_short} {day}, {year}"
+
+    # === Headline ===
+    headline:
+      - id: MORTGAGE30US
+        label: "30-year fixed mortgage rate"
+        primary_transform: raw
+        also_display: [yoy_pct_weekly, mom_pct_weekly]
+        basis: "level (%)"
+        display_unit: "%"
+      - id: MORTGAGE15US
+        label: "15-year fixed mortgage rate"
+        primary_transform: raw
+        also_display: [yoy_pct_weekly, mom_pct_weekly]
+        basis: "level (%)"
+        display_unit: "%"
+
+    components: []
+
+    # === Context ===
+    context:
+      anchor_series: MORTGAGE30US
+      anchor_transform: yoy_pct_weekly
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 5
+        series:
+          - {id: MORTGAGE30US, transform: raw, label: "30yr fixed (%)"}
+          - {id: MORTGAGE15US, transform: raw, label: "15yr fixed (%)"}
+        highlight_latest: true
+        filename: "mortgage_5y_{period}.png"
+      thread: []
+
+    # === Posting gate ===
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - MORTGAGE30US
+        - MORTGAGE15US
+      component_hash: []
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.freddiemac.com/pmms"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/mortgage_rates/{period}.pdf"
+
+  existing_home_sales:
+    # === Metadata ===
+    # NAR Existing Home Sales, monthly. FRED release_id 291 (EXHOSLUSM495S,
+    # SAAR units). ~85% of the housing market — the marquee housing-demand
+    # read; pairs with New Home Sales + Housing Starts.
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 291
+    release_time_et: "10:00"
+    source: fred
+    topics: [housing]
+
+    # === Display ===
+    display_name: "Existing Home Sales"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    headline:
+      - id: EXHOSLUSM495S
+        label: "Existing home sales (annualized rate)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    components: []
+
+    # === Context ===
+    context:
+      anchor_series: EXHOSLUSM495S
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: EXHOSLUSM495S, transform: yoy_pct, label: "Existing home sales YoY"}
+        highlight_latest: true
+        filename: "existing_home_sales_10y_{period}.png"
+      thread: []
+
+    # === Posting gate ===
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - EXHOSLUSM495S
+      component_hash: []
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.nar.realtor/research-and-statistics/housing-statistics/existing-home-sales"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/existing_home_sales/{period}.pdf"
+
+  new_home_sales:
+    # === Metadata ===
+    # Census New Residential Sales, monthly. FRED release_id 97 (HSN1F,
+    # thousands SAAR). New single-family homes sold; pairs with Housing
+    # Starts (New Residential Construction) + Existing Home Sales.
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 97
+    release_time_et: "10:00"
+    source: fred
+    topics: [housing]
+
+    # === Display ===
+    display_name: "New Home Sales"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    headline:
+      - id: HSN1F
+        label: "New single-family home sales (annualized rate)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    components: []
+
+    # === Context ===
+    context:
+      anchor_series: HSN1F
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: HSN1F, transform: yoy_pct, label: "New home sales YoY"}
+        highlight_latest: true
+        filename: "new_home_sales_10y_{period}.png"
+      thread: []
+
+    # === Posting gate ===
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - HSN1F
+      component_hash: []
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.census.gov/construction/nrs/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/new_home_sales/{period}.pdf"
+
+  construction_spending:
+    # === Metadata ===
+    # Census Construction Spending (Value of Construction Put in Place),
+    # monthly. FRED release_id 229. Total (TTLCONS) headline + private and
+    # nonresidential cuts. Mil $ SAAR → YoY is the read. The data-center
+    # construction theme (a nonresidential sub-cut JP wants broken out) is a
+    # planned follow-up — FRED doesn't isolate it as one series yet.
+    tier: B
+    family_type: numeric
+    cadence: monthly
+    release_calendar_id: 229
+    release_time_et: "10:00"
+    source: fred
+    topics: [construction]
+
+    # === Display ===
+    display_name: "Construction Spending"
+    period_label_format: "{month_name} {year}"
+
+    # === Headline ===
+    headline:
+      - id: TTLCONS
+        label: "Total construction spending (annualized)"
+        primary_transform: yoy_pct
+        also_display: [mom_pct]
+
+    # === Components ===
+    components:
+      - id: TLPRVCONS
+        label: "Private construction"
+        primary_transform: yoy_pct
+      - id: TLNRESCONS
+        label: "Nonresidential construction"
+        primary_transform: yoy_pct
+
+    # === Context ===
+    context:
+      anchor_series: TTLCONS
+      anchor_transform: yoy_pct
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: delta
+
+    # === Charts ===
+    charts:
+      main:
+        type: line
+        lookback_years: 10
+        series:
+          - {id: TTLCONS, transform: yoy_pct, label: "Total construction YoY"}
+          - {id: TLNRESCONS, transform: yoy_pct, label: "Nonresidential YoY"}
+        highlight_latest: true
+        filename: "construction_10y_{period}.png"
+      thread: []
+
+    # === Posting gate ===
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    # === Dedupe ===
+    dedupe:
+      headline_hash:
+        - TTLCONS
+      component_hash:
+        - TLPRVCONS
+        - TLNRESCONS
+
+    # === Reference reading ===
+    agency:
+      release_page: "https://www.census.gov/construction/c30/c30index.html"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/construction_spending/{period}.pdf"
+
 # === Families to add in later Phase 1 sub-phases ===
 # fomc_decision:   (1e — family_type: event)
 # fomc_minutes:    (1e — family_type: event)
