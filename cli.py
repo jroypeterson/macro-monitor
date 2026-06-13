@@ -1115,7 +1115,7 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
     #prediction-markets. Defaults to dry-run."""
     from datetime import datetime, timezone
     from .predmarkets.config import TRACKED
-    from .predmarkets.client import resolve_all
+    from .predmarkets.resolve import resolve_all
     from .predmarkets import rundown as RD
     from .predmarkets import history as HIST
     from .predmarkets import discovery as DISC

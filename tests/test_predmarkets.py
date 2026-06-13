@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from macro_monitor.predmarkets import client, config, rundown as RD
 from macro_monitor.predmarkets import history as HIST
 from macro_monitor.predmarkets import discovery as DISC
+from macro_monitor.predmarkets import predictit, resolve as RES
 from macro_monitor.predmarkets.client import Resolved
 
 _UTC = timezone.utc
@@ -171,6 +172,87 @@ def test_liquidity_flag_bands():
     assert config.liquidity_flag(300_000) == "🟢"
     assert config.liquidity_flag(50_000) == "🟡"
     assert config.liquidity_flag(2_000) == "🔴"
+
+
+# ---- PredictIt source ----
+
+def test_predictit_resolve_binary(monkeypatch):
+    spec = config.TrackedMarket("clarity_act", "legislative", "", "clarity act",
+                                "CLARITY Act", source="predictit")
+    monkeypatch.setattr(predictit, "fetch_all", lambda force=False: [
+        {"id": 1, "name": "Will crypto regulation (Clarity Act) be enacted in 2026?",
+         "url": "http://x", "contracts": [{"shortName": "Yes", "lastTradePrice": 0.50}]}])
+    r = predictit.resolve(spec)
+    assert r.ok and r.source == "predictit" and r.is_binary and r.outcomes == [("Yes", 0.5)]
+
+
+def test_predictit_resolve_multi_sorted(monkeypatch):
+    spec = config.TrackedMarket("pi_senate", "macro", "",
+                                "which party will control the senate after the 2026",
+                                "Senate", source="predictit")
+    monkeypatch.setattr(predictit, "fetch_all", lambda force=False: [
+        {"id": 2, "name": "Which party will control the Senate after the 2026 election?",
+         "url": "u", "contracts": [{"shortName": "Republican", "lastTradePrice": 0.60},
+                                    {"shortName": "Democratic", "lastTradePrice": 0.40}]}])
+    r = predictit.resolve(spec)
+    assert r.ok and r.outcomes[0] == ("Republican", 0.6)
+
+
+def test_predictit_resolve_not_found(monkeypatch):
+    spec = config.TrackedMarket("x", "macro", "", "no-such", "X", source="predictit")
+    monkeypatch.setattr(predictit, "fetch_all", lambda force=False: [{"id": 1, "name": "other"}])
+    assert predictit.resolve(spec).note == "not found"
+
+
+def test_resolve_all_dispatches_by_source(monkeypatch):
+    monkeypatch.setattr(RES.predictit, "resolve",
+                        lambda s: Resolved(s.key, s.label, s.lane, s.biotech, True, source="predictit"))
+    monkeypatch.setattr(RES.client, "resolve",
+                        lambda s: Resolved(s.key, s.label, s.lane, s.biotech, True, source="polymarket"))
+    specs = [config.TrackedMarket("a", "macro", "q", "m", "A"),
+             config.TrackedMarket("b", "legislative", "", "m", "B", source="predictit")]
+    out = RES.resolve_all(specs)
+    assert out[0].source == "polymarket" and out[1].source == "predictit"
+
+
+def test_predictit_line_calibrated_flag_no_dollar():
+    r = Resolved("pi_senate", "Senate control", "macro", False, True,
+                 outcomes=[("Republican", 0.6)], source="predictit")
+    line = RD._line(r)
+    assert "🎯" in line and "PredictIt" in line and "$" not in line
+
+
+def test_legislative_lane_routes_and_renders():
+    rows = [Resolved("clarity_act", "CLARITY Act enacted", "legislative", False, True,
+                     title="x", outcomes=[("Yes", 0.5)], source="predictit")]
+    rd = RD.build(rows)
+    assert len(rd.legislative) == 1
+    assert "LEGISLATIVE" in RD.render_text(rd)
+    assert "Legislative" in RD.render_html(rd)
+    blocks = RD.build_blocks(rd)
+    assert any(b.get("type") == "section" and "Legislative" in b["text"]["text"] for b in blocks)
+
+
+def test_discovery_per_source_seeds_predictit(tmp_path, monkeypatch):
+    import json as _json
+    p = tmp_path / "seen.json"
+    p.write_text(_json.dumps(["pm:existing-slug"]), encoding="utf-8")  # pm seeded; no pi/kalshi
+    monkeypatch.setattr(DISC, "_gather_polymarket", lambda found: None)
+    monkeypatch.setattr(DISC, "_gather_kalshi", lambda found: None)
+    monkeypatch.setattr(DISC.predictit, "fetch_all", lambda force=False: [
+        {"id": 9, "name": "Will the FDA ban a drug additive in 2026?", "url": "u",
+         "contracts": [{"shortName": "Yes", "lastTradePrice": 0.3}]}])
+    # predictit's first appearance seeds silently
+    assert DISC.discover_new(datetime(2026, 6, 12, tzinfo=_UTC), path=p) == []
+    # a genuinely new predictit market next run is surfaced
+    monkeypatch.setattr(DISC.predictit, "fetch_all", lambda force=False: [
+        {"id": 9, "name": "Will the FDA ban a drug additive in 2026?", "url": "u",
+         "contracts": [{"shortName": "Yes", "lastTradePrice": 0.3}]},
+        {"id": 10, "name": "Will Medicare drug price negotiation expand in 2026?", "url": "u2",
+         "contracts": [{"shortName": "Yes", "lastTradePrice": 0.22}]}])
+    out = DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p)
+    assert len(out) == 1 and out[0].source == "predictit"
+    assert out[0].lane in ("healthcare", "legislative")
 
 
 # ---- history + movers ----

@@ -20,7 +20,7 @@ _RETRY_BACKOFF = (3, 9, 20)  # wake-race / transient-blip retry (CONVENTIONS §3
 
 @dataclass
 class Resolved:
-    """A tracked market resolved to live Polymarket data."""
+    """A tracked market resolved to live data (Polymarket or PredictIt)."""
     key: str
     label: str
     lane: str
@@ -33,6 +33,7 @@ class Resolved:
     # (outcome_label, yes_probability 0..1), sorted desc. Binary → [("Yes", p)].
     outcomes: list[tuple[str, float]] = field(default_factory=list)
     note: str = ""
+    source: str = "polymarket"   # "polymarket" | "predictit"
 
     @property
     def lead(self) -> tuple[str, float] | None:

@@ -30,12 +30,13 @@ VOL_MID = 25_000
 @dataclass(frozen=True)
 class TrackedMarket:
     key: str
-    lane: str          # "macro" | "healthcare"
-    query: str         # Polymarket public-search term
-    match: str         # case-insensitive substring the event title must contain
+    lane: str          # "macro" | "healthcare" | "legislative"
+    query: str         # Polymarket public-search term (ignored for PredictIt)
+    match: str         # case-insensitive substring the market/event title must contain
     label: str         # display label in the rundown
     headline: bool = False   # include this market's lead number in the aggregated line
     biotech: bool = False    # FDA-approval catalyst — also routes to the biotech lane
+    source: str = "polymarket"   # "polymarket" | "predictit"
 
 
 TRACKED: list[TrackedMarket] = [
@@ -93,6 +94,20 @@ TRACKED: list[TrackedMarket] = [
                   "FDA approves Viridian's Veligrotug", biotech=True),
     TrackedMarket("tebipenem", "healthcare", "Tebipenem", "tebipenem",
                   "FDA approves GSK & Spero's Tebipenem", biotech=True),
+
+    # ---- PredictIt: control of government (most-calibrated electoral signal) ----
+    TrackedMarket("pi_senate", "macro", "", "which party will control the senate after the 2026",
+                  "Senate control after 2026 (PredictIt)", headline=True, source="predictit"),
+    TrackedMarket("pi_house", "macro", "", "which party will win the house in the 2026",
+                  "House control after 2026 (PredictIt)", headline=True, source="predictit"),
+    TrackedMarket("pi_balance", "macro", "", "what will be the balance of power in congress after the 2026",
+                  "Balance of power in Congress (PredictIt)", source="predictit"),
+
+    # ---- Legislative: meaningful law-change markets (PredictIt) ----
+    TrackedMarket("clarity_act", "legislative", "", "clarity act",
+                  "Crypto CLARITY Act enacted 2026", source="predictit"),
+    TrackedMarket("save_act", "legislative", "", "save act",
+                  "SAVE Act passes Senate before midterms", source="predictit"),
 ]
 
 

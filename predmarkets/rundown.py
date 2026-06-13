@@ -22,6 +22,8 @@ _SHORT = {
     "new_pandemic": "New pandemic",
     "rfk_out": "RFK out",
     "midterms": "Midterms",
+    "pi_senate": "Senate",
+    "pi_house": "House",
 }
 
 
@@ -39,15 +41,17 @@ def _vol(v: float) -> str:
 
 def _line(r: Resolved) -> str:
     """One rundown line for a resolved market (mrkdwn-safe)."""
-    flag = liquidity_flag(r.volume)
     if not r.ok:
         return f"⚪ {r.label} — _no live market ({r.note})_"
+    if r.source == "predictit":
+        flag, tail = "🎯", "PredictIt"          # calibrated (capped); no per-market $
+    else:
+        flag, tail = liquidity_flag(r.volume), _vol(r.volume)
     if r.is_binary:
         body = f"Yes {_pct(r.outcomes[0][1])}"
     else:
-        top = r.outcomes[:2]
-        body = " · ".join(f"{lbl} {_pct(p)}" for lbl, p in top)
-    return f"{flag} *{r.label}* — {body}  ({_vol(r.volume)})"
+        body = " · ".join(f"{lbl} {_pct(p)}" for lbl, p in r.outcomes[:2])
+    return f"{flag} *{r.label}* — {body}  ({tail})"
 
 
 def _move_line(m: Mover) -> str:
@@ -58,9 +62,15 @@ def _move_line(m: Mover) -> str:
             f"({sign}{abs(round(m.delta_pp))}pp {m.period})")
 
 
+_LANE_TAG = {"healthcare": "💊", "legislative": "📜", "macro": "📊"}
+_SRC_NAME = {"polymarket": "Polymarket", "predictit": "PredictIt", "kalshi": "Kalshi"}
+
+
 def _new_line(n: NewMarket) -> str:
-    tag = "💊" if n.lane == "healthcare" else "📊"
-    return f"{tag} *{n.title}* — {n.lead_label} {round(n.lead_prob * 100)}%  ({_vol(n.volume)})"
+    tag = _LANE_TAG.get(n.lane, "📊")
+    src = _SRC_NAME.get(n.source, n.source)
+    meta = f"{_vol(n.volume)} · {src}" if n.volume else src
+    return f"{tag} *{n.title}* — {n.lead_label} {round(n.lead_prob * 100)}%  ({meta})"
 
 
 @dataclass
@@ -70,6 +80,7 @@ class Rundown:
     hc_pandemic: list[Resolved] = field(default_factory=list)
     hc_policy: list[Resolved] = field(default_factory=list)
     biotech: list[Resolved] = field(default_factory=list)
+    legislative: list[Resolved] = field(default_factory=list)
     aggregated: list[str] = field(default_factory=list)
     movers: list[Mover] = field(default_factory=list)
     new_markets: list[NewMarket] = field(default_factory=list)
@@ -79,7 +90,7 @@ class Rundown:
         return sum(1 for r in self._all() if r.ok)
 
     def _all(self) -> list[Resolved]:
-        return self.macro + self.hc_pandemic + self.hc_policy + self.biotech
+        return self.macro + self.hc_pandemic + self.hc_policy + self.biotech + self.legislative
 
 
 _POLICY_KEYS = {"rfk_out", "fda_commissioner"}
@@ -94,6 +105,8 @@ def build(resolved: list[Resolved], now: datetime | None = None, *,
     for r in resolved:
         if r.lane == "macro":
             rd.macro.append(r)
+        elif r.lane == "legislative":
+            rd.legislative.append(r)
         elif r.biotech:
             rd.biotech.append(r)
         elif r.key in _POLICY_KEYS:
@@ -134,6 +147,7 @@ def render_text(rd: Rundown) -> str:
     block("HEALTHCARE — pandemics & public health", rd.hc_pandemic)
     block("HEALTHCARE — policy", rd.hc_policy)
     block("BIOTECH — FDA-approval catalysts (thin liquidity; directional)", rd.biotech)
+    block("LEGISLATIVE — law-change odds", rd.legislative)
     if rd.new_markets:
         out.append("\nNEWLY-OPENED RELEVANT MARKETS")
         out.extend("  " + _new_line(n).replace("*", "") for n in rd.new_markets)
@@ -181,6 +195,7 @@ def build_blocks(rd: Rundown) -> list[dict]:
     if rd.biotech:
         blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
             "text": "_Biotech approval markets are thin — read as directional, not calibrated._"}]})
+    blocks += _section_lines("📜 Legislative — law-change odds", rd.legislative)
     if rd.new_markets:
         blocks.append(_section("*🆕 Newly-opened relevant markets*\n"
                                + "\n".join(_new_line(n) for n in rd.new_markets)))
@@ -194,16 +209,19 @@ def build_blocks(rd: Rundown) -> list[dict]:
 def _html_rows(rows: list[Resolved]) -> str:
     cells = []
     for r in rows:
-        flag = liquidity_flag(r.volume)
         if not r.ok:
             cells.append(f'<tr><td>{r.label}</td><td colspan="2" class="dim">no live market ({r.note})</td></tr>')
             continue
+        if r.source == "predictit":
+            flag, tail = "🎯", "PredictIt"
+        else:
+            flag, tail = liquidity_flag(r.volume), _vol(r.volume)
         if r.is_binary:
             odds = f"Yes {_pct(r.outcomes[0][1])}"
         else:
             odds = " · ".join(f"{lbl} {_pct(p)}" for lbl, p in r.outcomes[:3])
-        link = f'<a href="{r.url}" target="_blank">{r.label}</a>'
-        cells.append(f'<tr><td>{flag} {link}</td><td>{odds}</td><td class="dim">{_vol(r.volume)}</td></tr>')
+        link = f'<a href="{r.url}" target="_blank">{r.label}</a>' if r.url else r.label
+        cells.append(f'<tr><td>{flag} {link}</td><td>{odds}</td><td class="dim">{tail}</td></tr>')
     return "\n".join(cells)
 
 
@@ -225,10 +243,11 @@ def render_html(rd: Rundown) -> str:
     new_html = ""
     if rd.new_markets:
         rows = "\n".join(
-            f'<tr><td>{"💊" if n.lane == "healthcare" else "📊"} '
+            f'<tr><td>{_LANE_TAG.get(n.lane, "📊")} '
             f'<a href="{n.url}" target="_blank">{n.title}</a></td>'
             f'<td>{n.lead_label} {round(n.lead_prob * 100)}%</td>'
-            f'<td class="dim">{_vol(n.volume)}</td></tr>' for n in rd.new_markets)
+            f'<td class="dim">{(_vol(n.volume) + " · " if n.volume else "") + _SRC_NAME.get(n.source, n.source)}</td></tr>'
+            for n in rd.new_markets)
         new_html = f"<h2>🆕 Newly-opened relevant markets</h2><table>{rows}</table>"
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -249,6 +268,7 @@ def render_html(rd: Rundown) -> str:
 {tbl("🦠 Healthcare — pandemics &amp; public health", rd.hc_pandemic)}
 {tbl("🏛️ Healthcare — policy", rd.hc_policy)}
 {tbl("💊 Biotech — FDA-approval catalysts <span class='sub'>(thin liquidity — directional)</span>", rd.biotech)}
+{tbl("📜 Legislative — law-change odds", rd.legislative)}
 {new_html}
 <footer>{rd.live_count} live markets · source: Polymarket Gamma API · see PREDICTION_MARKETS.md</footer>
 </body></html>"""

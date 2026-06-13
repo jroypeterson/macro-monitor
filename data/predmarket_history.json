@@ -3,7 +3,7 @@
   {
    "date": "2026-06-12",
    "title": "US recession by end of 2026?",
-   "volume": 1554135.6620079987,
+   "volume": 1554146.6620079987,
    "outcomes": [
     [
      "Yes",
@@ -16,7 +16,7 @@
   {
    "date": "2026-06-12",
    "title": "How many Fed rate cuts in 2026?",
-   "volume": 34203990.08373282,
+   "volume": 34204981.119292825,
    "outcomes": [
     [
      "0 (0 bps)",
@@ -77,7 +77,7 @@
   {
    "date": "2026-06-12",
    "title": "Fed Decision in June?",
-   "volume": 88733001.99616368,
+   "volume": 88736992.65354268,
    "outcomes": [
     [
      "No change",
@@ -106,7 +106,7 @@
   {
    "date": "2026-06-12",
    "title": "Balance of Power: 2026 Midterms",
-   "volume": 7683280.599372026,
+   "volume": 7683287.532228026,
    "outcomes": [
     [
      "Democrats Sweep",
@@ -143,7 +143,7 @@
     ],
     [
      "Shutdown & Republican Party",
-     0.1885
+     0.188
     ]
    ]
   }
@@ -254,7 +254,7 @@
    "outcomes": [
     [
      "Yes",
-     0.59
+     0.53
     ]
    ]
   }
@@ -267,23 +267,23 @@
    "outcomes": [
     [
      "Kyle Diamantas",
-     0.435
+     0.4
     ],
     [
      "No announcement by December 31",
-     0.2135
+     0.214
     ],
     [
      "Sara Brenner",
-     0.173
+     0.174
     ],
     [
      "Brett Giroir",
-     0.1135
+     0.116
     ],
     [
      "Grace Graham",
-     0.073
+     0.0715
     ],
     [
      "Stephen Hahn",
@@ -365,7 +365,7 @@
    "outcomes": [
     [
      "Yes",
-     0.755
+     0.585
     ]
    ]
   }
@@ -405,6 +405,91 @@
     [
      "Yes",
      0.595
+    ]
+   ]
+  }
+ ],
+ "pi_senate": [
+  {
+   "date": "2026-06-12",
+   "title": "Which party will control the Senate after the 2026 election?",
+   "volume": 0.0,
+   "outcomes": [
+    [
+     "Republican",
+     0.6
+    ],
+    [
+     "Democratic",
+     0.41
+    ]
+   ]
+  }
+ ],
+ "pi_house": [
+  {
+   "date": "2026-06-12",
+   "title": "Which party will win the House in the 2026 election?",
+   "volume": 0.0,
+   "outcomes": [
+    [
+     "Democratic",
+     0.73
+    ],
+    [
+     "Republican",
+     0.29
+    ]
+   ]
+  }
+ ],
+ "pi_balance": [
+  {
+   "date": "2026-06-12",
+   "title": "What will be the balance of power in Congress after the 2026 election?",
+   "volume": 0.0,
+   "outcomes": [
+    [
+     "D House & Senate",
+     0.36
+    ],
+    [
+     "D House, R Senate",
+     0.35
+    ],
+    [
+     "R House & Senate",
+     0.27
+    ],
+    [
+     "R House, D Senate",
+     0.02
+    ]
+   ]
+  }
+ ],
+ "clarity_act": [
+  {
+   "date": "2026-06-12",
+   "title": "Will crypto regulation (Clarity Act) be enacted in 2026?",
+   "volume": 0.0,
+   "outcomes": [
+    [
+     "Yes",
+     0.5
+    ]
+   ]
+  }
+ ],
+ "save_act": [
+  {
+   "date": "2026-06-12",
+   "title": "Will the Senate pass the SAVE Act before the Midterms?",
+   "volume": 0.0,
+   "outcomes": [
+    [
+     "Yes",
+     0.17
     ]
    ]
   }
