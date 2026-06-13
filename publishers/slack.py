@@ -219,17 +219,24 @@ def _format_trend_lines(result: ReleaseResult) -> list[str]:
 def _format_healthcare_components(result: ReleaseResult) -> list[str]:
     """Components + computed series carrying tags=[healthcare] surface as
     differentiated context in the main post. Computed HC totals (the
-    sum of NAICS 621+622+623) take precedence over individual sub-cuts."""
+    sum of NAICS 621+622+623) take precedence over individual sub-cuts.
+
+    Each value carries an explicit basis label (YoY / MoM / level …) — same
+    convention as the headline lines — so an HC-context percent is never a bare
+    unlabeled number whose reference period the reader has to guess (these cuts
+    are all YoY today, but the label keeps them honest if a future one isn't)."""
+    def _line(c, prefix=""):
+        basis = basis_label(c.transformed.transform, getattr(c, "basis", None))
+        return f"{prefix}{c.label}: {_fmt_transformed(c.transformed, c.display_unit)} {basis}"
+
     lines = []
     # Computed HC series first — these are the "summary" HC numbers
     for c in result.computed:
         if "healthcare" in c.tags and c.transformed.value is not None:
-            lines.append(f"{c.label}: {_fmt_transformed(c.transformed, c.display_unit)}")
+            lines.append(_line(c))
     for c in result.components:
         if "healthcare" in c.tags and c.transformed.value is not None:
-            lines.append(
-                f"  ↳ {c.label}: {_fmt_transformed(c.transformed, c.display_unit)}"
-            )
+            lines.append(_line(c, prefix="  ↳ "))
     return lines
 
 

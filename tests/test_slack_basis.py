@@ -8,8 +8,47 @@ prove the disambiguation shows up in the rendered headline line.
 
 from __future__ import annotations
 
-from macro_monitor.publishers.slack import _format_headline_line, basis_label
-from macro_monitor.release_runner import HeadlineSeriesResult, TransformedValue
+from macro_monitor.publishers.slack import (
+    _format_headline_line,
+    _format_healthcare_components,
+    basis_label,
+)
+from macro_monitor.release_runner import (
+    ComponentSeriesResult,
+    ComputedSeriesResult,
+    HeadlineSeriesResult,
+    ReleaseResult,
+    TransformedValue,
+)
+
+
+def _hc_result():
+    """A minimal ReleaseResult carrying one computed + one component HC series."""
+    computed = ComputedSeriesResult(
+        id="HC_TOTAL", label="Health Care employment (NAICS 621+622+623)",
+        method="sum", inputs=[],
+        transformed=TransformedValue(transform="yoy_pct", value=3.10),
+        also_display=[], prior_primary=None, tags=["healthcare"],
+    )
+    component = ComponentSeriesResult(
+        id="HOSP", label="Hospitals",
+        transformed=TransformedValue(transform="yoy_pct", value=2.40),
+        tags=["healthcare"],
+    )
+    return ReleaseResult(
+        family_id="x", family_display_name="X", period="2026-04", period_label="April 2026",
+        headline=[], components=[component], computed=[computed], context=None,
+        source="fred", source_fetched_at="", latest_observation_period="2026-04",
+        expected_observation_period="2026-04", is_stale=False, source_lag_minutes=None,
+    )
+
+
+def test_healthcare_context_lines_carry_basis_label():
+    lines = _format_healthcare_components(_hc_result())
+    # Every HC-context line now states its period — no bare unlabeled percent.
+    assert lines[0] == "Health Care employment (NAICS 621+622+623): +3.10% YoY"
+    assert lines[1] == "  ↳ Hospitals: +2.40% YoY"
+    assert all("YoY" in ln for ln in lines)
 
 
 def test_basis_label_derives_default_from_transform():
