@@ -219,6 +219,9 @@ class ChartSpec(BaseModel):
     series: list[ChartSeriesRef] = Field(default_factory=list)
     reference_lines: list[ReferenceLine] = Field(default_factory=list)
     highlight_latest: bool = False
+    # Annotate the window's peak + trough points with their values (the
+    # "significant figures" on the curve), in addition to highlight_latest.
+    label_extremes: bool = False
 
     # For type=panes (multi-pane, one PNG):
     panes: list[PaneSpec] = Field(default_factory=list)

@@ -563,11 +563,17 @@ families:
     # with what the market quotes).
     headline:
       - id: A191RL1Q225SBEA
-        label: "Real GDP"
+        label: "Real GDP (inflation-adjusted)"
         primary_transform: raw         # the series IS the QoQ SAAR percent
         also_display: []
         display_unit: "%"
         basis: "QoQ SAAR"            # raw default would wrongly read "(level)"
+      - id: A191RP1Q027SBEA
+        label: "Nominal GDP (actual $)"
+        primary_transform: raw         # official BEA nominal %-change SAAR
+        also_display: []
+        display_unit: "%"
+        basis: "QoQ SAAR"
 
     # === Components (thread) ===
     # GDPC1 is included so the long-history chart can show GDP YoY against
@@ -577,6 +583,20 @@ families:
     components:
       - id: GDPC1
         label: "Real GDP (level)"
+        primary_transform: yoy_pct
+        also_display: []
+      # Major real GDP expenditure components — YoY change, so the read shows
+      # WHERE growth is coming from (consumption vs investment vs government).
+      - id: PCECC96
+        label: "↳ Consumer spending (real PCE)"
+        primary_transform: yoy_pct
+        also_display: []
+      - id: GPDIC1
+        label: "↳ Private investment (real)"
+        primary_transform: yoy_pct
+        also_display: []
+      - id: GCEC1
+        label: "↳ Government (real)"
         primary_transform: yoy_pct
         also_display: []
       - id: DHLCRC1Q027SBEA
@@ -613,6 +633,15 @@ families:
             - {id: GDPC1, transform: yoy_pct, label: "Real GDP YoY (level → YoY)"}
           filename: "gdp_25y_{period}.png"
 
+        - name: gdp_components
+          type: line
+          lookback_years: 10
+          series:
+            - {id: PCECC96, transform: yoy_pct, label: "Consumer spending YoY"}
+            - {id: GPDIC1, transform: yoy_pct, label: "Private investment YoY"}
+            - {id: GCEC1, transform: yoy_pct, label: "Government YoY"}
+          filename: "gdp_components_{period}.png"
+
         - name: hc_pce_services
           type: line
           lookback_years: 5
@@ -626,8 +655,12 @@ families:
     dedupe:
       headline_hash:
         - A191RL1Q225SBEA
+        - A191RP1Q027SBEA
       component_hash:
         - GDPC1
+        - PCECC96
+        - GPDIC1
+        - GCEC1
         - DHLCRC1Q027SBEA
 
     agency:
@@ -1376,6 +1409,7 @@ families:
         reference_lines:
           - {value: 75.0, label: "Long-run avg", style: dashed}
         highlight_latest: true
+        label_extremes: true          # denote the peak/trough values on the curve
         filename: "umich_10y_{period}.png"
       thread: []
 

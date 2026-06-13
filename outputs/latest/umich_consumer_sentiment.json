@@ -4,9 +4,9 @@
   "family_display_name": "UMich Consumer Sentiment",
   "period": "2026-04",
   "period_label": "April 2026",
-  "posted_at": "2026-06-09T18:31:10.075987+00:00",
+  "posted_at": "2026-06-13T23:01:07.347322+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-06-09T18:31:09.428780+00:00",
+  "source_fetched_at": "2026-06-13T23:01:06.538127+00:00",
   "latest_observation_period": "2026-04",
   "expected_observation_period": "2026-04",
   "is_stale": false,
@@ -22,7 +22,16 @@
         "value": 49.8,
         "raw_value": 49.8
       },
-      "also_display": [],
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": -4.597701149425292
+        },
+        {
+          "transform": "mom_chg",
+          "value": -3.5
+        }
+      ],
       "prior_primary": {
         "transform": "raw",
         "value": 53.3

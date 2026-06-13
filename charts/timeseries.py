@@ -106,7 +106,8 @@ def render_chart(
         return _render_panes(spec, fetched_series, start, target_period, output_path, title, provenance)
 
     if spec.type == "line":
-        _render_line_into(spec.series, spec.highlight_latest, fetched_series, start, target_period, ax)
+        _render_line_into(spec.series, spec.highlight_latest, fetched_series, start, target_period, ax,
+                          label_extremes=spec.label_extremes)
     elif spec.type == "stacked_bar":
         _render_stacked_bar_into(spec.series, fetched_series, start, target_period, ax)
     else:
@@ -167,6 +168,33 @@ def _transform_series_to_window(
     return pd.Series([r[1] for r in rows], index=idx, dtype=float)
 
 
+def _fmt_point_value(val: float, transform: str) -> str:
+    """Significant-figure-aware label for a single plotted point. Percents get
+    one decimal; raw levels keep a decimal at index scale (so e.g. a UMich
+    reading shows 52.7, not a rounded 53) and drop decimals once large."""
+    is_pct = transform in {
+        "yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar",
+        "yoy_pct_weekly", "mom_pct_weekly",
+    }
+    if is_pct:
+        return f"{val:.1f}%"
+    if abs(val) < 100:
+        return f"{val:,.1f}"
+    return f"{val:,.0f}"
+
+
+def _annotate_point(ax, date, val, color, transform, dy_points: float, va: str) -> None:
+    ax.scatter([date], [val], color=color, s=60, zorder=5,
+               edgecolor="white", linewidth=1.5)
+    ax.annotate(
+        _fmt_point_value(val, transform),
+        xy=(date, val),
+        xytext=(8, dy_points),
+        textcoords="offset points",
+        fontsize=9, color=color, weight="bold", va=va,
+    )
+
+
 def _render_line_into(
     series_refs,
     highlight_latest: bool,
@@ -174,6 +202,7 @@ def _render_line_into(
     start: pd.Timestamp,
     end: pd.Timestamp,
     ax,
+    label_extremes: bool = False,
 ) -> None:
     for idx, s in enumerate(series_refs):
         if s.id not in fetched_series:
@@ -184,32 +213,19 @@ def _render_line_into(
         color = CYCLE[idx % len(CYCLE)]
         ax.plot(transformed.index, transformed.values, label=s.label, color=color, linewidth=2.0)
 
-        if highlight_latest and not transformed.empty:
-            last_date = transformed.index.max()
-            last_val = transformed.loc[last_date]
-            ax.scatter(
-                [last_date],
-                [last_val],
-                color=color,
-                s=60,
-                zorder=5,
-                edgecolor="white",
-                linewidth=1.5,
-            )
-            # Annotate using a format that respects whether we're showing
-            # percents or raw levels.
-            is_pct = s.transform in {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}
-            label_text = f"{last_val:.1f}%" if is_pct else f"{last_val:,.0f}"
-            ax.annotate(
-                label_text,
-                xy=(last_date, last_val),
-                xytext=(8, 0),
-                textcoords="offset points",
-                fontsize=9,
-                color=color,
-                weight="bold",
-                va="center",
-            )
+        last_date = transformed.index.max()
+
+        # Peak + trough of the window — the "significant figures" on the curve.
+        if label_extremes:
+            hi_date = transformed.idxmax()
+            lo_date = transformed.idxmin()
+            if hi_date != last_date:
+                _annotate_point(ax, hi_date, transformed.loc[hi_date], color, s.transform, 6, "bottom")
+            if lo_date != last_date and lo_date != hi_date:
+                _annotate_point(ax, lo_date, transformed.loc[lo_date], color, s.transform, -6, "top")
+
+        if highlight_latest:
+            _annotate_point(ax, last_date, transformed.loc[last_date], color, s.transform, 0, "center")
 
 
 def _render_stacked_bar_into(
