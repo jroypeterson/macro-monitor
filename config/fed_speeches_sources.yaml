@@ -1,0 +1,15 @@
+# Fed-speeches lane source list (consumed by collectors/rss.load_sources via
+# schedulers/fed_speeches.build_speech_digest). Separate file from
+# fed_research_sources.yaml so the speeches lane keeps its own config + dedup.
+#
+# The Federal Reserve Board publishes every governor/official speech to this
+# RSS feed. Each new item is summarized + tagged hawkish/dovish/neutral by
+# scoring/speech_scorer.py and posted to #macro.
+sources:
+  - id: fed_board_speeches
+    display_name: "Federal Reserve — Speeches"
+    url: "https://www.federalreserve.gov/feeds/speeches.xml"
+    max_items_per_run: 10
+    # Speeches are sporadic (multi-day gaps are normal), so use a generous
+    # staleness window to avoid false "feed dead" alerts on a quiet stretch.
+    stale_after_days: 45

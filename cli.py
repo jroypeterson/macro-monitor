@@ -682,6 +682,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_research_digest)
 
     sp = sub.add_parser(
+        "fed-speeches",
+        help="Pull Fed/FOMC speeches RSS, summarize + tag hawkish/dovish/neutral, post a digest to #macro",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.set_defaults(func=cmd_fed_speeches)
+
+    sp = sub.add_parser(
         "suggest-research-senders",
         help="Scan inbox for senders that look like macro/strategy/economist newsletters",
     )
@@ -878,6 +886,58 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
         return 0
 
     ok, msg = post_to_macro(payload)
+    if ok:
+        print(f"  {msg}", file=sys.stderr)
+        record_posted(payload)
+        print(
+            f"  Ledger updated with {len(payload.new_posts)} URLs; next run won't repost.",
+            file=sys.stderr,
+        )
+        return 0
+    print(f"  ⚠️ {msg}", file=sys.stderr)
+    return 1
+
+
+def cmd_fed_speeches(args: argparse.Namespace) -> int:
+    """Pull the Fed speeches feed, dedupe, summarize + tag stance, render + post."""
+    from .schedulers.fed_speeches import (
+        build_speech_digest,
+        post_speeches_to_macro,
+        record_posted,
+    )
+
+    payload = build_speech_digest()
+
+    print(f"  Found {len(payload.new_posts)} new Fed speech(es)")
+    if payload.verdicts:
+        tally = {"hawkish": 0, "dovish": 0, "neutral": 0}
+        for v in payload.verdicts.values():
+            tally[v.stance if v.stance in tally else "neutral"] += 1
+        print(
+            f"  Stance: hawkish={tally['hawkish']} "
+            f"dovish={tally['dovish']} neutral={tally['neutral']}"
+        )
+    if payload.errors:
+        print(f"  ⚠️ {len(payload.errors)} source(s) failed to fetch:")
+        for src_id, err in payload.errors:
+            print(f"      {src_id}: {err[:80]}")
+        # Live runs: forward feed-health issues to #status-reports.
+        if not args.dry_run:
+            _alert_status_reports_about_errors(payload.errors)
+
+    if not payload.new_posts:
+        print("  Nothing new since last run; no Slack post.", file=sys.stderr)
+        return 0
+
+    if args.dry_run:
+        print("\n=== FED SPEECHES (DRY-RUN) ===", file=sys.stderr)
+        print("\n--- TEXT FALLBACK ---", file=sys.stderr)
+        print(payload.text, file=sys.stderr)
+        print(f"\n--- {len(payload.blocks)} BLOCK KIT BLOCKS ---", file=sys.stderr)
+        print("\n  Use --post to publish.", file=sys.stderr)
+        return 0
+
+    ok, msg = post_speeches_to_macro(payload)
     if ok:
         print(f"  {msg}", file=sys.stderr)
         record_posted(payload)

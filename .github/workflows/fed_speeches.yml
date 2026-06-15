@@ -1,0 +1,76 @@
+name: Fed speeches digest
+
+# Daily ~17:00 ET digest of NEW Federal Reserve speeches. Each new speech is
+# summarized + tagged hawkish/dovish/neutral by Haiku and posted to #macro.
+# End-of-day so a day's speeches land in one digest. Dedupes against
+# state/fed_speeches_posted.db (committed back to main) so each speech fires
+# once even across re-runs.
+
+on:
+  schedule:
+    - cron: "0 21 * * *"  # 17:00 EDT (summer)
+    - cron: "0 22 * * *"  # 17:00 EST (winter)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit ledger updates
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Skip if not the active DST cron line
+        id: dst_guard
+        run: |
+          # Manual workflow_dispatch always runs.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" != "17" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Fed-speeches digest
+        if: steps.dst_guard.outputs.skip != 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          # Haiku 4.5 summary + hawkish/dovish/neutral classifier. On a
+          # missing key / API error, speech_scorer falls back to a neutral
+          # verdict so the speech still posts (no silent drop).
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli fed-speeches --post
+
+      - name: Commit ledger updates
+        if: success() && steps.dst_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add state/fed_speeches_posted.db 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "fed-speeches: $(date -u +%FT%TZ)"
+            git pull --rebase
+            git push
+          fi
