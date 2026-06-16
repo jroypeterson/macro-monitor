@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from .. import fomc
 from ..collectors.fred import FREDClient, FREDError, ReleaseDate
 from ..config import TIER_A_MANDATED_TOPICS, FamilyConfig, calendar_families
 
@@ -244,8 +245,9 @@ def build_preview_payload(
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
 
-    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras)
+    fomc_info = fomc.week_ahead(today, this_week_end)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras, fomc_info)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras, fomc_info)
     return text, blocks
 
 
@@ -273,8 +275,9 @@ def build_preview_payload_with_failures(
     )
     this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
     lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
-    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras)
-    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras)
+    fomc_info = fomc.week_ahead(today, this_week_end)
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras, fomc_info)
+    blocks = _build_blocks(today, this_week_end, this_week, lookahead, lookahead_end, failed, extras, fomc_info)
     return text, blocks, failed
 
 
@@ -425,9 +428,12 @@ def _build_text(
     lookahead: list[ScheduledRelease],
     failed: list[str] | None = None,
     extras: dict[str, dict] | None = None,
+    fomc: dict | None = None,
 ) -> str:
     lines = []
     lines.append("📅 THIS WEEK in macro")
+    for fl in (fomc or {}).get("this_week", []):
+        lines.append(f"  {fl}")
     if not this_week:
         lines.append("  (no Tier A or B releases scheduled)")
     else:
@@ -436,6 +442,8 @@ def _build_text(
 
     lines.append("")
     lines.append("🔭 LOOKING AHEAD — next 4 weeks (Tier A only)")
+    if (fomc or {}).get("next_line"):
+        lines.append(f"  {fomc['next_line']}")
     if not lookahead:
         lines.append("  (no Tier A releases scheduled)")
     else:
@@ -470,6 +478,7 @@ def _build_blocks(
     lookahead_end: date,
     failed: list[str] | None = None,
     extras: dict[str, dict] | None = None,
+    fomc: dict | None = None,
 ) -> list[dict]:
     blocks: list[dict] = []
 
@@ -483,6 +492,18 @@ def _build_blocks(
             },
         }
     )
+
+    # FOMC meeting / blackout block leads the week when relevant (most market-
+    # moving thing of the week). Source: macro_monitor.fomc (fixed meeting
+    # calendar + blackout rule), independent of the FRED release calendar.
+    fomc_this_week = (fomc or {}).get("this_week", [])
+    if fomc_this_week:
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "\n".join(fomc_this_week)},
+            }
+        )
 
     this_week_md = "\n".join(
         f"• {_fmt_event_line(r, extras)}" for r in this_week
@@ -526,6 +547,10 @@ def _build_blocks(
             )
             lines.append(f"{wk_label} — {names}")
         lookahead_md = "\n".join(lines)
+
+    next_line = (fomc or {}).get("next_line")
+    if next_line:
+        lookahead_md = f"{next_line}\n{lookahead_md}"
 
     blocks.append(
         {
