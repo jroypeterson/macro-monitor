@@ -103,12 +103,24 @@ def build_speech_digest(
 # ---------------------------------------------------------------------------
 
 
-def _fetch_speech_text(url: str, timeout: int = 15) -> str:
-    """Best-effort fetch + crude text-extract of a Fed speech page. Returns
-    "" on any failure (the scorer then falls back to the RSS blurb). Never
-    raises — body text is an enrichment, not a hard dependency."""
-    if not url:
+def _extract_title(html: str) -> str:
+    """Pull a clean title from a Fed speech page (<title>, sans the boilerplate
+    ' - Federal Reserve Board' suffix). "" if absent."""
+    m = re.search(r"(?is)<title[^>]*>(.*?)</title>", html)
+    if not m:
         return ""
+    t = re.sub(r"\s+", " ", m.group(1)).strip()
+    for suffix in (" - Federal Reserve Board", " | Federal Reserve Board"):
+        if t.endswith(suffix):
+            t = t[: -len(suffix)].strip()
+    return t
+
+
+def _fetch_speech_page(url: str, timeout: int = 15) -> tuple[str, str]:
+    """Best-effort fetch of a Fed speech page → (title, plain_text). Returns
+    ("", "") on any failure. Never raises — body text is an enrichment."""
+    if not url:
+        return "", ""
     try:
         import requests
 
@@ -120,14 +132,20 @@ def _fetch_speech_text(url: str, timeout: int = 15) -> str:
         resp.raise_for_status()
         html = resp.text
     except Exception:  # noqa: BLE001
-        return ""
+        return "", ""
 
+    title = _extract_title(html)
     # Drop scripts/styles, then strip tags and collapse whitespace.
     html = re.sub(r"(?is)<(script|style|nav|header|footer)[^>]*>.*?</\1>", " ", html)
     text = re.sub(r"(?s)<[^>]+>", " ", html)
     text = re.sub(r"&[a-z]+;", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return title, text
+
+
+def _fetch_speech_text(url: str, timeout: int = 15) -> str:
+    """Body-only convenience wrapper around _fetch_speech_page."""
+    return _fetch_speech_page(url, timeout)[1]
 
 
 # ---------------------------------------------------------------------------
@@ -347,10 +365,15 @@ def _venue_from_summary(summary: str) -> str:
     return s
 
 
-def record_from(post: ResearchPost, verdict: SpeechVerdict, body: str) -> SpeechRecord:
+def record_from(
+    post: ResearchPost,
+    verdict: SpeechVerdict,
+    body: str,
+    speaker_fallback: str = "",
+) -> SpeechRecord:
     """Compose an archive record from a scored speech (LLM fields preferred,
-    RSS-derived fallbacks for speaker/venue)."""
-    speaker = verdict.speaker or _speaker_from_title(post.title)
+    RSS-/URL-derived fallbacks for speaker/venue)."""
+    speaker = verdict.speaker or _speaker_from_title(post.title) or speaker_fallback
     venue = verdict.venue or _venue_from_summary(post.summary)
     return SpeechRecord(
         url=post.url,
@@ -404,6 +427,93 @@ def export_library(store: SpeechStore | None = None, out_path=None):
         if own:
             store.close()
     return export_markdown(records, out_path) if out_path else export_markdown(records)
+
+
+_ANNUAL_INDEX = "https://www.federalreserve.gov/newsevents/speech/{year}-speeches.htm"
+_SPEECH_URL_RE = re.compile(r"/newsevents/speech/([a-z]+)(\d{4})(\d{2})(\d{2})[a-z]?\.htm")
+
+
+def discover_annual_speeches(year: int, index_fetcher=None) -> list[tuple[str, str, str]]:
+    """Scrape the Federal Reserve Board's annual speeches index for `year`.
+    Returns [(absolute_url, speaker_hint, iso_date), ...], newest first, deduped.
+    The URL slug encodes the speaker surname + date, so both are exact even
+    before the LLM reads the body. `index_fetcher(url)->html` is injectable."""
+    url = _ANNUAL_INDEX.format(year=year)
+    if index_fetcher is None:
+        def index_fetcher(u):
+            import requests
+            r = requests.get(
+                u, timeout=20,
+                headers={"User-Agent": "macro-monitor/fed-speeches (+research)"},
+            )
+            r.raise_for_status()
+            return r.text
+    html = index_fetcher(url)
+
+    seen: set[str] = set()
+    out: list[tuple[str, str, str]] = []
+    for m in _SPEECH_URL_RE.finditer(html):
+        path = m.group(0)
+        if path in seen:
+            continue
+        seen.add(path)
+        speaker = m.group(1).capitalize()
+        iso = f"{m.group(2)}-{m.group(3)}-{m.group(4)}"
+        out.append(("https://www.federalreserve.gov" + path, speaker, iso))
+    # Newest date first.
+    out.sort(key=lambda t: t[2], reverse=True)
+    return out
+
+
+def backfill_year(
+    year: int,
+    store: SpeechStore | None = None,
+    body_fetcher=None,
+    index_fetcher=None,
+    client=None,
+    limit: int | None = None,
+    log=print,
+) -> int:
+    """Archive every Board speech from `year` not already in the store. Each
+    page is fetched once (title + body), summarized (worried/sanguine/stance),
+    and upserted. Idempotent — re-runs skip already-archived URLs. Returns the
+    number newly archived; regenerates the readable library when it owns the
+    store."""
+    own = store is None
+    if own:
+        store = SpeechStore()
+    try:
+        entries = discover_annual_speeches(year, index_fetcher=index_fetcher)
+        todo = [e for e in entries if not store.has(e[0])]
+        if limit is not None:
+            todo = todo[:limit]
+        log(f"  {len(entries)} {year} speeches found; {len(todo)} to archive "
+            f"({len(entries) - len(todo)} already present).")
+        n = 0
+        for url, speaker_hint, iso in todo:
+            if body_fetcher is None:
+                title, body = _fetch_speech_page(url)
+            else:
+                title, body = "", (body_fetcher(url) or "")
+            post = ResearchPost(
+                source_id="fed_board_speeches",
+                source_display="Federal Reserve — Speeches",
+                title=title or f"{speaker_hint} speech {iso}",
+                url=url,
+                summary="",
+                published_at_iso=iso,
+            )
+            verdict = score_speech(post, body, client=client)
+            store.upsert(record_from(post, verdict, body, speaker_fallback=speaker_hint))
+            n += 1
+            log(f"    [{n}/{len(todo)}] {iso} {verdict.speaker or speaker_hint} "
+                f"· {verdict.stance}")
+        if own:
+            export_library(store=store)
+        return n
+    finally:
+        if own:
+            store.close()
 
 
 def ingest_url(

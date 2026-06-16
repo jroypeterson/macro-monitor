@@ -701,6 +701,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_fed_speeches_add)
 
     sp = sub.add_parser(
+        "fed-speeches-backfill",
+        help="Backfill the archive with all Board speeches from a given year (scrapes the annual index)",
+    )
+    sp.add_argument("--year", type=int, required=True, help="Year to backfill (e.g. 2026)")
+    sp.add_argument("--limit", type=int, default=None, help="Cap the number archived this run")
+    sp.set_defaults(func=cmd_fed_speeches_backfill)
+
+    sp = sub.add_parser(
         "fed-speeches-export",
         help="Regenerate the readable Fed-speech library (readable/fed_speeches.md) from the archive",
     )
@@ -1027,6 +1035,21 @@ def cmd_fed_speeches_add(args: argparse.Namespace) -> int:
         ok, msg = post_speeches_to_macro(payload)
         print(f"  {'posted: ' + msg if ok else '⚠️ ' + msg}", file=sys.stderr)
         return 0 if ok else 1
+    return 0
+
+
+def cmd_fed_speeches_backfill(args: argparse.Namespace) -> int:
+    """Backfill the archive with a year's Board speeches (scrape the index)."""
+    from .schedulers.fed_speeches import backfill_year
+    from .schedulers.speech_store import SpeechStore
+
+    with SpeechStore() as store:
+        n = backfill_year(args.year, store=store, limit=args.limit)
+        from .schedulers.fed_speeches import export_library
+        lib = export_library(store=store)
+        total = store.count()
+    print(f"  Backfilled {n} {args.year} speech(es); archive now holds {total}. "
+          f"Library → {lib}")
     return 0
 
 

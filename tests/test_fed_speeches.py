@@ -275,6 +275,74 @@ def test_ingest_url_scores_and_titles_from_llm():
     assert "Neel Kashkari" in post.title
 
 
+def test_discover_annual_speeches_parses_and_dedups():
+    html = (
+        '<a href="/newsevents/speech/waller20260130a.htm">a</a>'
+        '<a href="/newsevents/speech/cook20260204a.htm">b</a>'
+        '<a href="/newsevents/speech/waller20260130a.htm">dup</a>'
+    )
+    out = fs.discover_annual_speeches(2026, index_fetcher=lambda u: html)
+    assert len(out) == 2  # deduped
+    # newest date first
+    assert out[0] == (
+        "https://www.federalreserve.gov/newsevents/speech/cook20260204a.htm",
+        "Cook", "2026-02-04",
+    )
+    assert out[1][1] == "Waller" and out[1][2] == "2026-01-30"
+
+
+def test_backfill_year_archives_new_only_and_is_idempotent(tmp_path):
+    from unittest.mock import MagicMock
+
+    from macro_monitor.schedulers.speech_store import SpeechStore
+
+    html = (
+        '<a href="/newsevents/speech/waller20260130a.htm">a</a>'
+        '<a href="/newsevents/speech/cook20260204a.htm">b</a>'
+    )
+    client = MagicMock()
+    resp = MagicMock()
+    resp.content = [MagicMock(text='{"speaker": "", "venue": "Y", "summary": "s", '
+                             '"worried_about": [], "sanguine_about": [], '
+                             '"stance": "neutral", "drivers": []}')]
+    client.messages.create.return_value = resp
+
+    with SpeechStore(tmp_path / "s.db") as store:
+        n = fs.backfill_year(
+            2026, store=store, index_fetcher=lambda u: html,
+            body_fetcher=lambda u: "body", client=client, log=lambda *a: None,
+        )
+        assert n == 2
+        # speaker falls back to the URL surname when the LLM returns blank
+        rows = {r["url"].rsplit("/", 1)[-1]: r for r in store.all_records()}
+        assert rows["cook20260204a.htm"]["speaker"] == "Cook"
+        assert rows["cook20260204a.htm"]["speech_date"] == "2026-02-04"
+        # Re-run archives nothing (idempotent).
+        n2 = fs.backfill_year(
+            2026, store=store, index_fetcher=lambda u: html,
+            body_fetcher=lambda u: "body", client=client, log=lambda *a: None,
+        )
+        assert n2 == 0
+
+
+def test_backfill_year_respects_limit(tmp_path):
+    from unittest.mock import MagicMock
+    from macro_monitor.schedulers.speech_store import SpeechStore
+
+    html = "".join(
+        f'<a href="/newsevents/speech/waller202601{d:02d}a.htm">x</a>' for d in range(1, 6)
+    )
+    client = MagicMock()
+    resp = MagicMock()
+    resp.content = [MagicMock(text='{"stance": "neutral", "summary": "s"}')]
+    client.messages.create.return_value = resp
+    with SpeechStore(tmp_path / "s.db") as store:
+        n = fs.backfill_year(2026, store=store, index_fetcher=lambda u: html,
+                             body_fetcher=lambda u: "b", client=client,
+                             limit=2, log=lambda *a: None)
+        assert n == 2 and store.count() == 2
+
+
 def test_post_requires_slack_env(monkeypatch):
     monkeypatch.delenv("SLACK_BOT_TOKEN", raising=False)
     monkeypatch.delenv("SLACK_MACRO_CHANNEL_ID", raising=False)
