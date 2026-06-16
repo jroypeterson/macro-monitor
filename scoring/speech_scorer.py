@@ -42,6 +42,10 @@ class SpeechVerdict:
     url: str
     stance: str            # one of STANCES
     summary: str           # 2-3 sentence plain-English summary ("" on fallback)
+    speaker: str = ""      # Fed official's name (LLM-identified; "" if unclear)
+    venue: str = ""        # where/what occasion (LLM-identified; "" if unclear)
+    worried_about: tuple[str, ...] = field(default_factory=tuple)   # concerns flagged
+    sanguine_about: tuple[str, ...] = field(default_factory=tuple)  # comforts/reassurances
     drivers: tuple[str, ...] = field(default_factory=tuple)  # short stance drivers
     why: str = ""          # one-line rationale / fallback reason
 
@@ -133,26 +137,40 @@ def _build_speech_prompt(post: ResearchPost, body: str) -> str:
          "summarize and classify from this blurb + title):"),
         text if text else "(no text available; use the title only)",
         "",
-        "Do two things:",
-        "1. summary: 2-3 sentences, plain English, on the substance — what the "
-        "official said about the economy, inflation, labor, growth, and the "
-        "policy path. No preamble; just the substance.",
-        "2. stance: classify the monetary-policy lean as exactly one of "
+        "Extract the following:",
+        "1. speaker: the Federal Reserve official's name (e.g. 'Christopher Waller'). "
+        "Use the title/text; '' if genuinely unclear.",
+        "2. venue: where/what occasion it was (e.g. 'Reykjavik Economic Conference'), "
+        "from the title/blurb/text; '' if unclear.",
+        "3. summary: 2-3 sentences, plain English, on the substance — what the "
+        "official said about the economy, inflation, labor, growth, and the policy path.",
+        "4. worried_about: a list (up to 4) of the specific things the official "
+        "signaled CONCERN, caution, or downside risk about (e.g. 'sticky services "
+        "inflation', 'tariff pass-through', 'labor-market softening', 'fiscal "
+        "deficits', 'financial-stability risk'). Each ≤10 words. [] if none.",
+        "5. sanguine_about: a list (up to 4) of the things the official sounded "
+        "COMFORTABLE, reassured, or confident about (e.g. 'inflation expectations "
+        "anchored', 'consumer spending resilient', 'banking system well-capitalized'). "
+        "Each ≤10 words. [] if none.",
+        "6. stance: classify the monetary-policy lean as exactly one of "
         '"hawkish" (leaning toward tighter policy / higher-for-longer / '
         'inflation-vigilant), "dovish" (leaning toward easier policy / cuts / '
         'growth-and-employment-protective), or "neutral" (balanced, data-'
         "dependent, or not policy-directional). When genuinely balanced or "
         'unclear, use "neutral" — do not force a lean.',
-        "Also give up to 3 short drivers (≤8 words each) for the stance call.",
+        "7. drivers: up to 3 short phrases (≤8 words) behind the stance call.",
         "",
         "Respond with JSON only — no preamble, no markdown fences — with keys: "
-        'summary (string), stance (one of "hawkish"/"dovish"/"neutral"), '
-        "drivers (array of ≤3 short strings).",
+        "speaker (string), venue (string), summary (string), worried_about (array), "
+        'sanguine_about (array), stance (one of "hawkish"/"dovish"/"neutral"), '
+        "drivers (array).",
         "",
-        'Example: {"summary": "Powell said disinflation has stalled and the '
-        'committee is in no hurry to cut, citing sticky services inflation and '
-        'a still-firm labor market.", "stance": "hawkish", "drivers": '
-        '["disinflation stalled", "no hurry to cut", "firm labor market"]}',
+        'Example: {"speaker": "Christopher Waller", "venue": "Economic Club of NY", '
+        '"summary": "Waller said disinflation has stalled and the committee is in no '
+        'hurry to cut, citing sticky services inflation and a still-firm labor market.", '
+        '"worried_about": ["sticky services inflation", "energy-shock pass-through"], '
+        '"sanguine_about": ["inflation expectations anchored", "labor market balanced"], '
+        '"stance": "hawkish", "drivers": ["disinflation stalled", "no hurry to cut"]}',
     ]
     return "\n".join(lines)
 
@@ -179,19 +197,24 @@ def _parse_speech_verdict(raw: str, post: ResearchPost) -> SpeechVerdict:
     if stance not in STANCES:
         stance = "neutral"  # unknown/invalid → neutral, never guess a lean
     summary = str(parsed.get("summary", "") or "").strip()[:600]
+    speaker = str(parsed.get("speaker", "") or "").strip()[:80]
+    venue = str(parsed.get("venue", "") or "").strip()[:160]
 
-    drivers_raw = parsed.get("drivers") or []
-    drivers: tuple[str, ...] = ()
-    if isinstance(drivers_raw, list):
-        drivers = tuple(
-            str(d).strip()[:60] for d in drivers_raw[:3] if str(d).strip()
-        )
+    def _strlist(key: str, cap: int, each: int) -> tuple[str, ...]:
+        raw = parsed.get(key) or []
+        if not isinstance(raw, list):
+            return ()
+        return tuple(str(x).strip()[:each] for x in raw[:cap] if str(x).strip())
 
     return SpeechVerdict(
         url=post.url,
         stance=stance,
         summary=summary,
-        drivers=drivers,
+        speaker=speaker,
+        venue=venue,
+        worried_about=_strlist("worried_about", 4, 80),
+        sanguine_about=_strlist("sanguine_about", 4, 80),
+        drivers=_strlist("drivers", 3, 60),
         why="",
     )
 
@@ -203,6 +226,5 @@ def _fallback_verdict(post: ResearchPost, reason: str) -> SpeechVerdict:
         url=post.url,
         stance="neutral",
         summary="",
-        drivers=(),
         why=f"fallback: {reason}",
     )

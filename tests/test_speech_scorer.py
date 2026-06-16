@@ -88,6 +88,27 @@ def test_parse_valid_json():
     assert v.drivers == ("sticky inflation", "firm labor")
 
 
+def test_parse_extracts_worried_sanguine_speaker_venue():
+    raw = (
+        '{"speaker": "Christopher Waller", "venue": "Economic Club of NY", '
+        '"summary": "Cautious on cuts.", "worried_about": ["sticky inflation", '
+        '"tariff pass-through"], "sanguine_about": ["expectations anchored"], '
+        '"stance": "hawkish", "drivers": ["no hurry"]}'
+    )
+    v = _parse_speech_verdict(raw, _post())
+    assert v.speaker == "Christopher Waller"
+    assert v.venue == "Economic Club of NY"
+    assert v.worried_about == ("sticky inflation", "tariff pass-through")
+    assert v.sanguine_about == ("expectations anchored",)
+
+
+def test_parse_caps_worried_at_four():
+    raw = ('{"summary": "x", "stance": "neutral", '
+           '"worried_about": ["a","b","c","d","e","f"]}')
+    v = _parse_speech_verdict(raw, _post())
+    assert len(v.worried_about) == 4
+
+
 def test_parse_strips_code_fences():
     raw = '```json\n{"summary": "Cuts coming.", "stance": "dovish", "drivers": []}\n```'
     v = _parse_speech_verdict(raw, _post())

@@ -2,9 +2,20 @@
 # schedulers/fed_speeches.build_speech_digest). Separate file from
 # fed_research_sources.yaml so the speeches lane keeps its own config + dedup.
 #
-# The Federal Reserve Board publishes every governor/official speech to this
-# RSS feed. Each new item is summarized + tagged hawkish/dovish/neutral by
-# scoring/speech_scorer.py and posted to #macro.
+# The Federal Reserve BOARD publishes every governor/official speech to this RSS
+# feed. Each new item is summarized (focus: worried-about vs sanguine-about) +
+# tagged hawkish/dovish/neutral by scoring/speech_scorer.py, archived to
+# data/fed_speeches.db, and posted to #macro.
+#
+# REGIONAL Reserve Bank presidents (Daly/Logan/Goolsbee/Kashkari/…) and any
+# OFF-SITE / non-official-capacity talks are NOT in a uniform RSS feed — the 12
+# regional banks don't expose a clean per-bank speeches feed (most 404; SF Fed's
+# only feed is its whole-site firehose). So capture those on demand with:
+#     python -m macro_monitor.cli fed-speeches-add <url> [--post]
+# which fetches, summarizes (worried/sanguine), and archives any single talk.
+# If a reliable regional speeches feed is found later, add it here as another
+# source (optionally with include_keywords: ["speech","remarks"] to filter a
+# general feed down to speeches).
 sources:
   - id: fed_board_speeches
     display_name: "Federal Reserve — Speeches"

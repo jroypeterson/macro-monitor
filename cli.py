@@ -683,11 +683,38 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser(
         "fed-speeches",
-        help="Pull Fed/FOMC speeches RSS, summarize + tag hawkish/dovish/neutral, post a digest to #macro",
+        help="Pull Fed/FOMC speeches RSS, summarize (worried/sanguine) + tag stance, archive + post a digest to #macro",
     )
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_fed_speeches)
+
+    sp = sub.add_parser(
+        "fed-speeches-add",
+        help="Archive + summarize a single speech by URL (any Fed member, any venue, incl. off-feed)",
+    )
+    sp.add_argument("url", help="URL of the speech / talk transcript page")
+    sp.add_argument("--title", default=None, help="Optional title override")
+    sp.add_argument("--source", default="manual", help="Source label (default: manual)")
+    sp.add_argument("--post", action="store_true",
+                    help="Also post this speech to #macro (default: archive only)")
+    sp.set_defaults(func=cmd_fed_speeches_add)
+
+    sp = sub.add_parser(
+        "fed-speeches-export",
+        help="Regenerate the readable Fed-speech library (readable/fed_speeches.md) from the archive",
+    )
+    sp.set_defaults(func=cmd_fed_speeches_export)
+
+    sp = sub.add_parser(
+        "fed-speeches-search",
+        help="Query the Fed-speech archive (by speaker / stance / free text)",
+    )
+    sp.add_argument("--speaker", default=None, help="Filter by speaker (substring)")
+    sp.add_argument("--stance", default=None, choices=["hawkish", "dovish", "neutral"])
+    sp.add_argument("--text", default=None, help="Free-text match (title/summary/worries/body)")
+    sp.add_argument("--full", action="store_true", help="Print full transcript text too")
+    sp.set_defaults(func=cmd_fed_speeches_search)
 
     sp = sub.add_parser(
         "suggest-research-senders",
@@ -901,7 +928,9 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
 def cmd_fed_speeches(args: argparse.Namespace) -> int:
     """Pull the Fed speeches feed, dedupe, summarize + tag stance, render + post."""
     from .schedulers.fed_speeches import (
+        archive_payload,
         build_speech_digest,
+        export_library,
         post_speeches_to_macro,
         record_posted,
     )
@@ -917,6 +946,11 @@ def cmd_fed_speeches(args: argparse.Namespace) -> int:
             f"  Stance: hawkish={tally['hawkish']} "
             f"dovish={tally['dovish']} neutral={tally['neutral']}"
         )
+        # Persist to the queryable archive + regenerate the readable library.
+        # Happens on dry-run too, so the library accumulates regardless of posting.
+        n_arch = archive_payload(payload)
+        lib = export_library()
+        print(f"  Archived {n_arch} speech(es) → data/fed_speeches.db; library → {lib}")
     if payload.errors:
         print(f"  ⚠️ {len(payload.errors)} source(s) failed to fetch:")
         for src_id, err in payload.errors:
@@ -948,6 +982,90 @@ def cmd_fed_speeches(args: argparse.Namespace) -> int:
         return 0
     print(f"  ⚠️ {msg}", file=sys.stderr)
     return 1
+
+
+def cmd_fed_speeches_add(args: argparse.Namespace) -> int:
+    """Archive + summarize a single speech by URL (off-feed / outside-venue)."""
+    from .schedulers.fed_speeches import (
+        SpeechDigestPayload,
+        archive_payload,
+        export_library,
+        ingest_url,
+        post_speeches_to_macro,
+        _render_blocks,
+        _render_text,
+    )
+    from .schedulers.speech_store import SpeechStore
+
+    post, verdict, body = ingest_url(args.url, title=args.title, source=args.source)
+    print(f"  Speaker: {verdict.speaker or '—'} | Venue: {verdict.venue or '—'} "
+          f"| Stance: {verdict.stance}")
+    if verdict.summary:
+        print(f"  Summary: {verdict.summary}")
+    if verdict.worried_about:
+        print(f"  Worried: {'; '.join(verdict.worried_about)}")
+    if verdict.sanguine_about:
+        print(f"  Sanguine: {'; '.join(verdict.sanguine_about)}")
+
+    # Archive (idempotent upsert) + regenerate the readable library.
+    payload = SpeechDigestPayload(
+        text="", blocks=[], new_posts=[post], errors=[],
+        verdicts={post.url: verdict}, bodies={post.url: body},
+    )
+    with SpeechStore() as store:
+        archive_payload(payload, store=store)
+        total = store.count()
+        lib = export_library(store=store)
+    print(f"  Archived → data/fed_speeches.db ({total} total); library → {lib}")
+
+    if args.post:
+        payload = SpeechDigestPayload(
+            text=_render_text([post], [], payload.verdicts),
+            blocks=_render_blocks([post], [], payload.verdicts),
+            new_posts=[post], errors=[], verdicts=payload.verdicts, bodies={},
+        )
+        ok, msg = post_speeches_to_macro(payload)
+        print(f"  {'posted: ' + msg if ok else '⚠️ ' + msg}", file=sys.stderr)
+        return 0 if ok else 1
+    return 0
+
+
+def cmd_fed_speeches_export(args: argparse.Namespace) -> int:
+    """Regenerate the readable Fed-speech library from the archive."""
+    from .schedulers.fed_speeches import export_library
+    from .schedulers.speech_store import SpeechStore
+
+    with SpeechStore() as store:
+        n = store.count()
+        lib = export_library(store=store)
+    print(f"  Wrote library of {n} speech(es) → {lib}")
+    return 0
+
+
+def cmd_fed_speeches_search(args: argparse.Namespace) -> int:
+    """Query the Fed-speech archive by speaker / stance / free text."""
+    from .schedulers.speech_store import SpeechStore
+
+    _STANCE = {"hawkish": "🦅", "dovish": "🕊️", "neutral": "➖"}
+    with SpeechStore() as store:
+        rows = store.search(speaker=args.speaker, stance=args.stance, text=args.text)
+    print(f"  {len(rows)} match(es).")
+    for r in rows:
+        badge = _STANCE.get(r.get("stance", "neutral"), "➖")
+        date = r.get("speech_date") or "—"
+        print(f"\n{badge} {date} · {r.get('speaker') or 'Unknown'} — {r.get('title') or ''}")
+        if r.get("venue"):
+            print(f"   venue: {r['venue']}")
+        if r.get("summary"):
+            print(f"   {r['summary']}")
+        if r.get("worried_about"):
+            print(f"   ⚠️ worried: {'; '.join(r['worried_about'])}")
+        if r.get("sanguine_about"):
+            print(f"   ✅ sanguine: {'; '.join(r['sanguine_about'])}")
+        print(f"   {r.get('url', '')}")
+        if args.full and r.get("full_text"):
+            print(f"\n   --- full text ---\n{r['full_text']}\n")
+    return 0
 
 
 def cmd_overview(args: argparse.Namespace) -> int:

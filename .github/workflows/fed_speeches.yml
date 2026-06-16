@@ -63,12 +63,16 @@ jobs:
           PYTHONPATH: /tmp/pkg
         run: python -m macro_monitor.cli fed-speeches --post
 
-      - name: Commit ledger updates
+      - name: Commit ledger + archive + library
         if: success() && steps.dst_guard.outputs.skip != 'true'
         run: |
           git config user.name "claudebot"
           git config user.email "claudebot@users.noreply.github.com"
-          git add state/fed_speeches_posted.db 2>/dev/null || true
+          # Persist all three so the archive survives across CI runs:
+          #  - state/fed_speeches_posted.db : Slack-post dedup ledger
+          #  - data/fed_speeches.db         : queryable content archive
+          #  - readable/fed_speeches.md     : regenerated human-readable library
+          git add state/fed_speeches_posted.db data/fed_speeches.db readable/fed_speeches.md 2>/dev/null || true
           if ! git diff --staged --quiet; then
             git commit -m "fed-speeches: $(date -u +%FT%TZ)"
             git pull --rebase

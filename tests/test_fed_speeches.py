@@ -22,7 +22,9 @@ def _post(idx: int = 1, title: str | None = None) -> ResearchPost:
 
 def _verdict(url: str, stance: str = "hawkish") -> SpeechVerdict:
     return SpeechVerdict(
-        url=url, stance=stance, summary="A summary.", drivers=("a", "b"), why=""
+        url=url, stance=stance, summary="A summary.", speaker="Jane Powell",
+        venue="Econ Club", worried_about=("sticky inflation",),
+        sanguine_about=("anchored expectations",), drivers=("a", "b"), why="",
     )
 
 
@@ -76,7 +78,8 @@ def test_render_blocks_has_header_badge_and_sections():
     )
     assert "Hawkish" in body and "Dovish" in body
     assert "A summary." in body
-    assert "drivers:" in body
+    assert "Worried" in body and "sticky inflation" in body
+    assert "Sanguine" in body and "anchored expectations" in body
 
 
 def test_render_text_includes_summary_and_url():
@@ -185,6 +188,91 @@ def test_post_skips_when_no_new_posts():
     ok, msg = fs.post_speeches_to_macro(payload)
     assert ok is True
     assert "skipped" in msg
+
+
+def test_post_requires_slack_env_placeholder():
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Archive + single-URL ingest
+# ---------------------------------------------------------------------------
+
+
+def test_speaker_and_venue_fallbacks():
+    # LLM gave neither -> fall back to RSS title surname + venue blurb.
+    p = ResearchPost("fed", "Fed", "Waller, Policy Risks Have Changed",
+                     "https://x/1", "Speech At the Economic Club of New York",
+                     "2026-05-22T16:00:00+00:00")
+    v = SpeechVerdict(url="https://x/1", stance="hawkish", summary="s")
+    rec = fs.record_from(p, v, body="full body text")
+    assert rec.speaker == "Waller"
+    assert "Economic Club of New York" in rec.venue
+    assert rec.full_text == "full body text"
+    assert rec.speech_date == "2026-05-22"
+
+
+def test_record_from_prefers_llm_fields():
+    p = ResearchPost("fed", "Fed", "Waller, X", "https://x/1", "Speech At Y", "")
+    v = SpeechVerdict(url="https://x/1", stance="dovish", summary="s",
+                      speaker="Christopher Waller", venue="Jackson Hole",
+                      worried_about=("inflation",), sanguine_about=("jobs",))
+    rec = fs.record_from(p, v, "")
+    assert rec.speaker == "Christopher Waller" and rec.venue == "Jackson Hole"
+    assert rec.worried_about == ("inflation",) and rec.sanguine_about == ("jobs",)
+
+
+def test_archive_payload_persists_to_store(tmp_path):
+    from macro_monitor.schedulers.speech_store import SpeechStore
+
+    posts = [_post(1)]
+    payload = fs.SpeechDigestPayload(
+        text="", blocks=[], new_posts=posts, errors=[],
+        verdicts={posts[0].url: _verdict(posts[0].url)},
+        bodies={posts[0].url: "the transcript"},
+    )
+    with SpeechStore(tmp_path / "fs.db") as store:
+        n = fs.archive_payload(payload, store=store)
+        assert n == 1
+        rows = store.all_records()
+        assert rows[0]["full_text"] == "the transcript"
+        assert rows[0]["worried_about"] == ["sticky inflation"]
+        # Idempotent re-archive (upsert) keeps count at 1.
+        fs.archive_payload(payload, store=store)
+        assert store.count() == 1
+
+
+def test_archive_payload_noop_without_verdicts(tmp_path):
+    from macro_monitor.schedulers.speech_store import SpeechStore
+
+    payload = fs.SpeechDigestPayload(
+        text="", blocks=[], new_posts=[_post(1)], errors=[], verdicts={}, bodies={}
+    )
+    with SpeechStore(tmp_path / "fs.db") as store:
+        assert fs.archive_payload(payload, store=store) == 0
+
+
+def test_ingest_url_scores_and_titles_from_llm():
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    resp = MagicMock()
+    resp.content = [MagicMock(text=(
+        '{"speaker": "Neel Kashkari", "venue": "Town Hall", "summary": "Cautious.", '
+        '"worried_about": ["tariffs"], "sanguine_about": [], "stance": "hawkish", '
+        '"drivers": []}'
+    ))]
+    client.messages.create.return_value = resp
+
+    post, verdict, body = fs.ingest_url(
+        "https://minneapolisfed.org/speech/2026/x",
+        body_fetcher=lambda u: "speech body", client=client,
+    )
+    assert verdict.speaker == "Neel Kashkari"
+    assert verdict.worried_about == ("tariffs",)
+    assert body == "speech body"
+    # Title was a URL slug -> upgraded from LLM-identified speaker/venue.
+    assert "Neel Kashkari" in post.title
 
 
 def test_post_requires_slack_env(monkeypatch):

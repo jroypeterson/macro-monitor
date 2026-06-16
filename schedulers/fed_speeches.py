@@ -28,7 +28,8 @@ from ..collectors.rss import (
     fetch_all,
     load_sources,
 )
-from ..scoring.speech_scorer import SpeechVerdict, score_speeches
+from ..scoring.speech_scorer import SpeechVerdict, score_speech, score_speeches
+from .speech_store import SpeechRecord, SpeechStore, export_markdown
 
 DEFAULT_SPEECHES_SOURCES_PATH = (
     Path(__file__).parent.parent / "config" / "fed_speeches_sources.yaml"
@@ -47,6 +48,7 @@ class SpeechDigestPayload:
     new_posts: list[ResearchPost]
     errors: list[tuple[str, str]]
     verdicts: dict[str, SpeechVerdict]  # {} when scoring skipped
+    bodies: dict[str, str] = None  # {url: full_text}; filled when scoring runs
 
 
 def build_speech_digest(
@@ -73,10 +75,10 @@ def build_speech_digest(
             ledger.close()
 
     verdicts: dict[str, SpeechVerdict] = {}
+    bodies: dict[str, str] = {}
     if new_posts and not skip_scoring:
         if body_fetcher is None:
             body_fetcher = _fetch_speech_text
-        bodies: dict[str, str] = {}
         for p in new_posts:
             try:
                 bodies[p.url] = body_fetcher(p.url) or ""
@@ -92,6 +94,7 @@ def build_speech_digest(
         new_posts=new_posts,
         errors=errors,
         verdicts=verdicts,
+        bodies=bodies,
     )
 
 
@@ -191,8 +194,10 @@ def _render_text(
         lines.append(f"\n• {badge}{p.title}{date_suffix}")
         if v and v.summary:
             lines.append(f"  {v.summary}")
-        if v and v.drivers:
-            lines.append(f"  drivers: {', '.join(v.drivers)}")
+        if v and v.worried_about:
+            lines.append(f"  Worried: {'; '.join(v.worried_about)}")
+        if v and v.sanguine_about:
+            lines.append(f"  Sanguine: {'; '.join(v.sanguine_about)}")
         lines.append(f"  {p.url}")
     if errors:
         lines.append(
@@ -243,8 +248,10 @@ def _render_blocks(
         parts = [head]
         if v and v.summary:
             parts.append(_md_escape(v.summary))
-        if v and v.drivers:
-            parts.append("_drivers: " + _md_escape(", ".join(v.drivers)) + "_")
+        if v and v.worried_about:
+            parts.append("⚠️ *Worried:* " + _md_escape("; ".join(v.worried_about)))
+        if v and v.sanguine_about:
+            parts.append("✅ *Sanguine:* " + _md_escape("; ".join(v.sanguine_about)))
         blocks.append(
             {
                 "type": "section",
@@ -312,3 +319,125 @@ def record_posted(
     finally:
         if own_ledger:
             ledger.close()
+
+
+# ---------------------------------------------------------------------------
+# Archive (queryable content store) + single-URL ingest
+# ---------------------------------------------------------------------------
+
+
+def _speaker_from_title(title: str) -> str:
+    """Fed Board RSS titles are 'Lastname, Speech Title' — grab the surname as
+    a fallback when the LLM didn't identify the speaker."""
+    if "," in title:
+        head = title.split(",", 1)[0].strip()
+        # Guard against false positives (a comma mid-title) — surnames are short.
+        if head and len(head.split()) <= 3:
+            return head
+    return ""
+
+
+def _venue_from_summary(summary: str) -> str:
+    """RSS summaries read 'Speech At <venue>...' / 'At <venue>...' — strip the
+    lead-in so the bare venue remains as a fallback."""
+    s = (summary or "").strip()
+    for prefix in ("Speech At ", "Speech at ", "At ", "Remarks At ", "Remarks at "):
+        if s.startswith(prefix):
+            return s[len(prefix):].strip()
+    return s
+
+
+def record_from(post: ResearchPost, verdict: SpeechVerdict, body: str) -> SpeechRecord:
+    """Compose an archive record from a scored speech (LLM fields preferred,
+    RSS-derived fallbacks for speaker/venue)."""
+    speaker = verdict.speaker or _speaker_from_title(post.title)
+    venue = verdict.venue or _venue_from_summary(post.summary)
+    return SpeechRecord(
+        url=post.url,
+        speaker=speaker,
+        venue=venue,
+        title=post.title,
+        source=post.source_display,
+        speech_date=(post.published_at_iso or "").split("T", 1)[0],
+        stance=verdict.stance,
+        summary=verdict.summary,
+        worried_about=verdict.worried_about,
+        sanguine_about=verdict.sanguine_about,
+        drivers=verdict.drivers,
+        full_text=body or post.summary or "",
+    )
+
+
+def archive_payload(
+    payload: SpeechDigestPayload, store: SpeechStore | None = None
+) -> int:
+    """Persist each scored speech in the payload to the content store. Idempotent
+    (upsert by url). Returns the number archived. No-op if nothing was scored."""
+    if not payload.verdicts:
+        return 0
+    own = store is None
+    if own:
+        store = SpeechStore()
+    try:
+        n = 0
+        bodies = payload.bodies or {}
+        for p in payload.new_posts:
+            v = payload.verdicts.get(p.url)
+            if v is None:
+                continue
+            store.upsert(record_from(p, v, bodies.get(p.url, "")))
+            n += 1
+        return n
+    finally:
+        if own:
+            store.close()
+
+
+def export_library(store: SpeechStore | None = None, out_path=None):
+    """Regenerate the human-readable markdown library from the store."""
+    own = store is None
+    if own:
+        store = SpeechStore()
+    try:
+        records = store.all_records()
+    finally:
+        if own:
+            store.close()
+    return export_markdown(records, out_path) if out_path else export_markdown(records)
+
+
+def ingest_url(
+    url: str,
+    title: str | None = None,
+    source: str = "manual",
+    body_fetcher=None,
+    client=None,
+) -> tuple[ResearchPost, SpeechVerdict, str]:
+    """Fetch + score a single speech by URL (for off-feed / outside-venue talks).
+    Returns (post, verdict, body). The body fetch + LLM call are best-effort —
+    a fetch miss still yields a (neutral) verdict so nothing silently drops."""
+    if body_fetcher is None:
+        body_fetcher = _fetch_speech_text
+    try:
+        body = body_fetcher(url) or ""
+    except Exception:  # noqa: BLE001
+        body = ""
+    post = ResearchPost(
+        source_id=source,
+        source_display=source,
+        title=(title or "").strip() or url.rsplit("/", 1)[-1],
+        url=url,
+        summary="",
+        published_at_iso="",
+    )
+    verdict = score_speech(post, body, client=client)
+    # If the title was a URL slug, upgrade it from what the LLM identified.
+    if not title and (verdict.speaker or verdict.venue):
+        nicer = " — ".join(x for x in [verdict.speaker, verdict.venue] if x)
+        if nicer:
+            post = ResearchPost(
+                source_id=post.source_id, source_display=post.source_display,
+                title=nicer, url=post.url, summary=post.summary,
+                published_at_iso=post.published_at_iso,
+            )
+    return post, verdict, body
