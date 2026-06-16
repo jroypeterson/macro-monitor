@@ -28,8 +28,13 @@ from ..collectors.rss import (
     fetch_all,
     load_sources,
 )
-from ..scoring.speech_scorer import SpeechVerdict, score_speech, score_speeches
-from .speech_store import SpeechRecord, SpeechStore, export_markdown
+from ..scoring.speech_scorer import (
+    SpeechVerdict,
+    score_speech,
+    score_speeches,
+    summarize_evolution,
+)
+from .speech_store import STANCE_ORDINAL, SpeechRecord, SpeechStore, export_markdown
 
 DEFAULT_SPEECHES_SOURCES_PATH = (
     Path(__file__).parent.parent / "config" / "fed_speeches_sources.yaml"
@@ -49,6 +54,7 @@ class SpeechDigestPayload:
     errors: list[tuple[str, str]]
     verdicts: dict[str, SpeechVerdict]  # {} when scoring skipped
     bodies: dict[str, str] = None  # {url: full_text}; filled when scoring runs
+    priors: dict[str, dict] = None  # {url: prior speech record by same speaker | None}
 
 
 def build_speech_digest(
@@ -56,6 +62,7 @@ def build_speech_digest(
     ledger: ResearchLedger | None = None,
     skip_scoring: bool = False,
     body_fetcher=None,
+    prior_lookup=None,
 ) -> SpeechDigestPayload:
     """Pull the Fed speeches feed, dedupe, summarize+classify, render. The
     caller owns the Slack post. `skip_scoring=True` and an injectable
@@ -86,8 +93,27 @@ def build_speech_digest(
                 bodies[p.url] = ""
         verdicts = score_speeches(new_posts, bodies=bodies)
 
-    text = _render_text(new_posts, errors, verdicts)
-    blocks = _render_blocks(new_posts, errors, verdicts)
+    # Per-speaker "vs last speech" context: the same official's most recent
+    # prior archived speech, for a stance-shift line in the digest.
+    priors: dict[str, dict] = {}
+    if verdicts:
+        _own_store = False
+        if prior_lookup is None:
+            _store = SpeechStore()
+            _own_store = True
+            prior_lookup = lambda spk, dt: _store.prior_speech(spk, dt)  # noqa: E731
+        try:
+            for p in new_posts:
+                v = verdicts.get(p.url)
+                spk = (v.speaker if v else "") or _speaker_from_title(p.title)
+                dt = (p.published_at_iso or "").split("T", 1)[0]
+                priors[p.url] = prior_lookup(spk, dt) if (spk and dt) else None
+        finally:
+            if _own_store:
+                _store.close()
+
+    text = _render_text(new_posts, errors, verdicts, priors)
+    blocks = _render_blocks(new_posts, errors, verdicts, priors)
     return SpeechDigestPayload(
         text=text,
         blocks=blocks,
@@ -95,6 +121,7 @@ def build_speech_digest(
         errors=errors,
         verdicts=verdicts,
         bodies=bodies,
+        priors=priors,
     )
 
 
@@ -163,6 +190,24 @@ def _stance_badge(stance: str) -> str:
     return _STANCE_BADGE.get(stance, _STANCE_BADGE["neutral"])
 
 
+def _stance_shift_line(stance: str, prior: dict | None) -> str | None:
+    """A 'vs last speech' line for the same speaker, or None if no prior."""
+    if not prior:
+        return None
+    pstance = prior.get("stance", "neutral")
+    pdate = prior.get("speech_date", "")
+    cur = STANCE_ORDINAL.get(stance, 0)
+    prev = STANCE_ORDINAL.get(pstance, 0)
+    if cur > prev:
+        arrow = "↗️ more hawkish"
+    elif cur < prev:
+        arrow = "↘️ more dovish"
+    else:
+        arrow = "→ stance unchanged"
+    when = f" {pdate}" if pdate else ""
+    return f"vs prior ({pstance}{when}): {arrow}"
+
+
 def _fmt_pub_date_portable(iso: str) -> str:
     """Render an ISO8601 timestamp as 'Jun 14' (Windows-safe). '' if missing."""
     if not iso:
@@ -197,6 +242,7 @@ def _render_text(
     new_posts: list[ResearchPost],
     errors: list[tuple[str, str]],
     verdicts: dict[str, SpeechVerdict],
+    priors: dict[str, dict] | None = None,
 ) -> str:
     """Plain-text fallback for the Slack `text` field."""
     if not new_posts:
@@ -210,12 +256,17 @@ def _render_text(
         pub = _fmt_pub_date_portable(p.published_at_iso)
         date_suffix = f" ({pub})" if pub else ""
         lines.append(f"\n• {badge}{p.title}{date_suffix}")
+        if v and v.audience:
+            lines.append(f"  🎙️ {v.audience}")
         if v and v.summary:
             lines.append(f"  {v.summary}")
         if v and v.worried_about:
             lines.append(f"  Worried: {'; '.join(v.worried_about)}")
         if v and v.sanguine_about:
             lines.append(f"  Sanguine: {'; '.join(v.sanguine_about)}")
+        shift = _stance_shift_line(v.stance if v else "neutral", (priors or {}).get(p.url))
+        if shift:
+            lines.append(f"  {shift}")
         lines.append(f"  {p.url}")
     if errors:
         lines.append(
@@ -228,9 +279,11 @@ def _render_blocks(
     new_posts: list[ResearchPost],
     errors: list[tuple[str, str]],
     verdicts: dict[str, SpeechVerdict],
+    priors: dict[str, dict] | None = None,
 ) -> list[dict]:
     """Block Kit payload: header + stance tally, then one section per speech
-    with a stance badge, title link, summary, and drivers."""
+    with a stance badge, title link, audience, summary, worries/comforts, and
+    a 'vs last speech' stance-shift line when a prior is known."""
     if not new_posts:
         return []
 
@@ -264,12 +317,17 @@ def _render_blocks(
         if pub:
             head += f" _{pub}_"
         parts = [head]
+        if v and v.audience:
+            parts.append(f"🎙️ _{_md_escape(v.audience)}_")
         if v and v.summary:
             parts.append(_md_escape(v.summary))
         if v and v.worried_about:
             parts.append("⚠️ *Worried:* " + _md_escape("; ".join(v.worried_about)))
         if v and v.sanguine_about:
             parts.append("✅ *Sanguine:* " + _md_escape("; ".join(v.sanguine_about)))
+        shift = _stance_shift_line(v.stance if v else "neutral", (priors or {}).get(p.url))
+        if shift:
+            parts.append(f"📊 {_md_escape(shift)}")
         blocks.append(
             {
                 "type": "section",
@@ -379,6 +437,7 @@ def record_from(
         url=post.url,
         speaker=speaker,
         venue=venue,
+        audience=verdict.audience,
         title=post.title,
         source=post.source_display,
         speech_date=(post.published_at_iso or "").split("T", 1)[0],
@@ -472,19 +531,21 @@ def backfill_year(
     index_fetcher=None,
     client=None,
     limit: int | None = None,
+    force: bool = False,
     log=print,
 ) -> int:
     """Archive every Board speech from `year` not already in the store. Each
     page is fetched once (title + body), summarized (worried/sanguine/stance),
-    and upserted. Idempotent — re-runs skip already-archived URLs. Returns the
-    number newly archived; regenerates the readable library when it owns the
-    store."""
+    and upserted. Idempotent — re-runs skip already-archived URLs unless
+    `force=True` (re-scores + overwrites, e.g. to populate a new field).
+    Returns the number archived; regenerates the readable library when it owns
+    the store."""
     own = store is None
     if own:
         store = SpeechStore()
     try:
         entries = discover_annual_speeches(year, index_fetcher=index_fetcher)
-        todo = [e for e in entries if not store.has(e[0])]
+        todo = entries if force else [e for e in entries if not store.has(e[0])]
         if limit is not None:
             todo = todo[:limit]
         log(f"  {len(entries)} {year} speeches found; {len(todo)} to archive "
@@ -514,6 +575,62 @@ def backfill_year(
     finally:
         if own:
             store.close()
+
+
+def build_speaker_report(
+    name: str,
+    months: int = 12,
+    store: SpeechStore | None = None,
+    client=None,
+    today=None,
+) -> str:
+    """Per-speaker change-tracking report: a chronological timeline (newest
+    first) with audience, stance, worries/comforts, and a 'vs prior speech'
+    stance-shift arrow on each — plus an LLM synthesis of how their views have
+    evolved over the window. Answers 'what has this official said, and how has
+    it changed, over the last year?'"""
+    from datetime import date, timedelta
+
+    today = today or date.today()
+    since = (today - timedelta(days=int(30.5 * months))).isoformat()
+    own = store is None
+    if own:
+        store = SpeechStore()
+    try:
+        timeline = store.speaker_timeline(name, since=since)  # oldest → newest
+    finally:
+        if own:
+            store.close()
+    if not timeline:
+        return f"No archived speeches for '{name}' in the last {months} months."
+
+    speaker = timeline[-1].get("speaker") or name
+    out = [f"🏛️ {speaker} — {len(timeline)} speech(es), last {months} months"]
+
+    evo = summarize_evolution(speaker, timeline, client=client)
+    if evo:
+        out += ["", "📈 How their views have evolved:", evo]
+
+    out += ["", "Timeline (newest first):"]
+    newest_first = list(reversed(timeline))
+    for i, r in enumerate(newest_first):
+        prior = newest_first[i + 1] if i + 1 < len(newest_first) else None
+        badge = _stance_badge(r.get("stance", "neutral"))
+        out.append("")
+        out.append(f"{r.get('speech_date', '?')} · {badge} — {r.get('title', '')}")
+        if r.get("audience"):
+            out.append(f"  🎙️ {r['audience']}")
+        if r.get("summary"):
+            out.append(f"  {r['summary']}")
+        if r.get("worried_about"):
+            out.append(f"  ⚠️ Worried: {'; '.join(r['worried_about'])}")
+        if r.get("sanguine_about"):
+            out.append(f"  ✅ Sanguine: {'; '.join(r['sanguine_about'])}")
+        shift = _stance_shift_line(r.get("stance", "neutral"), prior)
+        if shift:
+            out.append(f"  📊 {shift}")
+        out.append(f"  {r.get('url', '')}")
+    return "\n".join(out)
 
 
 def ingest_url(

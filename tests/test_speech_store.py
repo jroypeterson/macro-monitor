@@ -61,6 +61,49 @@ def test_json_fields_roundtrip_as_lists(tmp_path):
         assert r["sanguine_about"] == ["jobs"]
 
 
+def test_audience_roundtrips(tmp_path):
+    with SpeechStore(tmp_path / "s.db") as store:
+        store.upsert(SpeechRecord(url="u1", speaker="W",
+                                  audience="academic / university", stance="neutral"))
+        assert store.all_records()[0]["audience"] == "academic / university"
+
+
+def test_migration_adds_audience_to_v1_db(tmp_path):
+    import sqlite3
+    p = tmp_path / "old.db"
+    c = sqlite3.connect(p)
+    c.execute(
+        "CREATE TABLE speeches (url TEXT PRIMARY KEY, speaker TEXT, venue TEXT, "
+        "title TEXT, source TEXT, speech_date TEXT, stance TEXT, summary TEXT, "
+        "worried_about TEXT, sanguine_about TEXT, drivers TEXT, full_text TEXT, "
+        "archived_at TEXT)"
+    )
+    c.execute("INSERT INTO speeches (url, speaker, stance) VALUES ('u1','W','neutral')")
+    c.commit()
+    c.close()
+    with SpeechStore(p) as store:  # __init__ migrates
+        cols = {r[1] for r in store.conn.execute("PRAGMA table_info(speeches)")}
+        assert "audience" in cols
+        store.upsert(SpeechRecord(url="u1", speaker="W", audience="testimony", stance="hawkish"))
+        assert store.all_records()[0]["audience"] == "testimony"
+
+
+def test_speaker_timeline_and_prior_speech(tmp_path):
+    with SpeechStore(tmp_path / "s.db") as store:
+        store.upsert(SpeechRecord(url="u1", speaker="Christopher Waller",
+                                  speech_date="2026-01-10", stance="dovish"))
+        store.upsert(SpeechRecord(url="u2", speaker="Christopher Waller",
+                                  speech_date="2026-05-10", stance="hawkish"))
+        store.upsert(SpeechRecord(url="u3", speaker="Lisa Cook",
+                                  speech_date="2026-03-01", stance="neutral"))
+        tl = store.speaker_timeline("waller")          # surname substring, oldest→newest
+        assert [r["url"] for r in tl] == ["u1", "u2"]
+        assert store.prior_speech("Christopher Waller", "2026-05-10")["url"] == "u1"
+        assert store.prior_speech("Christopher Waller", "2026-01-10") is None
+        tl2 = store.speaker_timeline("waller", since="2026-02-01")
+        assert [r["url"] for r in tl2] == ["u2"]
+
+
 def test_export_markdown_writes_library(tmp_path):
     with SpeechStore(tmp_path / "s.db") as store:
         store.upsert(_rec("u1", speaker="Waller"))

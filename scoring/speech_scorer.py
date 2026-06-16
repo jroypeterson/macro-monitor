@@ -44,6 +44,7 @@ class SpeechVerdict:
     summary: str           # 2-3 sentence plain-English summary ("" on fallback)
     speaker: str = ""      # Fed official's name (LLM-identified; "" if unclear)
     venue: str = ""        # where/what occasion (LLM-identified; "" if unclear)
+    audience: str = ""     # who + what KIND of event (testimony/conference/academic/…)
     worried_about: tuple[str, ...] = field(default_factory=tuple)   # concerns flagged
     sanguine_about: tuple[str, ...] = field(default_factory=tuple)  # comforts/reassurances
     drivers: tuple[str, ...] = field(default_factory=tuple)  # short stance drivers
@@ -122,6 +123,57 @@ def score_speech(
         return _fallback_verdict(post, f"parse error: {e}")
 
 
+def summarize_evolution(speaker: str, records: list[dict], client: Any = None) -> str:
+    """Given a speaker's speeches over a period (chronological dicts with date/
+    stance/summary/worried_about/sanguine_about), synthesize how their tone +
+    concerns have evolved and the key shift in their latest speech vs the prior.
+    Returns "" on any error or with <2 speeches (nothing to compare)."""
+    usable = [r for r in records if (r.get("summary") or r.get("worried_about"))]
+    if len(usable) < 2:
+        return ""
+
+    if client is None:
+        try:
+            import anthropic
+        except ImportError:
+            return ""
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            return ""
+        client = anthropic.Anthropic()
+
+    lines = [
+        f"Here are {speaker}'s recent speeches, OLDEST first. For each: date, "
+        "policy stance, summary, what they were worried about, what they were "
+        "sanguine about.",
+        "",
+    ]
+    for r in usable:
+        lines.append(
+            f"- {r.get('speech_date','?')} [{r.get('stance','neutral')}] "
+            f"{(r.get('summary') or '').strip()}"
+        )
+        if r.get("worried_about"):
+            lines.append(f"    worried: {'; '.join(r['worried_about'])}")
+        if r.get("sanguine_about"):
+            lines.append(f"    sanguine: {'; '.join(r['sanguine_about'])}")
+    lines += [
+        "",
+        f"In 4-6 sentences, describe how {speaker}'s views have EVOLVED over this "
+        "period: (1) the trajectory of their policy stance (more hawkish / more "
+        "dovish / steady, with rough timing); (2) concerns they've grown MORE vs "
+        "LESS focused on; (3) the most notable shift in their latest speech vs the "
+        "one before it. Be specific and concise. Plain prose, no preamble.",
+    ]
+    try:
+        resp = client.messages.create(
+            model=MODEL, max_tokens=600,
+            messages=[{"role": "user", "content": "\n".join(lines)}],
+        )
+        return (resp.content[0].text or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _build_speech_prompt(post: ResearchPost, body: str) -> str:
     """Construct the per-speech summarize+classify prompt."""
     text = (body or post.summary or "").strip()[:MAX_BODY_CHARS]
@@ -142,6 +194,13 @@ def _build_speech_prompt(post: ResearchPost, body: str) -> str:
         "Use the title/text; '' if genuinely unclear.",
         "2. venue: where/what occasion it was (e.g. 'Reykjavik Economic Conference'), "
         "from the title/blurb/text; '' if unclear.",
+        "2b. audience: a short phrase for WHO it was delivered to and the KIND of "
+        "event — pick the closest: 'congressional testimony' (to Congress/a "
+        "committee), 'industry/banking conference', 'academic / university', "
+        "'central-bank research forum', 'community / regional event', "
+        "'general public / ceremonial' (award, commencement, anniversary), or "
+        "'press / Q&A / panel'. Add a few words of specificity if clear "
+        "(e.g. 'congressional testimony — Senate Banking'). '' if unclear.",
         "3. summary: 2-3 sentences, plain English, on the substance — what the "
         "official said about the economy, inflation, labor, growth, and the policy path.",
         "4. worried_about: a list (up to 4) of the specific things the official "
@@ -161,11 +220,12 @@ def _build_speech_prompt(post: ResearchPost, body: str) -> str:
         "7. drivers: up to 3 short phrases (≤8 words) behind the stance call.",
         "",
         "Respond with JSON only — no preamble, no markdown fences — with keys: "
-        "speaker (string), venue (string), summary (string), worried_about (array), "
-        'sanguine_about (array), stance (one of "hawkish"/"dovish"/"neutral"), '
-        "drivers (array).",
+        "speaker (string), venue (string), audience (string), summary (string), "
+        "worried_about (array), sanguine_about (array), "
+        'stance (one of "hawkish"/"dovish"/"neutral"), drivers (array).',
         "",
         'Example: {"speaker": "Christopher Waller", "venue": "Economic Club of NY", '
+        '"audience": "industry/banking conference", '
         '"summary": "Waller said disinflation has stalled and the committee is in no '
         'hurry to cut, citing sticky services inflation and a still-firm labor market.", '
         '"worried_about": ["sticky services inflation", "energy-shock pass-through"], '
@@ -199,6 +259,7 @@ def _parse_speech_verdict(raw: str, post: ResearchPost) -> SpeechVerdict:
     summary = str(parsed.get("summary", "") or "").strip()[:600]
     speaker = str(parsed.get("speaker", "") or "").strip()[:80]
     venue = str(parsed.get("venue", "") or "").strip()[:160]
+    audience = str(parsed.get("audience", "") or "").strip()[:120]
 
     def _strlist(key: str, cap: int, each: int) -> tuple[str, ...]:
         raw = parsed.get(key) or []
@@ -212,6 +273,7 @@ def _parse_speech_verdict(raw: str, post: ResearchPost) -> SpeechVerdict:
         summary=summary,
         speaker=speaker,
         venue=venue,
+        audience=audience,
         worried_about=_strlist("worried_about", 4, 80),
         sanguine_about=_strlist("sanguine_about", 4, 80),
         drivers=_strlist("drivers", 3, 60),

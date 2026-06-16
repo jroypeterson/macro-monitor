@@ -143,7 +143,8 @@ def test_build_digest_scores_with_injected_body_fetcher(tmp_path):
         with patch.object(fs, "fetch_all", return_value=(posts, [])), \
                 patch.object(fs, "score_speeches", side_effect=fake_score):
             payload = fs.build_speech_digest(
-                sources=[], ledger=ledger, body_fetcher=fake_body_fetcher
+                sources=[], ledger=ledger, body_fetcher=fake_body_fetcher,
+                prior_lookup=lambda s, d: None,
             )
         assert captured["url"] == posts[0].url
         assert captured["bodies"][posts[0].url] == "the speech body"
@@ -169,7 +170,8 @@ def test_build_digest_body_fetcher_failure_is_nonfatal(tmp_path):
         with patch.object(fs, "fetch_all", return_value=(posts, [])), \
                 patch.object(fs, "score_speeches", side_effect=fake_score):
             payload = fs.build_speech_digest(
-                sources=[], ledger=ledger, body_fetcher=boom
+                sources=[], ledger=ledger, body_fetcher=boom,
+                prior_lookup=lambda s, d: None,
             )
         assert len(payload.new_posts) == 1
     finally:
@@ -273,6 +275,59 @@ def test_ingest_url_scores_and_titles_from_llm():
     assert body == "speech body"
     # Title was a URL slug -> upgraded from LLM-identified speaker/venue.
     assert "Neel Kashkari" in post.title
+
+
+def test_stance_shift_line():
+    assert fs._stance_shift_line("hawkish", None) is None
+    up = fs._stance_shift_line("hawkish", {"stance": "neutral", "speech_date": "2026-05-01"})
+    assert "more hawkish" in up and "2026-05-01" in up
+    dn = fs._stance_shift_line("dovish", {"stance": "hawkish", "speech_date": "2026-05-01"})
+    assert "more dovish" in dn
+    same = fs._stance_shift_line("neutral", {"stance": "neutral", "speech_date": "2026-05-01"})
+    assert "unchanged" in same
+
+
+def test_render_blocks_shows_audience_and_shift():
+    posts = [_post(1)]
+    v = SpeechVerdict(url=posts[0].url, stance="hawkish", summary="s",
+                      audience="congressional testimony — Senate Banking")
+    priors = {posts[0].url: {"stance": "neutral", "speech_date": "2026-05-01"}}
+    blocks = fs._render_blocks(posts, [], {posts[0].url: v}, priors)
+    body = "".join(b["text"]["text"] for b in blocks if b.get("type") == "section")
+    assert "congressional testimony" in body
+    assert "more hawkish" in body
+
+
+def test_build_speaker_report_timeline_and_shift(tmp_path):
+    from datetime import date
+    from unittest.mock import MagicMock
+
+    from macro_monitor.schedulers.speech_store import SpeechRecord, SpeechStore
+
+    client = MagicMock()
+    resp = MagicMock()
+    resp.content = [MagicMock(text="Waller drifted from dovish to hawkish over the spring.")]
+    client.messages.create.return_value = resp
+
+    with SpeechStore(tmp_path / "s.db") as store:
+        store.upsert(SpeechRecord(url="u1", speaker="Christopher Waller",
+                                  speech_date="2026-01-10", stance="dovish",
+                                  summary="early", worried_about=("a",)))
+        store.upsert(SpeechRecord(url="u2", speaker="Christopher Waller",
+                                  speech_date="2026-05-10", stance="hawkish",
+                                  summary="later", worried_about=("b",)))
+        rpt = fs.build_speaker_report("waller", months=12, store=store,
+                                      client=client, today=date(2026, 6, 1))
+    assert "Christopher Waller" in rpt and "2 speech" in rpt
+    assert rpt.index("2026-05-10") < rpt.index("2026-01-10")  # newest first
+    assert "more hawkish" in rpt          # deterministic shift on latest vs prior
+    assert "drifted from dovish" in rpt   # LLM evolution synthesis included
+
+
+def test_build_speaker_report_no_data(tmp_path):
+    from macro_monitor.schedulers.speech_store import SpeechStore
+    with SpeechStore(tmp_path / "s.db") as store:
+        assert "No archived speeches" in fs.build_speaker_report("nobody", store=store)
 
 
 def test_discover_annual_speeches_parses_and_dedups():

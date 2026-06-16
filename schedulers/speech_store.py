@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS speeches (
     url             TEXT PRIMARY KEY,
     speaker         TEXT,
     venue           TEXT,
+    audience        TEXT,
     title           TEXT,
     source          TEXT,
     speech_date     TEXT,   -- ISO date (YYYY-MM-DD) or ''
@@ -42,12 +43,19 @@ CREATE INDEX IF NOT EXISTS idx_speeches_date ON speeches(speech_date);
 CREATE INDEX IF NOT EXISTS idx_speeches_stance ON speeches(stance);
 """
 
+# Columns added after v1; ALTER-migrated onto pre-existing archives.
+_ADDED_COLUMNS = {"audience": "TEXT"}
+
+# Ordinal for stance shift (dovish < neutral < hawkish).
+STANCE_ORDINAL = {"dovish": -1, "neutral": 0, "hawkish": 1}
+
 
 @dataclass(frozen=True)
 class SpeechRecord:
     url: str
     speaker: str = ""
     venue: str = ""
+    audience: str = ""
     title: str = ""
     source: str = ""
     speech_date: str = ""
@@ -68,7 +76,15 @@ class SpeechStore:
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a db was first created."""
+        have = {r[1] for r in self.conn.execute("PRAGMA table_info(speeches)")}
+        for col, decl in _ADDED_COLUMNS.items():
+            if col not in have:
+                self.conn.execute(f"ALTER TABLE speeches ADD COLUMN {col} {decl}")
 
     def close(self) -> None:
         self.conn.close()
@@ -93,14 +109,14 @@ class SpeechStore:
             self.conn.execute(
                 """
                 INSERT OR REPLACE INTO speeches (
-                    url, speaker, venue, title, source, speech_date, stance,
-                    summary, worried_about, sanguine_about, drivers, full_text,
-                    archived_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    url, speaker, venue, audience, title, source, speech_date,
+                    stance, summary, worried_about, sanguine_about, drivers,
+                    full_text, archived_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
-                    rec.url, rec.speaker, rec.venue, rec.title, rec.source,
-                    rec.speech_date, rec.stance, rec.summary,
+                    rec.url, rec.speaker, rec.venue, rec.audience, rec.title,
+                    rec.source, rec.speech_date, rec.stance, rec.summary,
                     json.dumps(list(rec.worried_about)),
                     json.dumps(list(rec.sanguine_about)),
                     json.dumps(list(rec.drivers)),
@@ -148,6 +164,34 @@ class SpeechStore:
             params,
         ).fetchall()
         return [self._row_to_dict(r) for r in rows]
+
+    def speaker_timeline(self, speaker: str, since: str | None = None) -> list[dict]:
+        """A speaker's speeches OLDEST→newest (optionally on/after `since`,
+        an ISO date). Matches on a case-insensitive surname/substring so
+        'waller' finds 'Christopher Waller'."""
+        clauses = ["LOWER(speaker) LIKE ?"]
+        params: list = [f"%{speaker.lower()}%"]
+        if since:
+            clauses.append("speech_date >= ?")
+            params.append(since)
+        rows = self.conn.execute(
+            "SELECT * FROM speeches WHERE " + " AND ".join(clauses)
+            + " ORDER BY speech_date ASC, archived_at ASC",
+            params,
+        ).fetchall()
+        return [self._row_to_dict(r) for r in rows]
+
+    def prior_speech(self, speaker: str, before_date: str) -> dict | None:
+        """The same speaker's most recent dated speech strictly before
+        `before_date` (exact speaker string match). None if none."""
+        if not speaker or not before_date:
+            return None
+        row = self.conn.execute(
+            "SELECT * FROM speeches WHERE speaker = ? AND speech_date != '' "
+            "AND speech_date < ? ORDER BY speech_date DESC LIMIT 1",
+            (speaker, before_date),
+        ).fetchone()
+        return self._row_to_dict(row) if row else None
 
     @staticmethod
     def _row_to_dict(r: sqlite3.Row) -> dict:
@@ -198,8 +242,14 @@ def export_markdown(records: list[dict], out_path: Path | str = DEFAULT_MD_PATH)
         venue = r.get("venue") or ""
         source = r.get("source") or ""
         lines.append(f"## {date} — {speaker}: {title}")
+        audience = r.get("audience") or ""
         meta = " · ".join(
-            x for x in [badge, f"_{venue}_" if venue else "", source] if x
+            x for x in [
+                badge,
+                f"_{venue}_" if venue else "",
+                f"🎙️ {audience}" if audience else "",
+                source,
+            ] if x
         )
         if url:
             meta += f" · [source]({url})"

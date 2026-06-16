@@ -706,6 +706,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--year", type=int, required=True, help="Year to backfill (e.g. 2026)")
     sp.add_argument("--limit", type=int, default=None, help="Cap the number archived this run")
+    sp.add_argument("--force", action="store_true",
+                    help="Re-score + overwrite already-archived speeches (e.g. to populate a new field)")
     sp.set_defaults(func=cmd_fed_speeches_backfill)
 
     sp = sub.add_parser(
@@ -713,6 +715,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Regenerate the readable Fed-speech library (readable/fed_speeches.md) from the archive",
     )
     sp.set_defaults(func=cmd_fed_speeches_export)
+
+    sp = sub.add_parser(
+        "fed-speeches-speaker",
+        help="Per-speaker change tracking: timeline + stance shifts + LLM evolution synthesis",
+    )
+    sp.add_argument("name", help="Speaker name or surname (e.g. waller)")
+    sp.add_argument("--months", type=int, default=12, help="Lookback window (default 12)")
+    sp.set_defaults(func=cmd_fed_speeches_speaker)
 
     sp = sub.add_parser(
         "fed-speeches-search",
@@ -1007,7 +1017,7 @@ def cmd_fed_speeches_add(args: argparse.Namespace) -> int:
 
     post, verdict, body = ingest_url(args.url, title=args.title, source=args.source)
     print(f"  Speaker: {verdict.speaker or '—'} | Venue: {verdict.venue or '—'} "
-          f"| Stance: {verdict.stance}")
+          f"| Audience: {verdict.audience or '—'} | Stance: {verdict.stance}")
     if verdict.summary:
         print(f"  Summary: {verdict.summary}")
     if verdict.worried_about:
@@ -1044,12 +1054,20 @@ def cmd_fed_speeches_backfill(args: argparse.Namespace) -> int:
     from .schedulers.speech_store import SpeechStore
 
     with SpeechStore() as store:
-        n = backfill_year(args.year, store=store, limit=args.limit)
+        n = backfill_year(args.year, store=store, limit=args.limit, force=args.force)
         from .schedulers.fed_speeches import export_library
         lib = export_library(store=store)
         total = store.count()
     print(f"  Backfilled {n} {args.year} speech(es); archive now holds {total}. "
           f"Library → {lib}")
+    return 0
+
+
+def cmd_fed_speeches_speaker(args: argparse.Namespace) -> int:
+    """Per-speaker timeline + sentiment-change tracking + evolution synthesis."""
+    from .schedulers.fed_speeches import build_speaker_report
+
+    print(build_speaker_report(args.name, months=args.months))
     return 0
 
 
@@ -1077,6 +1095,8 @@ def cmd_fed_speeches_search(args: argparse.Namespace) -> int:
         badge = _STANCE.get(r.get("stance", "neutral"), "➖")
         date = r.get("speech_date") or "—"
         print(f"\n{badge} {date} · {r.get('speaker') or 'Unknown'} — {r.get('title') or ''}")
+        if r.get("audience"):
+            print(f"   🎙️ {r['audience']}")
         if r.get("venue"):
             print(f"   venue: {r['venue']}")
         if r.get("summary"):

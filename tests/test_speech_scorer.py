@@ -102,6 +102,29 @@ def test_parse_extracts_worried_sanguine_speaker_venue():
     assert v.sanguine_about == ("expectations anchored",)
 
 
+def test_parse_extracts_audience():
+    raw = ('{"audience": "congressional testimony — Senate Banking", '
+           '"stance": "neutral", "summary": "s"}')
+    v = _parse_speech_verdict(raw, _post())
+    assert "congressional testimony" in v.audience
+
+
+def test_summarize_evolution_needs_two_speeches_and_uses_client():
+    from macro_monitor.scoring.speech_scorer import summarize_evolution
+
+    recs = [
+        {"speech_date": "2026-01-01", "stance": "dovish", "summary": "x",
+         "worried_about": ["a"], "sanguine_about": []},
+        {"speech_date": "2026-05-01", "stance": "hawkish", "summary": "y",
+         "worried_about": ["b"], "sanguine_about": []},
+    ]
+    client = _mock_client("Waller turned more hawkish through the spring.")
+    out = summarize_evolution("Waller", recs, client=client)
+    assert "hawkish" in out.lower()
+    # <2 usable speeches -> "" without calling the model
+    assert summarize_evolution("Waller", recs[:1], client=client) == ""
+
+
 def test_parse_caps_worried_at_four():
     raw = ('{"summary": "x", "stance": "neutral", '
            '"worried_about": ["a","b","c","d","e","f"]}')
