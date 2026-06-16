@@ -40,6 +40,26 @@ def test_default_config_loads_and_validates():
     validate_all_or_raise(cfg)
 
 
+def test_consumer_credit_delinquency_family_wired():
+    cfg = load_config(default_config_path())
+    fam = cfg["consumer_credit_delinquency"]
+    assert fam.cadence == "quarterly"
+    assert fam.release_calendar_id == 231          # FRB Charge-Off & Delinquency
+    assert fam.group == "Consumer"
+    assert fam.headline[0].id == "DRCCLACBS"
+    assert "yoy_chg" in fam.headline[0].also_display  # pp change context
+    ids = {c.id for c in fam.components}
+    assert {"DRCLACBS", "DRSFRMACBS", "DRALACBS"} <= ids
+
+
+def test_consumer_families_carry_group():
+    cfg = load_config(default_config_path())
+    for key in ["pce", "retail_sales", "consumer_credit", "umich",
+                "mortgage_rates", "existing_home_sales", "new_home_sales",
+                "consumer_credit_delinquency"]:
+        assert cfg[key].group == "Consumer", key
+
+
 def test_validator_catches_dedupe_referring_to_undeclared_series(tmp_path: Path):
     cfg = yaml.safe_load(default_config_path().read_text(encoding="utf-8"))
     cfg["families"]["cpi"]["dedupe"]["headline_hash"].append("BOGUS_SERIES")

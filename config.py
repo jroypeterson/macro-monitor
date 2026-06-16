@@ -303,6 +303,10 @@ class FamilyConfig(BaseModel):
     # Display
     display_name: str
     period_label_format: str
+    # Optional dashboard section this family groups under (e.g. "Consumer").
+    # Empty = the default ("Other US macro") section. Render-only — no effect
+    # on tiering, gating, or posting.
+    group: str = ""
 
     # Series
     headline: list[SeriesSpec]

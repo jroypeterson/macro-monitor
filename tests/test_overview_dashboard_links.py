@@ -4,8 +4,27 @@ current-state dashboard renders anchored cards + a click-to-zoom lightbox."""
 from __future__ import annotations
 
 from macro_monitor.config import FamilyConfig
+from macro_monitor.charts.dashboard import _render_sections
 from macro_monitor.outputs import family_slug
 from macro_monitor.publishers.overview import build_overview_blocks
+
+
+def test_render_sections_orders_consumer_first_default_last():
+    out = _render_sections({
+        "": ["<div class='card'><h2>X</h2></div>"],
+        "Consumer": ["<div class='card'><h2>C</h2></div>"],
+        "Zebra": ["<div class='card'><h2>Z</h2></div>"],
+    })
+    assert "<h2 class='section'>Consumer</h2>" in out
+    # Consumer (preferred) → Zebra (other named, alpha) → Other US macro (default)
+    assert out.index(">Consumer<") < out.index(">Zebra<") < out.index("Other US macro")
+    assert out.count("<div class='grid'>") == 3
+
+
+def test_render_sections_default_only_titled_other():
+    out = _render_sections({"": ["<div class='card'><h2>X</h2></div>"]})
+    assert "Other US macro" in out
+    assert "<div class='grid'>" in out
 
 
 def _family(display_name: str, tier: str) -> FamilyConfig:

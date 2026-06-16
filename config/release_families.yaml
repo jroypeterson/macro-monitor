@@ -341,6 +341,7 @@ families:
 
     # === Display ===
     display_name: "Consumer Spending — Personal Consumption Expenditures (PCE) / Personal Income & Outlays"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     # === Headline ===
@@ -891,6 +892,7 @@ families:
 
     # === Display ===
     display_name: "Retail Sales"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     # === Headline ===
@@ -1265,6 +1267,7 @@ families:
     # stays Tier B (gated). Consumer SPENDING lives in pce + retail_sales.
     topics: [consumer_credit]
     display_name: "Consumer Credit"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     headline:
@@ -1311,6 +1314,75 @@ families:
       pdf_url_static: null
       pdf_url_dated: null
       archive_path: "pdfs/archive/consumer_credit/{period}.pdf"
+
+  consumer_credit_delinquency:
+    tier: B
+    family_type: numeric
+    cadence: quarterly
+    release_calendar_id: 231           # Charge-Off and Delinquency Rates (FRB)
+    release_time_et: "16:30"
+    source: fred
+    # Loan delinquency RATES — consumer financial stress (defaults), distinct
+    # from the G.19 borrowing level. Rates are already %, so headline = level
+    # (raw) with the year-over-year pp change as context. Tier B (gated).
+    topics: [consumer_credit]
+    group: "Consumer"
+    display_name: "Loan Delinquency Rates"
+    period_label_format: "Q{quarter} {year}"
+
+    headline:
+      - id: DRCCLACBS
+        label: "Credit card delinquency rate"
+        primary_transform: raw          # already a percent, stationary
+        also_display: [yoy_chg]         # pp change vs a year ago
+
+    components:
+      - id: DRCLACBS
+        label: "Consumer loan delinquency rate"
+        primary_transform: raw
+      - id: DRSFRMACBS
+        label: "Single-family mortgage delinquency rate"
+        primary_transform: raw
+      - id: DRALACBS
+        label: "All-loan delinquency rate"
+        primary_transform: raw
+
+    context:
+      anchor_series: DRCCLACBS
+      anchor_transform: raw
+      trends: []
+      zscore_lookback_years: 5
+      zscore_kind: level                # how elevated the rate is vs its 5y range
+
+    charts:
+      main:
+        type: line
+        lookback_years: 15
+        series:
+          - {id: DRCCLACBS, transform: raw, label: "Credit card"}
+          - {id: DRCLACBS, transform: raw, label: "Consumer loans"}
+          - {id: DRSFRMACBS, transform: raw, label: "Single-family mortgage"}
+        highlight_latest: true
+        filename: "delinquency_15y_{period}.png"
+      thread: []
+
+    tier_b_gate:
+      threshold: 1.0
+      vs: trailing_5y_volatility
+
+    dedupe:
+      headline_hash:
+        - DRCCLACBS
+      component_hash:
+        - DRCLACBS
+        - DRSFRMACBS
+        - DRALACBS
+
+    agency:
+      release_page: "https://www.federalreserve.gov/releases/chargeoff/"
+      pdf_url_static: null
+      pdf_url_dated: null
+      archive_path: "pdfs/archive/consumer_credit_delinquency/{period}.pdf"
 
   productivity:
     tier: B
@@ -1378,6 +1450,7 @@ families:
     source: fred
     topics: [sentiment]
     display_name: "UMich Consumer Sentiment"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     headline:
@@ -1620,6 +1693,7 @@ families:
 
     # === Display ===
     display_name: "Mortgage Rates (30yr & 15yr fixed)"
+    group: "Consumer"
     period_label_format: "week ending {month_short} {day}, {year}"
 
     # === Headline ===
@@ -1693,6 +1767,7 @@ families:
 
     # === Display ===
     display_name: "Existing Home Sales"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     # === Headline ===
@@ -1756,6 +1831,7 @@ families:
 
     # === Display ===
     display_name: "New Home Sales"
+    group: "Consumer"
     period_label_format: "{month_name} {year}"
 
     # === Headline ===
