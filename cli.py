@@ -735,6 +735,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_fed_speeches_search)
 
     sp = sub.add_parser(
+        "fomc-statement",
+        help="Parse + redline the latest FOMC statement (decision, language changes vs prior) → #macro",
+    )
+    sp.add_argument("--date", default=None,
+                    help="Resolve the statement as of this date (ISO YYYY-MM-DD); default today")
+    sp.add_argument("--model", default=None, help="Override the LLM model")
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.set_defaults(func=cmd_fomc_statement)
+
+    sp = sub.add_parser(
         "suggest-research-senders",
         help="Scan inbox for senders that look like macro/strategy/economist newsletters",
     )
@@ -1069,6 +1080,36 @@ def cmd_fed_speeches_speaker(args: argparse.Namespace) -> int:
 
     print(build_speaker_report(args.name, months=args.months))
     return 0
+
+
+def cmd_fomc_statement(args: argparse.Namespace) -> int:
+    """Parse + redline the latest FOMC statement and post to #macro."""
+    from datetime import date as _date
+
+    from .fomc_statement import build_statement_report, post_to_macro
+
+    on_date = _date.fromisoformat(args.date) if args.date else None
+    verdict, text, blocks = build_statement_report(on_date=on_date, model=args.model)
+
+    if verdict is None:
+        print("  No FOMC statement to report (no meeting on/before that date).",
+              file=sys.stderr)
+        return 0
+
+    print(f"  FOMC {verdict.decision_date}: {verdict.action.upper()} · "
+          f"target {verdict.target_range or '—'} · {verdict.stance}")
+    if verdict.why:
+        print(f"  ⚠️ {verdict.why}")
+
+    if args.dry_run:
+        print("\n=== FOMC STATEMENT (DRY-RUN) ===", file=sys.stderr)
+        print(text, file=sys.stderr)
+        print("\n  Use --post to publish.", file=sys.stderr)
+        return 0
+
+    ok, msg = post_to_macro(text, blocks)
+    print(f"  {'posted: ' + msg if ok else '⚠️ ' + msg}", file=sys.stderr)
+    return 0 if ok else 1
 
 
 def cmd_fed_speeches_export(args: argparse.Namespace) -> int:

@@ -1,0 +1,58 @@
+name: FOMC statement
+
+# Runs at ~14:05 ET but ONLY on actual FOMC decision days (8/year) — guarded by
+# macro_monitor.fomc's meeting calendar. Fetches the just-released statement +
+# the prior one, redlines the language changes, tags the decision + lean, and
+# posts to #macro-and-markets.
+
+on:
+  schedule:
+    - cron: "5 18 * * *"   # 14:05 EDT (summer)
+    - cron: "5 19 * * *"   # 14:05 EST (winter)
+  workflow_dispatch: {}
+
+jobs:
+  statement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Skip unless FOMC decision day at 14:00 ET
+        id: guard
+        env:
+          PYTHONPATH: /tmp/pkg
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT; exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          DECISION=$(python -c "from datetime import date; from macro_monitor import fomc; t=date.today(); print('yes' if any(m.end==t for m in fomc.all_meetings()) else 'no')")
+          if [ "$ET_HOUR" = "14" ] && [ "$DECISION" = "yes" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            echo "skip=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post FOMC statement redline
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
+          SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli fomc-statement --post
