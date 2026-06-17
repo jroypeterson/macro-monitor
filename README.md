@@ -111,6 +111,25 @@ with a curated top-picks section (score ≥7, capped at 7), then a
 table-of-contents listing every source with item counts, then the
 full grouped-by-source digest sorted high→low by score. Cost ~$0.005/run.
 
+### Fed intelligence — speeches, week-ahead, FOMC statement
+
+```bash
+# Fed/FOMC speeches → Haiku summary (worried-about / sanguine-about + speaker/venue/audience) +
+# hawkish/dovish/neutral stance → #macro. Archived to data/fed_speeches.db + readable/fed_speeches.md.
+python -m macro_monitor.cli fed-speeches --dry-run                # daily ~17:00 ET (fed_speeches.yml)
+python -m macro_monitor.cli fed-speeches-add <url> [--post]       # capture any off-feed / regional / outside-venue talk
+python -m macro_monitor.cli fed-speeches-backfill --year 2026 [--force]
+python -m macro_monitor.cli fed-speeches-search --speaker waller --stance hawkish
+python -m macro_monitor.cli fed-speeches-speaker waller           # per-speaker timeline + stance-shift + LLM evolution
+
+# FOMC statement redline — on a decision day fetch the statement + the prior one, redline the
+# language changes, tag cut/hold/hike + lean + dissents → #macro. Guarded to decision days.
+python -m macro_monitor.cli fomc-statement [--date YYYY-MM-DD] [--post]
+```
+
+The Sunday `weekly-preview` also leads with the FOMC meeting + communications-blackout status
+(from `macro_monitor/fomc.py` — the fixed meeting calendar; add future years to `fomc.MEETINGS`).
+
 ## GitHub Actions secrets
 
 When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
