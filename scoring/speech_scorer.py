@@ -25,7 +25,7 @@ from typing import Any
 
 from ..collectors.rss import ResearchPost
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 1024
 # Cap the speech body we send. Fed speeches run 1.5k-4k words; the first
 # ~6k chars reliably carry the policy signal (framing + outlook) and keep

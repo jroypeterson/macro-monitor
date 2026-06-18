@@ -25,7 +25,7 @@ from typing import Any
 
 from ..collectors.rss import ResearchPost
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 4096
 MAX_SUMMARY_CHARS = 280  # keep prompt small; titles carry most of the signal
 
