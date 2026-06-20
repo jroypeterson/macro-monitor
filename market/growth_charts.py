@@ -22,7 +22,10 @@ from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from ..charts.style import COLOR_PRIMARY, COLOR_SECONDARY, DEFAULT_DPI, DEFAULT_FIGSIZE  # noqa: E402
 from ..collectors.fred import FREDClient  # noqa: E402
+from . import factset_forward as FF  # noqa: E402
 from . import macro_growth as G  # noqa: E402
+
+_FWD = "#2E8B57"  # forward-consensus green
 
 _OUT = Path(__file__).parent.parent / "readable" / "market"
 _TRAILING_QUARTERS = 12  # JP #31: trailing 3 years, quarterly
@@ -70,11 +73,13 @@ def render_growth_bar(
 
 def render_sp500_earnings(
     eps_yoy: pd.Series, profits_yoy: pd.Series, out: Path, years: int = 10,
+    forward: dict | None = None,
 ) -> Path:
-    """S&P 500 EPS YoY + whole-economy corporate-profits YoY, last `years`."""
+    """S&P 500 EPS YoY + whole-economy corporate-profits YoY (last `years`),
+    plus the FactSet forward-consensus quarterly EPS-growth overlay if provided."""
     fig, ax = plt.subplots(figsize=DEFAULT_FIGSIZE, dpi=DEFAULT_DPI)
     for s, lab, color in (
-        (eps_yoy, "S&P 500 EPS (YoY)", COLOR_PRIMARY),
+        (eps_yoy, "S&P 500 EPS, reported TTM (YoY)", COLOR_PRIMARY),
         (profits_yoy, "US corporate profits, after tax (YoY)", COLOR_SECONDARY),
     ):
         s = s.dropna().iloc[-years * 4:]
@@ -85,15 +90,42 @@ def render_sp500_earnings(
         ax.annotate(f"{s.iloc[-1]:+.1f}% ({_q_label(last)})",
                     (last, s.iloc[-1]), xytext=(8, 0), textcoords="offset points",
                     fontsize=9, color=color, weight="bold", va="center")
+
+    # Forward consensus overlay (FactSet Earnings Insight). Plotted as a distinct
+    # dashed series — it's bottom-up *operating*-EPS consensus by quarter, a
+    # different basis than the reported-TTM actual, so it isn't joined to it.
+    if forward:
+        fwd = FF.forward_quarterly_series(forward)
+        if not fwd.empty:
+            ax.plot(fwd.index, fwd.values, color=_FWD, lw=1.8, ls="--", marker="o",
+                    ms=5, zorder=4, label="S&P 500 EPS — FactSet consensus (fwd, operating)")
+            for ts, v in fwd.items():
+                ax.annotate(f"{v:+.0f}%", (ts, v), textcoords="offset points",
+                            xytext=(0, 7), ha="center", fontsize=8, color=_FWD, weight="bold")
+            cy = forward.get("cy", {})
+            pe = forward.get("forward_pe")
+            bits = []
+            if cy.get("2026") is not None:
+                bits.append(f"CY2026 {cy['2026']:+.1f}%")
+            if cy.get("2027") is not None:
+                bits.append(f"CY2027 {cy['2027']:+.1f}%")
+            if pe:
+                bits.append(f"fwd 12m P/E {pe:.1f}")
+            cap = "FactSet Earnings Insight " + forward.get("report_date", "")
+            if bits:
+                cap += " — " + " · ".join(bits)
+            ax.text(0.01, 0.02, cap, transform=ax.transAxes, fontsize=8,
+                    color=_FWD, va="bottom", weight="bold")
+
     ax.axhline(0, color="#444444", lw=1, zorder=2)
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:+.0f}%"))
-    ax.set_title("S&P 500 earnings growth vs whole-economy corporate profits",
+    ax.set_title("S&P 500 earnings growth — reported actual, corporate-profits companion, forward consensus",
                  fontsize=9.5, color="#444444", loc="left")
     fig.suptitle("S&P 500 Earnings — YoY Growth", fontsize=13, fontweight="bold", x=0.5, y=0.99)
-    ax.legend(loc="best", fontsize=9)
+    ax.legend(loc="best", fontsize=8.5)
     fig.text(0.5, 0.005,
              "Sources: S&P 500 reported TTM EPS via multpl.com; BEA corporate profits "
-             "(FRED CP). Forward consensus (FactSet Earnings Insight) overlay — TODO.",
+             "(FRED CP); forward consensus = FactSet Earnings Insight (operating EPS, quarterly).",
              ha="center", fontsize=7.5, color="#999999")
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -118,12 +150,14 @@ def build_growth_page(
                                  out_dir / f"growth_{spec.key}.png")
         rendered[spec.key] = dict(title=spec.label, source=spec.source, path=path)
 
-    # #7 — S&P 500 earnings YoY + corporate-profits companion.
+    # #7 — S&P 500 earnings YoY + corporate-profits companion + FactSet forward.
     if "sp500_eps" in series:
         try:
             cp = G.yoy_pct(G.to_quarterly(client.get_observations(G.CORPORATE_PROFITS.fred_id)))
+            forward = FF.load_forward(prefer_live=prefer_live)
             path = render_sp500_earnings(series["sp500_eps"], cp,
-                                         out_dir / "growth_sp500_earnings.png")
+                                         out_dir / "growth_sp500_earnings.png",
+                                         forward=forward)
             rendered["sp500_earnings"] = dict(
                 title="S&P 500 Earnings — YoY Growth (+ corporate profits)",
                 source="S&P 500 (multpl.com) + BEA", path=path)
