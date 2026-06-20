@@ -130,6 +130,27 @@ python -m macro_monitor.cli fomc-statement [--date YYYY-MM-DD] [--post]
 The Sunday `weekly-preview` also leads with the FOMC meeting + communications-blackout status
 (from `macro_monitor/fomc.py` — the fixed meeting calendar; add future years to `fomc.MEETINGS`).
 
+### Markets — valuation & growth charts
+
+```
+# Top-down valuation + factor charts (Shiller CAPE vs history, Damodaran implied ERP,
+# Fama-French/AQR factor returns) -> readable/market/index.html:
+python -m macro_monitor.cli market-charts
+
+# YoY growth views -> readable/market/growth.html:
+#  • six trailing-3yr quarterly bar charts (real GDP/PCE/IP/capex [BEA], industrial
+#    production [FRB], unemployment [BLS], S&P 500 EPS [multpl.com]) — each % change vs prior year
+#  • S&P 500 earnings: reported-TTM EPS YoY (multpl.com) + corporate-profits YoY (BEA, FRED CP)
+#    companion + FactSet Earnings Insight forward-consensus overlay
+python -m macro_monitor.cli growth
+```
+
+`market/macro_growth.py` is the YoY data layer (FRED + multpl, quarterly YoY, per-source
+graceful skip); `market/factset_forward.py` fetches + parses FactSet's **public weekly
+Earnings Insight PDF** (date-patterned URL, recent-Fridays fallback, cached) for the forward
+overlay — no key needed. Both `market-charts` and `growth` are **on-demand** (not yet wired
+to a cron); the published pages refresh whenever they're rebuilt and pushed.
+
 ## GitHub Actions secrets
 
 When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
@@ -172,7 +193,8 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 current-state dashboard, annual calendar, the **Global macro** dashboard, the
 **`fiscal`** (federal spending + healthcare wedge) and **`drug-prices`** charts
 (`cli fiscal` / `cli drug-prices` → `readable/fiscal/`, `readable/drug_prices/`),
-the **market** + **ahead-of-the-curve** galleries, and cross-links to the 13
+the **market** valuation + **earnings & growth** (`cli growth` → `readable/market/growth.html`)
++ **ahead-of-the-curve** galleries, and cross-links to the 13
 healthcare/biopharma views on the sibling `hc-macro-policy-pages` site.
 
 All workflows are idempotent. `release_polling`, `reconciliation`, and
