@@ -201,3 +201,20 @@ def test_prior_line_none_when_no_prior():
         also_display=[], prior_primary=None,
     )
     assert _format_prior_line(_result_with([h]), {"X": None}) is None
+
+
+def test_prior_line_includes_release_date_when_present():
+    h = HeadlineSeriesResult(
+        id="RS", label="Retail trade + food services",
+        primary=TransformedValue(transform="mom_pct", value=0.88),
+        also_display=[],
+        prior_primary=TransformedValue(transform="mom_pct", value=0.40),
+        prior_period_label="April 2026",
+        prior_yoy=TransformedValue(transform="yoy_pct", value=5.20),
+        prior_release_date="2026-05-14",
+    )
+    line = _format_prior_line(_result_with([h]), {"RS": None})
+    assert line == (
+        "Prior (April 2026, released May 14): "
+        "Retail trade + food services +0.40% MoM (+5.20% YoY)"
+    )

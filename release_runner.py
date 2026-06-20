@@ -59,6 +59,9 @@ class HeadlineSeriesResult:
     # primary transform already IS yoy_pct (prior_primary already shows it).
     prior_period_label: str | None = None
     prior_yoy: TransformedValue | None = None
+    # ISO date the prior value was first released (ALFRED initial release); None
+    # when the series has no vintage history or the lookup is unavailable.
+    prior_release_date: str | None = None
 
 
 @dataclass
@@ -315,6 +318,7 @@ def compute_release(
         prior_primary: TransformedValue | None = None
         prior_yoy: TransformedValue | None = None
         prior_period_lbl: str | None = None
+        prior_release: str | None = None
         if prior_period is not None:
             prior_primary = TransformedValue(
                 transform=s.primary_transform,
@@ -328,6 +332,16 @@ def compute_release(
                 _yv = apply_transform("yoy_pct", series, prior_period)
                 if _yv is not None:
                     prior_yoy = TransformedValue(transform="yoy_pct", value=_yv)
+            # When the prior value was first released (ALFRED initial release).
+            # Best-effort: skip cleanly if the client lacks the method (mocked in
+            # tests), the series has no vintage history, or the lookup errors.
+            _getter = getattr(client, "get_initial_release_dates", None)
+            if _getter is not None:
+                try:
+                    _rel = _getter(s.id).get(prior_period)
+                    prior_release = _rel.isoformat() if _rel else None
+                except Exception:  # noqa: BLE001
+                    prior_release = None
 
         headline_results.append(
             HeadlineSeriesResult(
@@ -340,6 +354,7 @@ def compute_release(
                 basis=s.basis,
                 prior_period_label=prior_period_lbl,
                 prior_yoy=prior_yoy,
+                prior_release_date=prior_release,
             )
         )
 

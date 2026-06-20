@@ -191,11 +191,23 @@ def _format_headline_line(h, display_unit: str | None = None) -> str:
     return f"{h.label}: {primary_with_basis}{suffix}"
 
 
+def _fmt_release_date(iso: str) -> str:
+    """ISO date -> 'May 14' (no leading zero); raw string back on parse failure."""
+    from datetime import date
+
+    try:
+        d = date.fromisoformat(iso)
+        return f"{d:%b} {d.day}"
+    except (ValueError, TypeError):
+        return iso
+
+
 def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | None]) -> str | None:
-    """Prior-period line. Self-dating (states the period the prior covered) and
-    carries the prior period's YoY even when the headline transform isn't YoY,
-    so a reader always sees the prior in both the headline basis and YoY terms
-    (JP ask 2026-06-19). Shape: `Prior (April 2026): <label> +0.40% MoM (+5.20% YoY)`."""
+    """Prior-period line. Self-dating (states the period the prior covered AND
+    when it was originally released) and carries the prior period's YoY even
+    when the headline transform isn't YoY, so a reader always sees the prior in
+    both the headline basis and YoY terms (JP ask 2026-06-19). Shape:
+    `Prior (April 2026, released May 14): <label> +0.40% MoM (+5.20% YoY)`."""
     prior_parts = []
     for h in result.headline:
         if h.prior_primary is None or h.prior_primary.value is None:
@@ -216,7 +228,18 @@ def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | No
          if getattr(h, "prior_period_label", None)),
         None,
     )
-    prefix = f"Prior ({period_lbl})" if period_lbl else "Prior"
+    rel_iso = next(
+        (h.prior_release_date for h in result.headline
+         if getattr(h, "prior_release_date", None)),
+        None,
+    )
+    if period_lbl and rel_iso:
+        inside = f"{period_lbl}, released {_fmt_release_date(rel_iso)}"
+    elif period_lbl:
+        inside = period_lbl
+    else:
+        inside = None
+    prefix = f"Prior ({inside})" if inside else "Prior"
     return f"{prefix}: {' · '.join(prior_parts)}"
 
 

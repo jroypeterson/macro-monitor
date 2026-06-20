@@ -184,6 +184,38 @@ class FREDClient:
         vals = [r[1] for r in rows]
         return pd.Series(vals, index=idx, name=series_id, dtype=float)
 
+    def get_initial_release_dates(self, series_id: str) -> dict[pd.Timestamp, "date"]:
+        """Map each observation period → the date it was FIRST published (ALFRED
+        initial release, output_type=4 over the full real-time window).
+
+        Used to state when a prior headline value was originally released. Returns
+        an empty dict if the series has no vintage history or on any error —
+        callers treat a missing release date as 'unknown' rather than failing.
+        Deliberately NOT written to the defensive observations cache (its
+        output_type differs from the live-value path, so it must not overwrite it).
+        """
+        from datetime import date as _date
+
+        try:
+            data = self._get("/series/observations", {
+                "series_id": series_id,
+                "realtime_start": "1776-07-04",
+                "realtime_end": "9999-12-31",
+                "output_type": "4",  # initial release only
+            })
+        except FREDError:
+            return {}
+        out: dict[pd.Timestamp, _date] = {}
+        for obs in data.get("observations", []):
+            rt = obs.get("realtime_start")
+            if obs.get("value") in (".", None, "") or not rt:
+                continue
+            try:
+                out[pd.Timestamp(obs["date"])] = _date.fromisoformat(rt)
+            except (ValueError, TypeError):
+                continue
+        return out
+
     def get_series_info(self, series_id: str) -> dict[str, Any]:
         data = self._get("/series", {"series_id": series_id})
         seriess = data.get("seriess", [])
