@@ -121,10 +121,12 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    "*💹 Markets — top-down valuation, risk premium & factor returns*\n"
+                    "*💹 Markets — top-down valuation, risk premium, earnings & factor returns*\n"
                     "• *<https://jroypeterson.github.io/macro-monitor/market/|Valuation vs history>* — "
                     "Shiller CAPE vs its own history (live from multpl.com)\n"
                     "• *Implied equity-risk premium (ERP)* — Damodaran-style, vs the 10y\n"
+                    "• *<https://jroypeterson.github.io/macro-monitor/market/growth.html|Earnings & growth>* — "
+                    "S&P 500 EPS growth (vs corporate profits) + real GDP/PCE/IP/capex & unemployment YoY, quarterly\n"
                     "• *Factor returns* — Fama-French / Ken French + AQR premia (size · value · momentum · quality)\n"
                     "_The full gallery: <https://jroypeterson.github.io/macro-monitor/market/|Market valuation & factors>. "
                     "Dataset inventories: "

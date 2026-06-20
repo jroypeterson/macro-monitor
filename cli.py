@@ -646,6 +646,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_market_charts)
 
     sp = sub.add_parser(
+        "growth",
+        help="Build the YoY growth charts (real GDP/PCE/IP/capex, S&P 500 EPS, "
+             "unemployment + S&P 500 earnings vs corporate profits) into readable/market/",
+    )
+    sp.set_defaults(func=cmd_growth)
+
+    sp = sub.add_parser(
         "fiscal",
         help="Build the federal spending + healthcare-wedge charts into readable/fiscal/",
     )
@@ -1342,6 +1349,21 @@ def cmd_market_charts(args: argparse.Namespace) -> int:
         print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
     idx = path.parent / "index.html"
     print(f"\nOpen the gallery: file://{idx.absolute()}")
+    return 0
+
+
+def cmd_growth(args: argparse.Namespace) -> int:
+    """Build the YoY growth charts (the six-figure trailing-3yr quarterly page +
+    the S&P 500 earnings-vs-corporate-profits chart) into readable/market/."""
+    from .market.growth_charts import build_growth_page
+
+    out = build_growth_page()
+    print(f"Rendered {len(out)} growth chart(s):")
+    for name, path in out.items():
+        print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
+    if out:
+        idx = next(iter(out.values())).parent / "growth.html"
+        print(f"\nOpen the page: file://{idx.absolute()}")
     return 0
 
 

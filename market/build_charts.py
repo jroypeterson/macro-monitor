@@ -105,7 +105,8 @@ def _render_gallery(rendered: dict[str, dict], out_path: Path) -> Path:
 </style></head><body>
 <h1>Top-Down Market Data — Charts</h1>
 <p class="meta">Valuation &amp; factor history from Shiller (CAPE), Damodaran (implied ERP) and
-Ken French (factors). · <a href="../index.html">↑ workspace hub</a> · {len(cards)} charts</p>
+Ken French (factors). · <a href="growth.html">Earnings &amp; growth (YoY) →</a> ·
+<a href="../index.html">↑ workspace hub</a> · {len(cards)} charts</p>
 {''.join(cards)}
 </body></html>"""
     out_path.write_text(html, encoding="utf-8")
