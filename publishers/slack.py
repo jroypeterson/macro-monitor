@@ -192,14 +192,32 @@ def _format_headline_line(h, display_unit: str | None = None) -> str:
 
 
 def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | None]) -> str | None:
+    """Prior-period line. Self-dating (states the period the prior covered) and
+    carries the prior period's YoY even when the headline transform isn't YoY,
+    so a reader always sees the prior in both the headline basis and YoY terms
+    (JP ask 2026-06-19). Shape: `Prior (April 2026): <label> +0.40% MoM (+5.20% YoY)`."""
     prior_parts = []
     for h in result.headline:
-        if h.prior_primary is not None:
-            unit = headline_units.get(h.id)
-            prior_parts.append(f"{h.label} {_fmt_transformed(h.prior_primary, unit)}")
+        if h.prior_primary is None or h.prior_primary.value is None:
+            continue
+        unit = headline_units.get(h.id)
+        basis = basis_label(h.prior_primary.transform, getattr(h, "basis", None))
+        part = f"{h.label} {_fmt_transformed(h.prior_primary, unit)} {basis}"
+        prior_yoy = getattr(h, "prior_yoy", None)
+        if prior_yoy is not None and prior_yoy.value is not None:
+            part += f" ({_fmt_transformed(prior_yoy, None)} YoY)"
+        prior_parts.append(part)
     if not prior_parts:
         return None
-    return f"Prior: {' · '.join(prior_parts)}"
+    # Headline series in a family share a cadence/period, so the first prior
+    # period label is representative of the whole prior line.
+    period_lbl = next(
+        (h.prior_period_label for h in result.headline
+         if getattr(h, "prior_period_label", None)),
+        None,
+    )
+    prefix = f"Prior ({period_lbl})" if period_lbl else "Prior"
+    return f"{prefix}: {' · '.join(prior_parts)}"
 
 
 def _format_trend_lines(result: ReleaseResult) -> list[str]:

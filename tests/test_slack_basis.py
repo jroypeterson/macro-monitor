@@ -146,3 +146,58 @@ def test_index_level_series_carries_yoy_and_mom():
     )
     line = _format_headline_line(h, h.display_unit)
     assert line == "Consumer Sentiment Index: 49.80 level (-8.30% YoY, +1.2 MoM chg)"
+
+
+# --- prior line: self-dating + prior YoY (JP ask 2026-06-19) --------------
+
+from macro_monitor.publishers.slack import _format_prior_line  # noqa: E402
+
+
+def _result_with(headlines):
+    return ReleaseResult(
+        family_id="x", family_display_name="Retail Sales", period="2026-05",
+        period_label="May 2026", headline=headlines, components=[], computed=[],
+        context=None, source="fred", source_fetched_at="",
+        latest_observation_period="2026-05", expected_observation_period="2026-05",
+        is_stale=False, source_lag_minutes=None,
+    )
+
+
+def test_prior_line_states_period_and_yoy_for_non_yoy_headline():
+    # Retail Sales: headline is MoM; prior must state the period it covered AND
+    # carry the prior period's YoY even though YoY isn't the headline transform.
+    h = HeadlineSeriesResult(
+        id="RS", label="Retail trade + food services",
+        primary=TransformedValue(transform="mom_pct", value=0.88),
+        also_display=[TransformedValue(transform="yoy_pct", value=6.88)],
+        prior_primary=TransformedValue(transform="mom_pct", value=0.40),
+        prior_period_label="April 2026",
+        prior_yoy=TransformedValue(transform="yoy_pct", value=5.20),
+    )
+    line = _format_prior_line(_result_with([h]), {"RS": None})
+    assert line == (
+        "Prior (April 2026): Retail trade + food services +0.40% MoM (+5.20% YoY)"
+    )
+
+
+def test_prior_line_no_duplicate_yoy_when_headline_is_yoy():
+    # CPI headline is already YoY → prior_primary IS the YoY, so no parenthetical.
+    h = HeadlineSeriesResult(
+        id="CPI", label="CPI",
+        primary=TransformedValue(transform="yoy_pct", value=3.40),
+        also_display=[],
+        prior_primary=TransformedValue(transform="yoy_pct", value=3.10),
+        prior_period_label="April 2026",
+        prior_yoy=None,
+    )
+    line = _format_prior_line(_result_with([h]), {"CPI": None})
+    assert line == "Prior (April 2026): CPI +3.10% YoY"
+
+
+def test_prior_line_none_when_no_prior():
+    h = HeadlineSeriesResult(
+        id="X", label="X",
+        primary=TransformedValue(transform="mom_pct", value=1.0),
+        also_display=[], prior_primary=None,
+    )
+    assert _format_prior_line(_result_with([h]), {"X": None}) is None

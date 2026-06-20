@@ -52,6 +52,13 @@ class HeadlineSeriesResult:
     # Optional explicit basis label (see config.SeriesSpec.basis). None
     # means the publisher derives it from primary.transform.
     basis: str | None = None
+    # Prior-period context (JP ask 2026-06-19): the period the prior value
+    # covered (e.g. "April 2026") and that prior period's YoY, so the prior
+    # line is self-dating and always carries a year-over-year read even when
+    # the headline transform isn't itself YoY. `prior_yoy` is None when the
+    # primary transform already IS yoy_pct (prior_primary already shows it).
+    prior_period_label: str | None = None
+    prior_yoy: TransformedValue | None = None
 
 
 @dataclass
@@ -299,13 +306,28 @@ def compute_release(
                 )
             )
 
-        prior_period = target_period - pd.DateOffset(months=1)
+        # Prior = the previous actual observation (cadence-agnostic: the last
+        # index entry strictly before the target). More robust than a fixed
+        # 1-month offset, which silently yielded no prior for quarterly/weekly
+        # families and broke on observation gaps.
+        _prior_idx = series.index[series.index < target_period]
+        prior_period = _prior_idx.max() if len(_prior_idx) else None
         prior_primary: TransformedValue | None = None
-        if prior_period in series.index:
+        prior_yoy: TransformedValue | None = None
+        prior_period_lbl: str | None = None
+        if prior_period is not None:
             prior_primary = TransformedValue(
                 transform=s.primary_transform,
                 value=apply_transform(s.primary_transform, series, prior_period),
             )
+            prior_period_lbl = period_label(prior_period, family.cadence)
+            # Always surface the prior period's YoY for context (JP ask
+            # 2026-06-19) unless the headline is already a YoY (then
+            # prior_primary already carries it, so don't duplicate).
+            if s.primary_transform != "yoy_pct":
+                _yv = apply_transform("yoy_pct", series, prior_period)
+                if _yv is not None:
+                    prior_yoy = TransformedValue(transform="yoy_pct", value=_yv)
 
         headline_results.append(
             HeadlineSeriesResult(
@@ -316,6 +338,8 @@ def compute_release(
                 prior_primary=prior_primary,
                 display_unit=s.display_unit,
                 basis=s.basis,
+                prior_period_label=prior_period_lbl,
+                prior_yoy=prior_yoy,
             )
         )
 
