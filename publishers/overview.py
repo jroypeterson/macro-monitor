@@ -68,7 +68,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
     tier_b_lines = _lines(tier_b)
 
     text = (
-        "macro-and-markets channel overview\n"
+        "Macro & Markets Monitor — channel overview\n"
         f"Macro release feed ({len(tier_a)} Tier A + {len(tier_b)} Tier B families) plus "
         "top-down market data (valuation, ERP, factor returns) and the Ahead-of-the-Curve charts."
     )
@@ -78,7 +78,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": "📊 macro-and-markets — channel overview",
+                "text": "📊 Macro & Markets Monitor — channel overview",
                 "emoji": True,
             },
         },
@@ -87,10 +87,10 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    "*This channel covers four layers:*\n"
+                    "*Two halves — macro and markets — across four layers:*\n"
                     "1️⃣ *Macro releases & cycle* — the disciplined Tier A/B release feed (below)\n"
-                    "2️⃣ *Ahead of the Curve* — Joseph Ellis's leading-indicator chart framework (23 charts)\n"
-                    "3️⃣ *Top-down market data* — valuation, ERP & factor returns (Damodaran · Ken French · AQR · Shiller)\n"
+                    "2️⃣ *Markets* — valuation, equity-risk premium & factor returns (dedicated section below)\n"
+                    "3️⃣ *Ahead of the Curve* — Joseph Ellis's leading-indicator chart framework (23 charts)\n"
                     "4️⃣ *Global macro* — international CPI/GDP/rates (Eurozone · UK · China · Japan), weekly"
                 ),
             },
@@ -112,6 +112,24 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "text": (
                     "*Tier B — preview always; post only on material surprise (|z| ≥ 1σ vs trailing 5y)*\n"
                     + "\n".join(tier_b_lines)
+                ),
+            },
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "*💹 Markets — top-down valuation, risk premium & factor returns*\n"
+                    "• *<https://jroypeterson.github.io/macro-monitor/market/|Valuation vs history>* — "
+                    "Shiller CAPE vs its own history (live from multpl.com)\n"
+                    "• *Implied equity-risk premium (ERP)* — Damodaran-style, vs the 10y\n"
+                    "• *Factor returns* — Fama-French / Ken French + AQR premia (size · value · momentum · quality)\n"
+                    "_The full gallery: <https://jroypeterson.github.io/macro-monitor/market/|Market valuation & factors>. "
+                    "Dataset inventories: "
+                    "<https://github.com/jroypeterson/macro-monitor/blob/main/damodaran/DATA_OVERVIEW.md|Damodaran>, "
+                    "<https://github.com/jroypeterson/macro-monitor/blob/main/market/README.md|Ken French / AQR / Shiller>._"
                 ),
             },
         },
