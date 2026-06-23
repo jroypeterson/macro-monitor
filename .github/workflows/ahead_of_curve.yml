@@ -1,0 +1,53 @@
+name: Ahead-of-the-Curve refresh
+
+# Weekly rebuild of the Ahead-of-the-Curve chart gallery
+# (readable/ahead_of_curve/) so its MONTHLY series (PCE, employment, industrial
+# production, sentiment, saving rate, ...) stay current. Without this, the
+# gallery was only regenerated as a ride-along on a GDP release (quarterly), so
+# the monthly charts silently aged for up to a full quarter between GDP prints
+# (observed 2026-06: charts stuck at 2026-06-04 for ~2.5 weeks).
+#
+# Monday 11:00 UTC (~06:00-07:00 ET) — timing is not critical (this only
+# refreshes static chart artifacts; it posts nothing to Slack). The commit step
+# is change-guarded, so weeks with no new data produce no commit. Quarterly GDP
+# charts are still also refreshed by the GDP-release ride-along in
+# ahead_of_curve/post.py — this workflow just covers the monthly gap.
+
+on:
+  schedule:
+    - cron: "0 11 * * 1"   # Monday 11:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ahead-of-curve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Set up package import path
+        run: |
+          mkdir -p /tmp/pkg
+          ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
+
+      - name: Rebuild Ahead-of-the-Curve charts
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          PYTHONUTF8: "1"
+          PYTHONPATH: /tmp/pkg
+        run: python -m macro_monitor.cli ahead-of-curve
+
+      - name: Commit refreshed charts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add readable/ahead_of_curve/ || true
+          git diff --cached --quiet || git commit -m "ahead-of-curve: weekly chart refresh [skip ci]"
+          git push || true
