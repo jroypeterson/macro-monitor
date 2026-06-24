@@ -99,13 +99,20 @@ def post_for_release(
         f"📈 *Ahead of the Curve* — {len(uploads)} chart(s) updated with the new "
         f"{rname} data:\n" + "\n".join(f"• {f.title}" for f in figs if f.id in posted)
     )
+    # Upload each chart as its own single-file files_upload_v2 call. The multi-file
+    # `file_uploads=[...]` form combined with thread_ts + initial_comment returns
+    # `file_update_failed` from Slack — only the GDP release produces >1 chart, which
+    # is why ONLY GDP failed 2026-06-17 (3 figs). The single-file form is the proven
+    # path used everywhere else in the publisher. Summary comment on the first only.
     try:
-        client.files_upload_v2(
-            channel=channel or pub.channel_id,
-            file_uploads=uploads,
-            initial_comment=comment,
-            thread_ts=thread_ts,
-        )
+        for i, up in enumerate(uploads):
+            client.files_upload_v2(
+                channel=channel or pub.channel_id,
+                file=up["file"],
+                title=up["title"],
+                thread_ts=thread_ts,
+                initial_comment=comment if i == 0 else None,
+            )
     except SlackApiError as e:
         pub._alert_status_reports(
             f"⚠️ macro_monitor: Ahead-of-the-Curve chart upload failed for "
