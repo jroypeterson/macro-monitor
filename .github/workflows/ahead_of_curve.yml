@@ -18,6 +18,12 @@ on:
     - cron: "0 11 * * 1"   # Monday 11:00 UTC
   workflow_dispatch: {}
 
+# The commit step pushes the refreshed gallery, so the job's GITHUB_TOKEN needs
+# write access (mirrors release_polling.yml). Without this the push silently
+# no-ops and the weekly refresh never lands.
+permissions:
+  contents: write
+
 jobs:
   ahead-of-curve:
     runs-on: ubuntu-latest
@@ -48,6 +54,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add readable/ahead_of_curve/ || true
-          git diff --cached --quiet || git commit -m "ahead-of-curve: weekly chart refresh [skip ci]"
-          git push || true
+          git add readable/ahead_of_curve/
+          if git diff --cached --quiet; then
+            echo "No chart changes to commit."
+          else
+            git commit -m "ahead-of-curve: weekly chart refresh [skip ci]"
+            # Rebase onto any concurrent commits (e.g. a release-polling push)
+            # before pushing, and DON'T swallow a push failure — a bare
+            # `git push || true` hid every failed refresh. Mirrors release_polling.yml.
+            git pull --rebase
+            git push
+          fi
