@@ -13,6 +13,8 @@ once per new release, and again on a revision.
 """
 from __future__ import annotations
 
+import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -23,6 +25,48 @@ from .schedule import RELEASE_NAME, SERIES_RELEASE_ID
 # The (expensive — deep FRED + yfinance) build is memoized per process+data-day
 # so a single poll run posting several AoC-relevant releases rebuilds only once.
 _BUILD_CACHE: dict[str, dict[str, Path]] = {}
+
+# Backoff schedule (seconds) for retrying a transient Slack upload failure.
+# Mirrors scheduled_jobs_monitor's `_urlopen_retry` pattern.
+_RETRY_BACKOFF = (2, 5, 10)
+
+# Slack `files_upload_v2` error codes that are server-side / transient and worth
+# retrying. `file_update_failed` is the race that dropped the 3 GDP charts on
+# 2026-06-17; the rest are Slack's generic transient/availability codes. Anything
+# NOT in this set (e.g. `invalid_auth`, `channel_not_found`) is a permanent error —
+# retrying just wastes the backoff window, so we re-raise immediately.
+_RETRYABLE_SLACK_ERRORS = frozenset({
+    "file_update_failed",
+    "fatal_error",
+    "internal_error",
+    "service_unavailable",
+    "ratelimited",
+    "rate_limited",
+})
+
+
+def _upload_with_retry(client, *, attempts: int = 4, label: str = "AoC upload", **kwargs):
+    """`client.files_upload_v2(**kwargs)` with backoff so a momentary Slack-side
+    race (e.g. `file_update_failed`) doesn't drop a chart. Retries only transient
+    server errors; permanent client errors re-raise on the first hit. Re-raises the
+    last exception if every attempt fails (the caller alerts — never silent)."""
+    from slack_sdk.errors import SlackApiError
+
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            return client.files_upload_v2(**kwargs)
+        except SlackApiError as e:
+            err = (e.response.get("error") if e.response else "") or ""
+            if err.lower() not in _RETRYABLE_SLACK_ERRORS:
+                raise  # permanent — don't burn the backoff window
+            last = e
+            if i < attempts - 1:
+                delay = _RETRY_BACKOFF[min(i, len(_RETRY_BACKOFF) - 1)]
+                print(f"  {label} attempt {i+1}/{attempts} failed ({err}); "
+                      f"retrying in {delay}s...", file=sys.stderr)
+                time.sleep(delay)
+    raise last  # type: ignore[misc]
 
 
 def figures_for_release(release_id: int) -> list[FigureSpec]:
@@ -106,7 +150,9 @@ def post_for_release(
     # path used everywhere else in the publisher. Summary comment on the first only.
     try:
         for i, up in enumerate(uploads):
-            client.files_upload_v2(
+            _upload_with_retry(
+                client,
+                label=f"AoC upload {up['title']!r}",
                 channel=channel or pub.channel_id,
                 file=up["file"],
                 title=up["title"],

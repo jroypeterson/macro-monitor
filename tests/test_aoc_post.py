@@ -83,7 +83,9 @@ def test_post_for_release_uploads_one_threaded_reply(monkeypatch, tmp_path):
     up = _FakeWebClient.last
     assert up["channel"] == "C_REL"
     assert up["thread_ts"] == "123.45"
-    assert len(up["file_uploads"]) == 1
+    # One-at-a-time single-file upload form (`file=`) — the multi-file
+    # `file_uploads=[...]` form + thread_ts returned `file_update_failed`.
+    assert str(up["file"]).endswith("inflation_vs_rates.png")
     assert "Ahead of the Curve" in up["initial_comment"]
     assert not pub.alerts
 
@@ -113,4 +115,88 @@ def test_post_for_release_upload_failure_is_nonfatal(monkeypatch, tmp_path):
     monkeypatch.setattr("slack_sdk.WebClient", _BoomClient)
     pub = _FakePublisher()
     assert post.post_for_release(10, dry_run=False, publisher=pub) == []
+    assert pub.alerts and "upload failed" in pub.alerts[0]
+
+
+# --- retry-with-backoff on transient file_update_failed -----------------
+
+def test_upload_retries_transient_file_update_failed_then_succeeds(monkeypatch, tmp_path):
+    from slack_sdk.errors import SlackApiError
+
+    png = tmp_path / "inflation_vs_rates.png"
+    png.write_bytes(b"x")
+
+    calls = {"n": 0}
+
+    class _FlakyClient:
+        def __init__(self, token=None):
+            pass
+
+        def files_upload_v2(self, **kwargs):
+            calls["n"] += 1
+            if calls["n"] < 3:  # fail twice (transient), succeed on the 3rd
+                raise SlackApiError("boom", {"error": "file_update_failed"})
+            return {"ok": True}
+
+    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr("slack_sdk.WebClient", _FlakyClient)
+    monkeypatch.setattr(post.time, "sleep", lambda s: None)  # no real backoff in tests
+
+    pub = _FakePublisher()
+    posted = post.post_for_release(10, dry_run=False, publisher=pub)
+
+    assert posted == ["inflation_vs_rates"]
+    assert calls["n"] == 3
+    assert not pub.alerts  # recovered → no warning
+
+
+def test_upload_does_not_retry_permanent_error(monkeypatch, tmp_path):
+    from slack_sdk.errors import SlackApiError
+
+    png = tmp_path / "inflation_vs_rates.png"
+    png.write_bytes(b"x")
+
+    calls = {"n": 0}
+
+    class _AuthFailClient:
+        def __init__(self, token=None):
+            pass
+
+        def files_upload_v2(self, **kwargs):
+            calls["n"] += 1
+            raise SlackApiError("boom", {"error": "invalid_auth"})
+
+    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr("slack_sdk.WebClient", _AuthFailClient)
+    monkeypatch.setattr(post.time, "sleep", lambda s: pytest.fail("slept on permanent error"))
+
+    pub = _FakePublisher()
+    assert post.post_for_release(10, dry_run=False, publisher=pub) == []
+    assert calls["n"] == 1  # no retries on a permanent client error
+    assert pub.alerts and "upload failed" in pub.alerts[0]
+
+
+def test_upload_alerts_after_exhausting_retries(monkeypatch, tmp_path):
+    from slack_sdk.errors import SlackApiError
+
+    png = tmp_path / "inflation_vs_rates.png"
+    png.write_bytes(b"x")
+
+    calls = {"n": 0}
+
+    class _AlwaysFlaky:
+        def __init__(self, token=None):
+            pass
+
+        def files_upload_v2(self, **kwargs):
+            calls["n"] += 1
+            raise SlackApiError("boom", {"error": "file_update_failed"})
+
+    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr("slack_sdk.WebClient", _AlwaysFlaky)
+    monkeypatch.setattr(post.time, "sleep", lambda s: None)
+
+    pub = _FakePublisher()
+    assert post.post_for_release(10, dry_run=False, publisher=pub) == []
+    assert calls["n"] == 4  # default attempts exhausted, no silent failure
     assert pub.alerts and "upload failed" in pub.alerts[0]
