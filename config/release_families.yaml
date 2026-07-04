@@ -197,11 +197,31 @@ families:
         display_unit: "K"              # FRED gives thousands of persons
         basis: "MoM chg"              # the +K is a month-over-month change
       - id: UNRATE
-        label: "Unemployment rate"
+        label: "Unemployment rate (U-3)"
         primary_transform: raw         # already a percent, stationary
         also_display: [mom_chg, yoy_chg]   # pp change context, not a bare level
         display_unit: "%"
         basis: "level"               # a rate level, not a change
+        definition: >-
+          U-3 Unemployment Rate (UNRATE): the official/headline unemployment
+          rate — people with no job who actively looked for work in the prior
+          4 weeks, as a % of the civilian labor force.
+      # Broadest BLS labor-underutilization measure — same Employment
+      # Situation release (table A-15). Reads alongside U-3: a widening
+      # U-6-minus-U-3 gap = rising involuntary part-time / discouraged workers.
+      - id: U6RATE
+        label: "Underemployment rate (U-6)"
+        primary_transform: raw         # already a percent, stationary
+        also_display: [mom_chg, yoy_chg]   # pp change context, not a bare level
+        display_unit: "%"
+        basis: "level"
+        definition: >-
+          U-6 Underemployment Rate (U6RATE): the broadest BLS
+          labor-underutilization measure — the U-3 unemployed PLUS marginally
+          attached workers (want a job, looked in the past year but not the
+          past 4 weeks, incl. discouraged workers) PLUS people working
+          part-time for economic reasons (want full-time work but can't get
+          the hours), as a % of the labor force plus the marginally attached.
 
     # === Components (thread) ===
     components:
@@ -224,6 +244,24 @@ families:
         primary_transform: yoy_pct
         tags: [healthcare]
         display_unit: "K"
+      # White-collar cuts (JP ask 2026-06-30) — CES supersector payrolls that
+      # proxy office/knowledge work. Each renders YoY % with an
+      # accelerating/decelerating read vs the prior month.
+      - id: USPBS
+        label: "Professional & business services"
+        primary_transform: yoy_pct
+        tags: [white_collar]
+        display_unit: "K"
+      - id: USINFO
+        label: "Information"
+        primary_transform: yoy_pct
+        tags: [white_collar]
+        display_unit: "K"
+      - id: USFIRE
+        label: "Financial activities"
+        primary_transform: yoy_pct
+        tags: [white_collar]
+        display_unit: "K"
 
     # === Computed series ===
     # Health Care employment = NAICS 621 + 622 + 623, summed in-process.
@@ -242,6 +280,27 @@ families:
         also_display: [mom_chg]
         tags: [healthcare]
         display_unit: "K"
+      # White-collar employment = Professional & Business Services +
+      # Information + Financial Activities, summed in-process. BLS has no
+      # single "white-collar" series; this CES-supersector sum is the
+      # standard office-jobs proxy.
+      - id: WC_TOTAL
+        label: "White-collar employment (Prof & Business + Info + Financial)"
+        method: sum_of
+        inputs:
+          - USPBS
+          - USINFO
+          - USFIRE
+        primary_transform: yoy_pct
+        also_display: [mom_chg]
+        tags: [white_collar]
+        display_unit: "K"
+        definition: >-
+          White-Collar Employment (WC_TOTAL, computed): sum of the
+          Professional & Business Services (USPBS) + Information (USINFO) +
+          Financial Activities (USFIRE) payroll supersectors — a proxy for
+          office/knowledge-worker jobs, shown as YoY % change plus whether
+          that growth rate is accelerating or decelerating vs the prior month.
 
     # === Trend / z-score config ===
     context:
@@ -268,9 +327,10 @@ families:
           type: line
           lookback_years: 5
           series:
-            - {id: UNRATE, transform: raw, label: "Unemployment rate"}
+            - {id: UNRATE, transform: raw, label: "U-3 unemployment rate (official)"}
+            - {id: U6RATE, transform: raw, label: "U-6 underemployment rate (broadest)"}
           reference_lines:
-            - {value: 4.0, label: "4% (~NAIRU)", style: dashed}
+            - {value: 4.0, label: "4% (~NAIRU, vs U-3)", style: dashed}
           highlight_latest: true
           filename: "unrate_5y_{period}.png"
 
@@ -302,6 +362,28 @@ families:
               highlight_latest: true
           filename: "hc_employment_{period}.png"
 
+        # White-collar employment two-pane chart — the aggregate's YoY pace
+        # (accel/decel visible as slope) + the three supersector cuts.
+        - name: white_collar_employment
+          type: panes
+          layout: vertical
+          lookback_years: 5
+          panes:
+            - title: "White-collar employment YoY (Prof & Business + Info + Financial)"
+              type: line
+              series:
+                - {id: WC_TOTAL, transform: yoy_pct, label: "White-collar YoY"}
+                - {id: PAYEMS, transform: yoy_pct, label: "Total nonfarm YoY"}
+              highlight_latest: true
+            - title: "White-collar supersector cuts YoY"
+              type: line
+              series:
+                - {id: USPBS, transform: yoy_pct, label: "Prof & business services YoY"}
+                - {id: USINFO, transform: yoy_pct, label: "Information YoY"}
+                - {id: USFIRE, transform: yoy_pct, label: "Financial activities YoY"}
+              highlight_latest: true
+          filename: "white_collar_employment_{period}.png"
+
     # === Posting gate ===
     tier_b_gate: null
 
@@ -309,7 +391,8 @@ families:
     # Headline = PAYEMS + UNRATE (the two market-moving numbers).
     # Average hourly earnings is in component_hash because AHE revisions
     # are economically meaningful and worth a thread note. HC sub-cuts +
-    # HC_TOTAL also in component_hash.
+    # HC_TOTAL also in component_hash. U-6 + the white-collar cuts ride
+    # component_hash too — their revisions warrant a note, not a re-headline.
     dedupe:
       headline_hash:
         - PAYEMS
@@ -320,6 +403,11 @@ families:
         - CES6562200001
         - CES6562300001
         - HC_TOTAL
+        - U6RATE
+        - USPBS
+        - USINFO
+        - USFIRE
+        - WC_TOTAL
 
     # === Reference reading ===
     agency:

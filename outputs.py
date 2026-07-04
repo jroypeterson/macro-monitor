@@ -17,7 +17,12 @@ from pathlib import Path
 
 from .release_runner import ReleaseResult
 
-SCHEMA_VERSION = "1.0"
+# 1.1 (2026-07-04, additive): + top-level `computed` (the derived series —
+# previously only in dataclasses, so the dashboard's computed lines never
+# rendered), + `definition` on headline/components/computed, + `prior` on
+# components (accel/decel context). Existing consumers (focus_today reads
+# headline[0].primary/prior_primary) are unaffected.
+SCHEMA_VERSION = "1.1"
 
 
 def outputs_root() -> Path:
@@ -78,6 +83,7 @@ def write_release_artifacts(
         # Data
         "headline": [_serialize_headline(h) for h in result.headline],
         "components": [_serialize_component(c) for c in result.components],
+        "computed": [_serialize_computed(c) for c in result.computed],
         "context": _serialize_context(result.context) if result.context else None,
 
         # Charts (paths relative to the archive directory)
@@ -141,16 +147,48 @@ def _serialize_headline(h) -> dict:
             if h.prior_primary
             else None
         ),
+        "definition": getattr(h, "definition", None),
     }
 
 
 def _serialize_component(c) -> dict:
+    prior = getattr(c, "prior_transformed", None)
     return {
         "id": c.id,
         "label": c.label,
         "transform": c.transformed.transform,
         "value": c.transformed.value,
+        "prior": (
+            {"transform": prior.transform, "value": prior.value} if prior else None
+        ),
         "tags": c.tags,
+        "definition": getattr(c, "definition", None),
+    }
+
+
+def _serialize_computed(c) -> dict:
+    """Derived series (e.g. HC_TOTAL, WC_TOTAL) — shape mirrors the dataclass
+    the dashboard's computed-lines renderer expects (transformed{}, tags)."""
+    return {
+        "id": c.id,
+        "label": c.label,
+        "method": c.method,
+        "inputs": list(c.inputs),
+        "transformed": {
+            "transform": c.transformed.transform,
+            "value": c.transformed.value,
+            "raw_value": c.transformed.raw_value,
+        },
+        "prior_primary": (
+            {
+                "transform": c.prior_primary.transform,
+                "value": c.prior_primary.value,
+            }
+            if c.prior_primary
+            else None
+        ),
+        "tags": c.tags,
+        "definition": getattr(c, "definition", None),
     }
 
 
@@ -221,6 +259,8 @@ _HTML_TEMPLATE = """\
 <h2>Headline</h2>
 {headline_table}
 
+{definitions_section}
+
 {context_section}
 
 {components_section}
@@ -281,11 +321,44 @@ def _render_headline_table(payload: dict) -> str:
     )
 
 
+def _render_definitions_section(payload: dict) -> str:
+    """Plain-English definitions footnote — any headline/computed/component
+    series that declares one (e.g. U-3 vs U-6 unemployment)."""
+    defs: list[str] = []
+    seen: set[str] = set()
+    for coll in ("headline", "computed", "components"):
+        for s in payload.get(coll) or []:
+            d = s.get("definition")
+            if d and d not in seen:
+                seen.add(d)
+                defs.append(d)
+    if not defs:
+        return ""
+    items = "\n".join(f"<li>{html.escape(d)}</li>" for d in defs)
+    return (
+        "<div class='freshness'><strong>Definitions</strong>"
+        f"<ul style='margin:0.4em 0 0 1.2em; padding:0'>{items}</ul></div>"
+    )
+
+
 def _render_components_section(payload: dict) -> str:
     components = payload["components"]
-    if not components:
+    computed = payload.get("computed") or []
+    if not components and not computed:
         return ""
     rows = []
+    # Computed aggregates first (HC_TOTAL, WC_TOTAL) — the summary numbers.
+    for c in computed:
+        tv = c.get("transformed") or {}
+        tag_html = "".join(
+            f"<span class='tag'>{html.escape(t)}</span>" for t in c.get("tags", [])
+        )
+        rows.append(
+            f"<tr><td><strong>{html.escape(c['label'])}</strong> "
+            f"<small style='color:#888'>({html.escape(c['id'])}, computed)</small> {tag_html}</td>"
+            f"<td>{html.escape(tv.get('transform', ''))}</td>"
+            f"<td class='num'>{_fmt_value(tv.get('value'), tv.get('transform', 'raw'))}</td></tr>"
+        )
     for c in components:
         tag_html = "".join(
             f"<span class='tag'>{html.escape(t)}</span>" for t in c.get("tags", [])
@@ -370,6 +443,7 @@ def _render_html(
         is_stale="yes" if payload["is_stale"] else "no",
         stale_class=" stale" if payload["is_stale"] else "",
         headline_table=_render_headline_table(payload),
+        definitions_section=_render_definitions_section(payload),
         context_section=_render_context_section(payload),
         components_section=_render_components_section(payload),
         charts_section=_render_charts_section(chart_paths),

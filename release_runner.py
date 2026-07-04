@@ -62,6 +62,9 @@ class HeadlineSeriesResult:
     # ISO date the prior value was first released (ALFRED initial release); None
     # when the series has no vintage history or the lookup is unavailable.
     prior_release_date: str | None = None
+    # Plain-English definition (config.SeriesSpec.definition). Rendered as a
+    # footnote wherever the series appears; None = no footnote.
+    definition: str | None = None
 
 
 @dataclass
@@ -72,6 +75,11 @@ class ComponentSeriesResult:
     tags: list[str]
     display_unit: str | None = None
     basis: str | None = None
+    definition: str | None = None
+    # The same primary_transform one observation prior. Lets renderers state
+    # whether a YoY cut is accelerating or decelerating (white-collar ask,
+    # JP 2026-06-30) without re-fetching.
+    prior_transformed: TransformedValue | None = None
 
 
 @dataclass
@@ -89,6 +97,7 @@ class ComputedSeriesResult:
     tags: list[str]
     display_unit: str | None = None
     basis: str | None = None
+    definition: str | None = None
 
 
 @dataclass
@@ -355,6 +364,7 @@ def compute_release(
                 prior_period_label=prior_period_lbl,
                 prior_yoy=prior_yoy,
                 prior_release_date=prior_release,
+                definition=s.definition,
             )
         )
 
@@ -366,6 +376,16 @@ def compute_release(
             transform=s.primary_transform,
             value=apply_transform(s.primary_transform, series, target_period),
         )
+        # Prior observation in the same transform (cadence-agnostic, same
+        # lookup as headline priors) — powers accel/decel context on cuts.
+        _prior_idx = series.index[series.index < target_period]
+        _prior_period = _prior_idx.max() if len(_prior_idx) else None
+        prior_tv: TransformedValue | None = None
+        if _prior_period is not None:
+            prior_tv = TransformedValue(
+                transform=s.primary_transform,
+                value=apply_transform(s.primary_transform, series, _prior_period),
+            )
         component_results.append(
             ComponentSeriesResult(
                 id=s.id,
@@ -374,6 +394,8 @@ def compute_release(
                 tags=list(s.tags),
                 display_unit=s.display_unit,
                 basis=s.basis,
+                definition=s.definition,
+                prior_transformed=prior_tv,
             )
         )
 
@@ -417,6 +439,7 @@ def compute_release(
                 tags=list(cs.tags),
                 display_unit=cs.display_unit,
                 basis=cs.basis,
+                definition=cs.definition,
             )
         )
 

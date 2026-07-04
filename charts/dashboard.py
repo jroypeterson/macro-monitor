@@ -195,6 +195,13 @@ _HTML_TEMPLATE = """\
                   padding: 0.1em 0.4em; border-radius: 3px; margin-left: 0.5em; }}
   .hc-badge {{ display: inline-block; background: #E8F0E0; color: #2D5016; font-size: 0.7em;
                padding: 0.1em 0.4em; border-radius: 3px; margin-left: 0.4em; }}
+  .wc-badge {{ display: inline-block; background: #E0EAF5; color: #1F4E79; font-size: 0.7em;
+               padding: 0.1em 0.4em; border-radius: 3px; margin-left: 0.4em; }}
+  .accel {{ font-size: 0.72em; font-weight: 400; margin-left: 0.35em; }}
+  .accel.up {{ color: #2D7D2D; }}
+  .accel.down {{ color: #C00000; }}
+  .defs {{ font-size: 0.72em; color: #888; margin-top: 0.6em; line-height: 1.4;
+           border-top: 1px dashed #eee; padding-top: 0.4em; }}
   .curve {{ background: white; border: 1px solid #e0e0e0; border-radius: 6px;
             padding: 1em; margin-bottom: 1.5em; }}
   .curve h2 {{ font-size: 1.05em; margin: 0 0 0.1em 0; color: #1F4E79; }}
@@ -394,6 +401,18 @@ def _value_with_basis(value: float | None, transform: str) -> str:
     )
 
 
+def _accel_html(cur: float | None, prior: float | None, tol: float = 0.005) -> str:
+    """Small accel/decel marker for a YoY read: is the growth RATE rising or
+    falling vs the prior observation? '' when either value is missing."""
+    if cur is None or prior is None:
+        return ""
+    if cur > prior + tol:
+        return "<span class='accel up' title='YoY pace rising vs prior month'>▲ accel</span>"
+    if cur < prior - tol:
+        return "<span class='accel down' title='YoY pace falling vs prior month'>▼ decel</span>"
+    return "<span class='accel' title='YoY pace unchanged vs prior month'>→ flat</span>"
+
+
 def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     stale = payload.get("is_stale", False)
     from_cache = payload.get("from_fallback_cache", False)
@@ -421,26 +440,58 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
             f"</div>"
         )
 
-    # Healthcare context (computed + tagged components)
+    # Tagged context lines (computed aggregates + tagged components):
+    # healthcare (HC badge) and white-collar (WC badge, with an accel/decel
+    # marker on YoY reads — is the growth rate rising or falling?).
+    _BADGES = {"healthcare": "<span class='hc-badge'>HC</span>",
+               "white_collar": "<span class='wc-badge'>WC</span>"}
     hc_lines = []
-    for c in payload.get("computed", []) or []:
-        if "healthcare" in (c.get("tags") or []):
-            tv = c.get("transformed") or {}
-            hc_lines.append(
-                f"<div class='headline'>"
-                f"<span class='headline-label'>{html.escape(c.get('label', '?'))} "
-                f"<span class='hc-badge'>HC</span></span>"
-                f"<span class='headline-value'>{_value_with_basis(tv.get('value'), tv.get('transform', 'raw'))}</span>"
-                f"</div>"
-            )
-    for c in payload.get("components", []) or []:
-        if "healthcare" in (c.get("tags") or []):
-            hc_lines.append(
-                f"<div class='headline'>"
-                f"<span class='headline-label'>↳ {html.escape(c.get('label', '?'))}</span>"
-                f"<span class='headline-value'>{_value_with_basis(c.get('value'), c.get('transform', 'raw'))}</span>"
-                f"</div>"
-            )
+    for tag, badge in _BADGES.items():
+        for c in payload.get("computed", []) or []:
+            if tag in (c.get("tags") or []):
+                tv = c.get("transformed") or {}
+                prior = c.get("prior_primary") or {}
+                accel = (
+                    _accel_html(tv.get("value"), prior.get("value"))
+                    if tv.get("transform") == "yoy_pct"
+                    else ""
+                )
+                hc_lines.append(
+                    f"<div class='headline'>"
+                    f"<span class='headline-label'>{html.escape(c.get('label', '?'))} "
+                    f"{badge}</span>"
+                    f"<span class='headline-value'>{_value_with_basis(tv.get('value'), tv.get('transform', 'raw'))}{accel}</span>"
+                    f"</div>"
+                )
+        for c in payload.get("components", []) or []:
+            if tag in (c.get("tags") or []):
+                prior = c.get("prior") or {}
+                accel = (
+                    _accel_html(c.get("value"), prior.get("value"))
+                    if c.get("transform") == "yoy_pct"
+                    else ""
+                )
+                hc_lines.append(
+                    f"<div class='headline'>"
+                    f"<span class='headline-label'>↳ {html.escape(c.get('label', '?'))}</span>"
+                    f"<span class='headline-value'>{_value_with_basis(c.get('value'), c.get('transform', 'raw'))}{accel}</span>"
+                    f"</div>"
+                )
+
+    # Plain-English definitions footnote (U-3 vs U-6, computed aggregates…)
+    _defs: list[str] = []
+    for coll in ("headline", "computed", "components"):
+        for s in payload.get(coll) or []:
+            d = s.get("definition")
+            if d and d not in _defs:
+                _defs.append(d)
+    defs_html = (
+        "<div class='defs'>"
+        + "<br>".join(f"ℹ️ {html.escape(d)}" for d in _defs)
+        + "</div>"
+        if _defs
+        else ""
+    )
 
     # Main chart (relative path from outputs/dashboard/ to outputs/charts/)
     charts = payload.get("charts", {}) or {}
@@ -476,6 +527,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
         f"<div class='period'>{html.escape(period_label)}</div>"
         + "".join(headline_rows)
         + "".join(hc_lines)
+        + defs_html
         + chart_html
         + links_html
         + "</div>"

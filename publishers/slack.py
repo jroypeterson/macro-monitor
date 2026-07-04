@@ -281,6 +281,79 @@ def _format_healthcare_components(result: ReleaseResult) -> list[str]:
     return lines
 
 
+def accel_note(
+    current: float | None, prior: float | None, tol: float = 0.005
+) -> str | None:
+    """Is a YoY read accelerating or decelerating vs the prior observation?
+
+    Returns e.g. "accelerating (prior +0.40% YoY)" / "decelerating (prior
+    +0.80% YoY)" / "unchanged vs prior", or None when either value is missing.
+    `tol` absorbs sub-display-precision noise (values print to 2dp)."""
+    if current is None or prior is None:
+        return None
+    sign = "+" if prior >= 0 else ""
+    prior_str = f"{sign}{prior:.2f}% YoY"
+    if current > prior + tol:
+        return f"accelerating (prior {prior_str})"
+    if current < prior - tol:
+        return f"decelerating (prior {prior_str})"
+    return "unchanged vs prior"
+
+
+def _format_white_collar_components(result: ReleaseResult) -> list[str]:
+    """Components + computed series tagged `white_collar` — the office-jobs
+    read (Professional & Business Services + Information + Financial
+    Activities). Same shape as the healthcare context: the computed aggregate
+    first, sub-cuts indented below. Each YoY line additionally states whether
+    the YoY pace is accelerating or decelerating vs the prior month (JP ask
+    2026-06-30 — level AND direction of change of the growth rate)."""
+    lines = []
+    for c in result.computed:
+        if "white_collar" not in c.tags or c.transformed.value is None:
+            continue
+        basis = basis_label(c.transformed.transform, c.basis)
+        line = f"{c.label}: {_fmt_transformed(c.transformed, c.display_unit)} {basis}"
+        if c.transformed.transform == "yoy_pct":
+            note = accel_note(
+                c.transformed.value,
+                c.prior_primary.value if c.prior_primary else None,
+            )
+            if note:
+                line += f" — {note}"
+        lines.append(line)
+    for c in result.components:
+        if "white_collar" not in c.tags or c.transformed.value is None:
+            continue
+        basis = basis_label(c.transformed.transform, c.basis)
+        line = (
+            f"  ↳ {c.label}: {_fmt_transformed(c.transformed, c.display_unit)} {basis}"
+        )
+        if c.transformed.transform == "yoy_pct":
+            prior_tv = getattr(c, "prior_transformed", None)
+            note = accel_note(
+                c.transformed.value, prior_tv.value if prior_tv else None
+            )
+            if note:
+                line += f" — {note}"
+        lines.append(line)
+    return lines
+
+
+def _format_definition_lines(result: ReleaseResult) -> list[str]:
+    """Plain-English definitions for any series in this release that declares
+    one (config `definition:`). Rendered as a footnote so terms like U-3 / U-6
+    are never bare abbreviations. Order: headline, computed, components;
+    de-duplicated in case two series share a definition."""
+    lines: list[str] = []
+    seen: set[str] = set()
+    for s in list(result.headline) + list(result.computed) + list(result.components):
+        d = getattr(s, "definition", None)
+        if d and d not in seen:
+            seen.add(d)
+            lines.append(d)
+    return lines
+
+
 def _decision_emoji(decision: PostDecision) -> str:
     return {
         PostDecision.NEW_PERIOD: "🔴",
@@ -331,6 +404,18 @@ def render_release_text(
         lines.append("")
         for hl in hc_lines:
             lines.append(hl)
+
+    wc_lines = _format_white_collar_components(result)
+    if wc_lines:
+        lines.append("")
+        for wl in wc_lines:
+            lines.append(wl)
+
+    def_lines = _format_definition_lines(result)
+    if def_lines:
+        lines.append("")
+        for dl in def_lines:
+            lines.append(f"ℹ️ {dl}")
 
     if agency_pdf_url:
         lines.append(f"📄 {agency_pdf_url}")
@@ -419,6 +504,33 @@ def build_release_blocks(
                     "text": "*Healthcare context*\n"
                     + "\n".join(f"• {hl}" for hl in hc_lines),
                 },
+            }
+        )
+
+    # White-collar employment context (office-jobs proxy, with accel/decel)
+    wc_lines = _format_white_collar_components(result)
+    if wc_lines:
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*White-collar employment*\n"
+                    + "\n".join(f"• {wl}" for wl in wc_lines),
+                },
+            }
+        )
+
+    # Plain-English definitions footnote. NOTE: Slack `context` blocks take
+    # `elements[]` (a `text` field is an invalid_blocks HTTP 400).
+    def_lines = _format_definition_lines(result)
+    if def_lines:
+        blocks.append(
+            {
+                "type": "context",
+                "elements": [
+                    {"type": "mrkdwn", "text": f"ℹ️ {dl}"} for dl in def_lines
+                ],
             }
         )
 

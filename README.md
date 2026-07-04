@@ -16,7 +16,13 @@ Disciplined US macro data feed for `#macro` Slack channel. Posts Tier A
 releases (CPI, payrolls, PCE, GDP, claims, JOLTS, PPI, ECI, FOMC) within
 ~1 hour of agency publication with a 5y chart, threaded long-history
 context, and HC-investor-specific sub-cuts (healthcare employment, medical
-care CPI).
+care CPI). The Employment Situation post carries both the U-3 Unemployment
+Rate (UNRATE) and the broader U-6 Underemployment Rate (U6RATE), with
+plain-English definitions footnoted on every surface (Slack post, archive
+HTML, dashboard card), plus a white-collar employment read — Professional &
+Business Services (USPBS) + Information (USINFO) + Financial Activities
+(USFIRE) payrolls, computed `WC_TOTAL` — shown YoY with an explicit
+accelerating/decelerating tag vs the prior month.
 
 **Spec:** see [`MACRO_MONITOR_PLAN.md`](../MACRO_MONITOR_PLAN.md) in the
 parent directory.

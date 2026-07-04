@@ -20,7 +20,7 @@ _DASHBOARD_URL = "https://jroypeterson.github.io/macro-monitor/dashboard/"
 RELEASE_WINDOWS: dict[str, str] = {
     # Tier A
     "cpi": "monthly · mid-month 8:30 ET · BLS",
-    "payrolls": "monthly · 1st Friday 8:30 ET · BLS (HC employment sub-cuts in thread)",
+    "payrolls": "monthly · 1st Friday 8:30 ET · BLS (U-3 + U-6 unemployment; HC + white-collar sub-cuts in thread)",
     "pce": "monthly · end-month 8:30 ET · BEA",
     "claims": "weekly · Thursday 8:30 ET · DOL",
     "gdp": "quarterly · 8:30 ET · BEA (PCE Health Services quarterly here)",

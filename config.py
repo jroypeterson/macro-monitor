@@ -78,6 +78,11 @@ class SeriesSpec(BaseModel):
     # publishers.slack.basis_label). Set this to override the default, e.g.
     # UNRATE is `raw` but the basis should read "(level)" not just a bare %.
     basis: str | None = None
+    # Optional plain-English definition of WHAT the series measures. Rendered
+    # wherever the series appears (Slack release footnote, archive HTML,
+    # dashboard card) so a reader never has to guess what e.g. U-6 means.
+    # Convention: open with "Full Name (ABBR):" — never a bare abbreviation.
+    definition: str | None = None
 
     @field_validator("primary_transform")
     @classmethod
@@ -125,6 +130,8 @@ class ComputedSeriesSpec(BaseModel):
     display_unit: str | None = None
     # See SeriesSpec.basis — explicit per-metric basis label override.
     basis: str | None = None
+    # See SeriesSpec.definition — plain-English "what is this" footnote.
+    definition: str | None = None
 
     @field_validator("method")
     @classmethod
