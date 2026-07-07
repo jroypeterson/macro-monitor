@@ -125,7 +125,7 @@ def test_yoy_chg_is_signed():
     assert _fmt_transformed(pos, None) == "+0.2"
     assert _fmt_transformed(neg, None) == "-0.3"
     # pp display unit (latent capability for a primary on a rate series)
-    assert _fmt_transformed(TransformedValue(transform="yoy_chg", value=0.2), "pp") == "+0.20pp"
+    assert _fmt_transformed(TransformedValue(transform="yoy_chg", value=0.2), "pp") == "+0.2pp"
 
 
 def test_rate_level_series_carries_change_context():
@@ -137,7 +137,7 @@ def test_rate_level_series_carries_change_context():
         also=[("mom_chg", -0.10), ("yoy_chg", 0.20)],
     )
     line = _format_headline_line(h, h.display_unit)
-    assert line == "Unemployment rate: 4.30% level (-0.10pp MoM, +0.20pp YoY)"
+    assert line == "Unemployment rate: 4.30% level (-0.1pp MoM, +0.2pp YoY)"
 
 
 def test_index_level_series_carries_yoy_and_mom():

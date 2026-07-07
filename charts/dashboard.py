@@ -460,7 +460,7 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
         def _also_str(ad, _rate_level=rate_level) -> str:
             if _rate_level and ad["transform"] in {"mom_chg", "yoy_chg"}:
                 lbl = "m/m" if ad["transform"] == "mom_chg" else "y/y"
-                return f"{ad['value']:+.2f}pp {lbl}"
+                return f"{ad['value']:+.1f}pp {lbl}"
             return f"{_fmt_value(ad['value'], ad['transform'])} {_basis_label(ad['transform'])}"
 
         also = h.get("also_display", [])

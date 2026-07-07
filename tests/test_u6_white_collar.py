@@ -242,16 +242,16 @@ def test_rate_level_headline_change_context_renders_pp():
     # U-6's mom_chg/yoy_chg context must read as percentage points, labelled
     # "pp" — never a bare "-0.2" or a relative %-of-a-%.
     text = render_release_text(_wc_result())
-    assert "Underemployment rate (U-6): 7.80% level (-0.20pp MoM, +0.40pp YoY)" in text
+    assert "Underemployment rate (U-6): 7.80% level (-0.2pp MoM, +0.4pp YoY)" in text
 
 
 def test_prior_line_uses_pp_for_rate_level_series():
     # The PRIOR line for a rate level carries pp deltas as of the prior
-    # period — "(+0.10pp MoM, +0.60pp YoY)" — not "(+3.85% YoY)".
+    # period — "(+0.1pp MoM, +0.6pp YoY)" — not "(+3.85% YoY)".
     text = render_release_text(_wc_result())
     assert (
         "Prior (April 2026): Underemployment rate (U-6) 8.00% level "
-        "(+0.10pp MoM, +0.60pp YoY)"
+        "(+0.1pp MoM, +0.6pp YoY)"
     ) in text
     assert "% YoY)" not in text.split("Prior (April 2026)")[1].split("\n")[0]
 
@@ -337,5 +337,5 @@ def test_dashboard_card_renders_wc_badge_accel_and_definitions():
     assert "vs 3m ago (-1.10%): falling" in card
     # Rate-level headline (U-6): level shows its %, changes show as pp.
     assert "7.80%" in card
-    assert "-0.20pp m/m" in card
-    assert "+0.40pp y/y" in card
+    assert "-0.2pp m/m" in card
+    assert "+0.4pp y/y" in card

@@ -335,7 +335,7 @@ def _render_headline_table(payload: dict) -> str:
                 and ad["value"] is not None
             ):
                 label = "MoM" if ad["transform"] == "mom_chg" else "YoY"
-                return f"{label} {ad['value']:+.2f}pp"
+                return f"{label} {ad['value']:+.1f}pp"
             return f"{ad['transform']} {_fmt_value(ad['value'], ad['transform'])}"
 
         also = " · ".join(_also_str(ad) for ad in h["also_display"])

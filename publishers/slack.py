@@ -124,7 +124,7 @@ def _fmt_transformed(tv, display_unit: str | None = None) -> str:
         if display_unit == "M":
             return f"{sign}{tv.value:,.2f}M"
         if display_unit == "pp":
-            return f"{sign}{tv.value:,.2f}pp"
+            return f"{sign}{tv.value:,.1f}pp"
         return f"{sign}{tv.value:,.1f}"
     # raw — strip unit-aware formatting
     if display_unit == "%":
