@@ -41,6 +41,21 @@ class TransformedValue:
     label: str | None = None
 
 
+def is_rate_level(transform: str, display_unit: str | None) -> bool:
+    """Is this series a rate LEVEL — a series whose observations are already
+    percents (U-3/U-6 unemployment, the quits rate, capacity utilization,
+    a delinquency rate)?
+
+    For these, a *relative* percent change (yoy_pct / mom_pct) is a
+    confusing %-of-a-% ("U-6 +3.85% YoY" when the rate moved 7.8 → 8.1).
+    The meaningful change context is the percentage-point (pp) delta
+    (mom_chg / yoy_chg), labelled "pp" (JP ask 2026-07-04). Renderers use
+    this to pick pp formatting; compute_release uses it to build the
+    prior-period context in pp instead of a relative %.
+    """
+    return transform == "raw" and display_unit == "%"
+
+
 @dataclass
 class HeadlineSeriesResult:
     id: str
@@ -57,8 +72,13 @@ class HeadlineSeriesResult:
     # line is self-dating and always carries a year-over-year read even when
     # the headline transform isn't itself YoY. `prior_yoy` is None when the
     # primary transform already IS yoy_pct (prior_primary already shows it).
+    # For rate-LEVEL series (is_rate_level: U-3, U-6, quits rate…) the
+    # relative % would be a %-of-a-%, so prior_yoy carries a `yoy_chg` pp
+    # delta instead and `prior_mom` additionally carries the `mom_chg` pp
+    # delta (JP ask 2026-07-04). prior_mom stays None for non-rate series.
     prior_period_label: str | None = None
     prior_yoy: TransformedValue | None = None
+    prior_mom: TransformedValue | None = None
     # ISO date the prior value was first released (ALFRED initial release); None
     # when the series has no vintage history or the lookup is unavailable.
     prior_release_date: str | None = None
@@ -80,6 +100,10 @@ class ComponentSeriesResult:
     # whether a YoY cut is accelerating or decelerating (white-collar ask,
     # JP 2026-06-30) without re-fetching.
     prior_transformed: TransformedValue | None = None
+    # The same primary_transform three observations prior (= 3 months ago on
+    # a monthly series). The accel/decel read shows BOTH comparisons — vs
+    # prior month AND vs 3 months ago (JP ask 2026-07-04).
+    prior_3m_transformed: TransformedValue | None = None
 
 
 @dataclass
@@ -98,6 +122,9 @@ class ComputedSeriesResult:
     display_unit: str | None = None
     basis: str | None = None
     definition: str | None = None
+    # The same primary_transform 3 months prior — the second leg of the
+    # accel/decel read (vs prior month AND vs 3 months ago, JP 2026-07-04).
+    prior_3m_primary: TransformedValue | None = None
 
 
 @dataclass
@@ -326,6 +353,7 @@ def compute_release(
         prior_period = _prior_idx.max() if len(_prior_idx) else None
         prior_primary: TransformedValue | None = None
         prior_yoy: TransformedValue | None = None
+        prior_mom: TransformedValue | None = None
         prior_period_lbl: str | None = None
         prior_release: str | None = None
         if prior_period is not None:
@@ -334,10 +362,20 @@ def compute_release(
                 value=apply_transform(s.primary_transform, series, prior_period),
             )
             prior_period_lbl = period_label(prior_period, family.cadence)
-            # Always surface the prior period's YoY for context (JP ask
+            # Always surface the prior period's change context (JP ask
             # 2026-06-19) unless the headline is already a YoY (then
             # prior_primary already carries it, so don't duplicate).
-            if s.primary_transform != "yoy_pct":
+            if is_rate_level(s.primary_transform, s.display_unit):
+                # Rate LEVEL (U-3, U-6, quits rate…): a relative % change of
+                # a percent is a %-of-a-%. Carry percentage-point deltas
+                # instead — MoM + YoY pp changes (JP ask 2026-07-04).
+                _mv = apply_transform("mom_chg", series, prior_period)
+                if _mv is not None:
+                    prior_mom = TransformedValue(transform="mom_chg", value=_mv)
+                _yv = apply_transform("yoy_chg", series, prior_period)
+                if _yv is not None:
+                    prior_yoy = TransformedValue(transform="yoy_chg", value=_yv)
+            elif s.primary_transform != "yoy_pct":
                 _yv = apply_transform("yoy_pct", series, prior_period)
                 if _yv is not None:
                     prior_yoy = TransformedValue(transform="yoy_pct", value=_yv)
@@ -363,6 +401,7 @@ def compute_release(
                 basis=s.basis,
                 prior_period_label=prior_period_lbl,
                 prior_yoy=prior_yoy,
+                prior_mom=prior_mom,
                 prior_release_date=prior_release,
                 definition=s.definition,
             )
@@ -378,13 +417,21 @@ def compute_release(
         )
         # Prior observation in the same transform (cadence-agnostic, same
         # lookup as headline priors) — powers accel/decel context on cuts.
-        _prior_idx = series.index[series.index < target_period]
-        _prior_period = _prior_idx.max() if len(_prior_idx) else None
+        # prior_3m = three observations back (3 months on a monthly series):
+        # the second leg of the accel/decel read (JP ask 2026-07-04).
+        _prior_idx = series.index[series.index < target_period].sort_values()
+        _prior_period = _prior_idx[-1] if len(_prior_idx) else None
         prior_tv: TransformedValue | None = None
         if _prior_period is not None:
             prior_tv = TransformedValue(
                 transform=s.primary_transform,
                 value=apply_transform(s.primary_transform, series, _prior_period),
+            )
+        prior_3m_tv: TransformedValue | None = None
+        if len(_prior_idx) >= 3:
+            prior_3m_tv = TransformedValue(
+                transform=s.primary_transform,
+                value=apply_transform(s.primary_transform, series, _prior_idx[-3]),
             )
         component_results.append(
             ComponentSeriesResult(
@@ -396,6 +443,7 @@ def compute_release(
                 basis=s.basis,
                 definition=s.definition,
                 prior_transformed=prior_tv,
+                prior_3m_transformed=prior_3m_tv,
             )
         )
 
@@ -427,6 +475,14 @@ def compute_release(
                 transform=cs.primary_transform,
                 value=apply_transform(cs.primary_transform, series, prior_period),
             )
+        # 3 months back — second leg of the accel/decel read (JP 2026-07-04).
+        prior_3m_period = target_period - pd.DateOffset(months=3)
+        prior_3m_primary: TransformedValue | None = None
+        if prior_3m_period in series.index:
+            prior_3m_primary = TransformedValue(
+                transform=cs.primary_transform,
+                value=apply_transform(cs.primary_transform, series, prior_3m_period),
+            )
         computed_results.append(
             ComputedSeriesResult(
                 id=cs.id,
@@ -440,6 +496,7 @@ def compute_release(
                 display_unit=cs.display_unit,
                 basis=cs.basis,
                 definition=cs.definition,
+                prior_3m_primary=prior_3m_primary,
             )
         )
 

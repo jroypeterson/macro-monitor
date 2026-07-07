@@ -22,7 +22,10 @@ plain-English definitions footnoted on every surface (Slack post, archive
 HTML, dashboard card), plus a white-collar employment read — Professional &
 Business Services (USPBS) + Information (USINFO) + Financial Activities
 (USFIRE) payrolls, computed `WC_TOTAL` — shown YoY with an explicit
-accelerating/decelerating tag vs the prior month.
+accelerating/decelerating tag on two horizons: vs the prior month AND vs
+3 months ago. Rate-LEVEL series (U-3, U-6, quits rate, capacity
+utilization, delinquency rates) show their change context as
+percentage-point ("pp") deltas, never a relative %-of-a-%.
 
 **Spec:** see [`MACRO_MONITOR_PLAN.md`](../MACRO_MONITOR_PLAN.md) in the
 parent directory.

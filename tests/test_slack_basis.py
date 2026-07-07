@@ -129,14 +129,15 @@ def test_yoy_chg_is_signed():
 
 
 def test_rate_level_series_carries_change_context():
-    # Unemployment rate is a level; it now reads with pp-change context in
-    # parens instead of a bare "4.30% level".
+    # Unemployment rate is a level; its change context reads as percentage
+    # points with an explicit "pp" suffix (JP 2026-07-04) — never a bare
+    # "-0.1" or a relative %-of-a-%.
     h = _headline(
         "Unemployment rate", "raw", 4.30, basis="level", unit="%",
         also=[("mom_chg", -0.10), ("yoy_chg", 0.20)],
     )
     line = _format_headline_line(h, h.display_unit)
-    assert line == "Unemployment rate: 4.30% level (-0.1 MoM chg, +0.2 YoY chg)"
+    assert line == "Unemployment rate: 4.30% level (-0.10pp MoM, +0.20pp YoY)"
 
 
 def test_index_level_series_carries_yoy_and_mom():

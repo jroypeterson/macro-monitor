@@ -401,16 +401,35 @@ def _value_with_basis(value: float | None, transform: str) -> str:
     )
 
 
-def _accel_html(cur: float | None, prior: float | None, tol: float = 0.005) -> str:
+def _accel_html(
+    cur: float | None,
+    prior: float | None,
+    prior_3m: float | None = None,
+    tol: float = 0.005,
+) -> str:
     """Small accel/decel marker for a YoY read: is the growth RATE rising or
-    falling vs the prior observation? '' when either value is missing."""
+    falling? The glyph tracks the vs-prior-month comparison (space-constrained
+    card row); the hover title carries BOTH comparisons — vs prior month AND
+    vs 3 months ago (JP ask 2026-07-04). '' when cur/prior are missing."""
     if cur is None or prior is None:
         return ""
-    if cur > prior + tol:
-        return "<span class='accel up' title='YoY pace rising vs prior month'>▲ accel</span>"
-    if cur < prior - tol:
-        return "<span class='accel down' title='YoY pace falling vs prior month'>▼ decel</span>"
-    return "<span class='accel' title='YoY pace unchanged vs prior month'>→ flat</span>"
+
+    def _dir(ref: float) -> str:
+        if cur > ref + tol:
+            return "rising"
+        if cur < ref - tol:
+            return "falling"
+        return "unchanged"
+
+    title = f"YoY pace vs prior month ({prior:+.2f}%): {_dir(prior)}"
+    if prior_3m is not None:
+        title += f"; vs 3m ago ({prior_3m:+.2f}%): {_dir(prior_3m)}"
+    d1 = _dir(prior)
+    if d1 == "rising":
+        return f"<span class='accel up' title='{title}'>▲ accel</span>"
+    if d1 == "falling":
+        return f"<span class='accel down' title='{title}'>▼ decel</span>"
+    return f"<span class='accel' title='{title}'>→ flat</span>"
 
 
 def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
@@ -419,17 +438,35 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
     card_class = "card stale" if (stale or from_cache) else "card"
     period_label = payload.get("period_label", payload.get("period", "?"))
 
-    # Headline rows
+    # Headline rows. Rate-LEVEL series (U-3, U-6, quits rate…) render their
+    # level with its % and their mom_chg/yoy_chg context as percentage-point
+    # ("pp") deltas — never a bare number (JP 2026-07-04). display_unit comes
+    # from the payload (schema 1.2+) with a config fallback for older JSONs.
+    unit_by_id = {s.id: s.display_unit for s in family.headline}
     headline_rows = []
     for h in payload.get("headline", []):
         label = html.escape(h.get("label", h.get("id", "?")))
         primary = h.get("primary", {})
-        value_str = _value_with_basis(primary.get("value"), primary.get("transform", "raw"))
+        transform = primary.get("transform", "raw")
+        unit = h.get("display_unit") or unit_by_id.get(h.get("id"))
+        rate_level = transform == "raw" and unit == "%"
+        value_str = _value_with_basis(primary.get("value"), transform)
+        if rate_level and primary.get("value") is not None:
+            value_str = (
+                f"{_fmt_value(primary.get('value'), transform)}%"
+                f"<span class='basis'>{html.escape(_basis_label(transform))}</span>"
+            )
+
+        def _also_str(ad, _rate_level=rate_level) -> str:
+            if _rate_level and ad["transform"] in {"mom_chg", "yoy_chg"}:
+                lbl = "m/m" if ad["transform"] == "mom_chg" else "y/y"
+                return f"{ad['value']:+.2f}pp {lbl}"
+            return f"{_fmt_value(ad['value'], ad['transform'])} {_basis_label(ad['transform'])}"
+
         also = h.get("also_display", [])
         also_str = (
             " · ".join(
-                f"{_fmt_value(ad['value'], ad['transform'])} {_basis_label(ad['transform'])}"
-                for ad in also if ad.get("value") is not None
+                _also_str(ad) for ad in also if ad.get("value") is not None
             )
         )
         also_html = f"<span class='also'>{html.escape(also_str)}</span>" if also_str else ""
@@ -451,8 +488,11 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
             if tag in (c.get("tags") or []):
                 tv = c.get("transformed") or {}
                 prior = c.get("prior_primary") or {}
+                prior_3m = c.get("prior_3m_primary") or {}
                 accel = (
-                    _accel_html(tv.get("value"), prior.get("value"))
+                    _accel_html(
+                        tv.get("value"), prior.get("value"), prior_3m.get("value")
+                    )
                     if tv.get("transform") == "yoy_pct"
                     else ""
                 )
@@ -466,8 +506,11 @@ def _render_card(family_id: str, family: FamilyConfig, payload: dict) -> str:
         for c in payload.get("components", []) or []:
             if tag in (c.get("tags") or []):
                 prior = c.get("prior") or {}
+                prior_3m = c.get("prior_3m") or {}
                 accel = (
-                    _accel_html(c.get("value"), prior.get("value"))
+                    _accel_html(
+                        c.get("value"), prior.get("value"), prior_3m.get("value")
+                    )
                     if c.get("transform") == "yoy_pct"
                     else ""
                 )

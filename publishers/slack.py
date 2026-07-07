@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..posts_ledger import PostDecision
-from ..release_runner import ReleaseResult
+from ..release_runner import ReleaseResult, is_rate_level
 
 
 # ---------------------------------------------------------------------------
@@ -179,14 +179,23 @@ def _format_headline_line(h, display_unit: str | None = None) -> str:
     `Nonfarm payrolls: +172K (+0.32% YoY)` reads the +172K as a MoM change
     and the YoY in the parens, `Unemployment rate: 4.30% (level)` reads the
     rate as a level, not a change.
+
+    Rate-LEVEL series (U-3, U-6, quits rate…): the mom_chg/yoy_chg context
+    values are percentage-point moves of a percent — they render with an
+    explicit "pp" suffix ("-0.10pp MoM"), never a bare number (JP 2026-07-04).
     """
     primary_str = _fmt_transformed(h.primary, display_unit)
     basis = basis_label(h.primary.transform, getattr(h, "basis", None))
     primary_with_basis = f"{primary_str} {basis}"
+    rate_level = is_rate_level(h.primary.transform, display_unit)
     also_parts = []
     for ad in h.also_display:
-        label = basis_label(ad.transform)
-        also_parts.append(f"{_fmt_transformed(ad, None)} {label}")
+        if rate_level and ad.transform in {"mom_chg", "yoy_chg"}:
+            label = "MoM" if ad.transform == "mom_chg" else "YoY"
+            also_parts.append(f"{_fmt_transformed(ad, 'pp')} {label}")
+        else:
+            label = basis_label(ad.transform)
+            also_parts.append(f"{_fmt_transformed(ad, None)} {label}")
     suffix = f" ({', '.join(also_parts)})" if also_parts else ""
     return f"{h.label}: {primary_with_basis}{suffix}"
 
@@ -204,10 +213,14 @@ def _fmt_release_date(iso: str) -> str:
 
 def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | None]) -> str | None:
     """Prior-period line. Self-dating (states the period the prior covered AND
-    when it was originally released) and carries the prior period's YoY even
-    when the headline transform isn't YoY, so a reader always sees the prior in
-    both the headline basis and YoY terms (JP ask 2026-06-19). Shape:
-    `Prior (April 2026, released May 14): <label> +0.40% MoM (+5.20% YoY)`."""
+    when it was originally released) and carries the prior period's change
+    context, so a reader always sees the prior in both the headline basis and
+    change terms (JP ask 2026-06-19). Shape:
+    `Prior (April 2026, released May 14): <label> +0.40% MoM (+5.20% YoY)`.
+
+    Rate-LEVEL series carry percentage-point deltas instead of a relative
+    %-of-a-% — `U-6 8.10% level (-0.20pp MoM, +0.40pp YoY)` (JP 2026-07-04);
+    compute_release stores those as mom_chg/yoy_chg in prior_mom/prior_yoy."""
     prior_parts = []
     for h in result.headline:
         if h.prior_primary is None or h.prior_primary.value is None:
@@ -215,9 +228,18 @@ def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | No
         unit = headline_units.get(h.id)
         basis = basis_label(h.prior_primary.transform, getattr(h, "basis", None))
         part = f"{h.label} {_fmt_transformed(h.prior_primary, unit)} {basis}"
+        ctx_parts = []
+        prior_mom = getattr(h, "prior_mom", None)
+        if prior_mom is not None and prior_mom.value is not None:
+            ctx_parts.append(f"{_fmt_transformed(prior_mom, 'pp')} MoM")
         prior_yoy = getattr(h, "prior_yoy", None)
         if prior_yoy is not None and prior_yoy.value is not None:
-            part += f" ({_fmt_transformed(prior_yoy, None)} YoY)"
+            if prior_yoy.transform == "yoy_chg":  # pp delta on a rate level
+                ctx_parts.append(f"{_fmt_transformed(prior_yoy, 'pp')} YoY")
+            else:
+                ctx_parts.append(f"{_fmt_transformed(prior_yoy, None)} YoY")
+        if ctx_parts:
+            part += f" ({', '.join(ctx_parts)})"
         prior_parts.append(part)
     if not prior_parts:
         return None
@@ -282,22 +304,39 @@ def _format_healthcare_components(result: ReleaseResult) -> list[str]:
 
 
 def accel_note(
-    current: float | None, prior: float | None, tol: float = 0.005
+    current: float | None,
+    prior: float | None,
+    prior_3m: float | None = None,
+    tol: float = 0.005,
 ) -> str | None:
-    """Is a YoY read accelerating or decelerating vs the prior observation?
+    """Is a YoY read accelerating or decelerating — vs the prior month AND
+    vs 3 months ago (both comparisons, JP ask 2026-07-04)?
 
-    Returns e.g. "accelerating (prior +0.40% YoY)" / "decelerating (prior
-    +0.80% YoY)" / "unchanged vs prior", or None when either value is missing.
+    Returns e.g. "accelerating vs prior month (-0.48%), accelerating vs 3m
+    ago (-0.61%)" — the parenthesized value is that comparison period's YoY.
+    A missing comparison is dropped; None when no comparison is possible.
     `tol` absorbs sub-display-precision noise (values print to 2dp)."""
-    if current is None or prior is None:
+    if current is None:
         return None
-    sign = "+" if prior >= 0 else ""
-    prior_str = f"{sign}{prior:.2f}% YoY"
-    if current > prior + tol:
-        return f"accelerating (prior {prior_str})"
-    if current < prior - tol:
-        return f"decelerating (prior {prior_str})"
-    return "unchanged vs prior"
+
+    def _phrase(ref: float | None, name: str) -> str | None:
+        if ref is None:
+            return None
+        if current > ref + tol:
+            word = "accelerating"
+        elif current < ref - tol:
+            word = "decelerating"
+        else:
+            word = "unchanged"
+        sign = "+" if ref >= 0 else ""
+        return f"{word} vs {name} ({sign}{ref:.2f}%)"
+
+    parts = [
+        p
+        for p in (_phrase(prior, "prior month"), _phrase(prior_3m, "3m ago"))
+        if p
+    ]
+    return ", ".join(parts) if parts else None
 
 
 def _format_white_collar_components(result: ReleaseResult) -> list[str]:
@@ -305,8 +344,9 @@ def _format_white_collar_components(result: ReleaseResult) -> list[str]:
     read (Professional & Business Services + Information + Financial
     Activities). Same shape as the healthcare context: the computed aggregate
     first, sub-cuts indented below. Each YoY line additionally states whether
-    the YoY pace is accelerating or decelerating vs the prior month (JP ask
-    2026-06-30 — level AND direction of change of the growth rate)."""
+    the YoY pace is accelerating or decelerating vs the prior month AND vs
+    3 months ago (JP asks 2026-06-30 + 2026-07-04 — level AND direction of
+    change of the growth rate, on two horizons)."""
     lines = []
     for c in result.computed:
         if "white_collar" not in c.tags or c.transformed.value is None:
@@ -314,9 +354,11 @@ def _format_white_collar_components(result: ReleaseResult) -> list[str]:
         basis = basis_label(c.transformed.transform, c.basis)
         line = f"{c.label}: {_fmt_transformed(c.transformed, c.display_unit)} {basis}"
         if c.transformed.transform == "yoy_pct":
+            prior_3m = getattr(c, "prior_3m_primary", None)
             note = accel_note(
                 c.transformed.value,
                 c.prior_primary.value if c.prior_primary else None,
+                prior_3m.value if prior_3m else None,
             )
             if note:
                 line += f" — {note}"
@@ -330,8 +372,11 @@ def _format_white_collar_components(result: ReleaseResult) -> list[str]:
         )
         if c.transformed.transform == "yoy_pct":
             prior_tv = getattr(c, "prior_transformed", None)
+            prior_3m_tv = getattr(c, "prior_3m_transformed", None)
             note = accel_note(
-                c.transformed.value, prior_tv.value if prior_tv else None
+                c.transformed.value,
+                prior_tv.value if prior_tv else None,
+                prior_3m_tv.value if prior_3m_tv else None,
             )
             if note:
                 line += f" — {note}"

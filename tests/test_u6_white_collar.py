@@ -8,7 +8,12 @@ Three adds to the Employment Situation family, locked here:
      archive HTML report, and the dashboard card.
   3. White-collar employment = USPBS + USINFO + USFIRE (CES supersectors),
      each cut + the computed sum shown as YoY % with an explicit
-     accelerating / decelerating read vs the prior month.
+     accelerating / decelerating read on two horizons — vs the prior month
+     AND vs 3 months ago (JP ask 2026-07-04).
+
+Also locks the rate-level pp convention (JP ask 2026-07-04): series whose
+level IS a percent (U-3, U-6…) render change context as percentage-point
+("pp") deltas, never a relative %-of-a-%.
 """
 
 from __future__ import annotations
@@ -96,12 +101,31 @@ def test_white_collar_chart_declared():
 # --- accel/decel helpers ---------------------------------------------------
 
 def test_accel_note_directions():
-    assert accel_note(1.50, 1.20) == "accelerating (prior +1.20% YoY)"
-    assert accel_note(0.80, 1.20) == "decelerating (prior +1.20% YoY)"
-    assert accel_note(-1.00, -1.40) == "accelerating (prior -1.40% YoY)"
-    assert accel_note(1.20, 1.20) == "unchanged vs prior"
+    assert accel_note(1.50, 1.20) == "accelerating vs prior month (+1.20%)"
+    assert accel_note(0.80, 1.20) == "decelerating vs prior month (+1.20%)"
+    assert accel_note(-1.00, -1.40) == "accelerating vs prior month (-1.40%)"
+    assert accel_note(1.20, 1.20) == "unchanged vs prior month (+1.20%)"
     assert accel_note(None, 1.0) is None
     assert accel_note(1.0, None) is None
+
+
+def test_accel_note_carries_both_comparisons():
+    # BOTH horizons (JP ask 2026-07-04): vs prior month AND vs 3 months ago.
+    assert accel_note(-0.29, -0.48, -0.61) == (
+        "accelerating vs prior month (-0.48%), accelerating vs 3m ago (-0.61%)"
+    )
+    # Horizons may disagree — each gets its own word.
+    assert accel_note(1.00, 0.80, 1.40) == (
+        "accelerating vs prior month (+0.80%), decelerating vs 3m ago (+1.40%)"
+    )
+    # Missing 3m leg degrades to the prior-month comparison only.
+    assert accel_note(1.00, 0.80, None) == "accelerating vs prior month (+0.80%)"
+    # Missing prior-month leg still renders the 3m comparison.
+    assert accel_note(1.00, None, 1.40) == "decelerating vs 3m ago (+1.40%)"
+    # 0.005pp tolerance still absorbs sub-display-precision noise.
+    assert accel_note(1.204, 1.20, 1.20) == (
+        "unchanged vs prior month (+1.20%), unchanged vs 3m ago (+1.20%)"
+    )
 
 
 def test_accel_html_directions():
@@ -109,6 +133,22 @@ def test_accel_html_directions():
     assert "▼" in _accel_html(0.8, 1.2)
     assert "flat" in _accel_html(1.2, 1.2)
     assert _accel_html(None, 1.2) == ""
+
+
+def test_accel_html_title_carries_both_comparisons():
+    # One glyph (vs prior month drives it); hover title carries BOTH reads.
+    tag = _accel_html(-0.29, -0.48, -0.61)
+    assert "▲ accel" in tag
+    assert "vs prior month (-0.48%): rising" in tag
+    assert "vs 3m ago (-0.61%): rising" in tag
+    # Disagreeing horizons: glyph still tracks prior month, title shows both.
+    tag = _accel_html(1.00, 0.80, 1.40)
+    assert "▲ accel" in tag
+    assert "vs prior month (+0.80%): rising" in tag
+    assert "vs 3m ago (+1.40%): falling" in tag
+    # No 3m data → title only mentions the prior-month comparison.
+    tag = _accel_html(1.00, 0.80)
+    assert "3m ago" not in tag
 
 
 # --- Slack rendering -------------------------------------------------------
@@ -121,6 +161,7 @@ def _wc_result():
         transformed=TransformedValue(transform="yoy_pct", value=0.55),
         also_display=[],
         prior_primary=TransformedValue(transform="yoy_pct", value=0.62),
+        prior_3m_primary=TransformedValue(transform="yoy_pct", value=0.71),
         tags=["white_collar"],
         definition=(
             "White-Collar Employment (WC_TOTAL, computed): sum of USPBS + "
@@ -132,6 +173,7 @@ def _wc_result():
         transformed=TransformedValue(transform="yoy_pct", value=-1.20),
         tags=["white_collar"],
         prior_transformed=TransformedValue(transform="yoy_pct", value=-1.50),
+        prior_3m_transformed=TransformedValue(transform="yoy_pct", value=-1.10),
     )
     u3 = HeadlineSeriesResult(
         id="UNRATE", label="Unemployment rate (U-3)",
@@ -143,8 +185,15 @@ def _wc_result():
     u6 = HeadlineSeriesResult(
         id="U6RATE", label="Underemployment rate (U-6)",
         primary=TransformedValue(transform="raw", value=7.80),
-        also_display=[], prior_primary=None,
+        also_display=[
+            TransformedValue(transform="mom_chg", value=-0.20),
+            TransformedValue(transform="yoy_chg", value=0.40),
+        ],
+        prior_primary=TransformedValue(transform="raw", value=8.00),
         display_unit="%", basis="level",
+        prior_period_label="April 2026",
+        prior_mom=TransformedValue(transform="mom_chg", value=0.10),
+        prior_yoy=TransformedValue(transform="yoy_chg", value=0.60),
         definition="U-6 Underemployment Rate (U6RATE): the broadest measure.",
     )
     return ReleaseResult(
@@ -157,15 +206,18 @@ def _wc_result():
     )
 
 
-def test_white_collar_lines_carry_yoy_and_accel_read():
+def test_white_collar_lines_carry_yoy_and_both_accel_reads():
     lines = _format_white_collar_components(_wc_result())
     assert lines[0] == (
         "White-collar employment (Prof & Business + Info + Financial): "
-        "+0.55% YoY — decelerating (prior +0.62% YoY)"
+        "+0.55% YoY — decelerating vs prior month (+0.62%), "
+        "decelerating vs 3m ago (+0.71%)"
     )
-    # Less-negative YoY = the growth rate is RISING = accelerating.
+    # Less-negative YoY = the growth rate is RISING = accelerating (vs prior
+    # month); vs 3 months ago it's more negative = decelerating. Both shown.
     assert lines[1] == (
-        "  ↳ Information: -1.20% YoY — accelerating (prior -1.50% YoY)"
+        "  ↳ Information: -1.20% YoY — accelerating vs prior month (-1.50%), "
+        "decelerating vs 3m ago (-1.10%)"
     )
 
 
@@ -180,8 +232,38 @@ def test_definition_lines_ordered_and_deduped():
 def test_release_text_carries_wc_section_and_definitions():
     text = render_release_text(_wc_result())
     assert "Underemployment rate (U-6): 7.80% level" in text
-    assert "decelerating (prior +0.62% YoY)" in text
+    assert "decelerating vs prior month (+0.62%)" in text
     assert "ℹ️ U-6 Underemployment Rate (U6RATE):" in text
+
+
+# --- rate-level pp convention (JP ask 2026-07-04) --------------------------
+
+def test_rate_level_headline_change_context_renders_pp():
+    # U-6's mom_chg/yoy_chg context must read as percentage points, labelled
+    # "pp" — never a bare "-0.2" or a relative %-of-a-%.
+    text = render_release_text(_wc_result())
+    assert "Underemployment rate (U-6): 7.80% level (-0.20pp MoM, +0.40pp YoY)" in text
+
+
+def test_prior_line_uses_pp_for_rate_level_series():
+    # The PRIOR line for a rate level carries pp deltas as of the prior
+    # period — "(+0.10pp MoM, +0.60pp YoY)" — not "(+3.85% YoY)".
+    text = render_release_text(_wc_result())
+    assert (
+        "Prior (April 2026): Underemployment rate (U-6) 8.00% level "
+        "(+0.10pp MoM, +0.60pp YoY)"
+    ) in text
+    assert "% YoY)" not in text.split("Prior (April 2026)")[1].split("\n")[0]
+
+
+def test_is_rate_level_detection():
+    from macro_monitor.release_runner import is_rate_level
+
+    assert is_rate_level("raw", "%")            # U-3 / U-6 / quits rate / TCU
+    assert not is_rate_level("raw", None)       # index level (UMich, JTSJOL)
+    assert not is_rate_level("raw", "K")        # count level
+    assert not is_rate_level("yoy_pct", "%")    # already a relative change
+    assert not is_rate_level("mom_chg", "%")
 
 
 def test_blocks_definitions_use_context_elements():
@@ -207,13 +289,16 @@ def test_serialization_carries_definitions_prior_and_computed():
     r = _wc_result()
     h = _serialize_headline(r.headline[1])
     assert h["definition"].startswith("U-6 Underemployment Rate")
+    assert h["display_unit"] == "%"  # lets the dashboard spot rate levels
 
     c = _serialize_component(r.components[0])
     assert c["prior"] == {"transform": "yoy_pct", "value": -1.50}
+    assert c["prior_3m"] == {"transform": "yoy_pct", "value": -1.10}
 
     cmp_ = _serialize_computed(r.computed[0])
     assert cmp_["transformed"]["value"] == 0.55
     assert cmp_["prior_primary"]["value"] == 0.62
+    assert cmp_["prior_3m_primary"]["value"] == 0.71
     assert cmp_["tags"] == ["white_collar"]
     assert cmp_["definition"].startswith("White-Collar Employment")
 
@@ -245,3 +330,12 @@ def test_dashboard_card_renders_wc_badge_accel_and_definitions():
     assert "▼ decel" in card                  # +0.55 vs prior +0.62
     assert "▲ accel" in card                  # Information -1.20 vs -1.50
     assert "U-6 Underemployment Rate (U6RATE)" in card
+    # Hover titles carry BOTH accel comparisons (prior month + 3m ago).
+    assert "vs prior month (+0.62%): falling" in card
+    assert "vs 3m ago (+0.71%): falling" in card
+    assert "vs prior month (-1.50%): rising" in card
+    assert "vs 3m ago (-1.10%): falling" in card
+    # Rate-level headline (U-6): level shows its %, changes show as pp.
+    assert "7.80%" in card
+    assert "-0.20pp m/m" in card
+    assert "+0.40pp y/y" in card

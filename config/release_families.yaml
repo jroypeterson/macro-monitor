@@ -300,7 +300,8 @@ families:
           Professional & Business Services (USPBS) + Information (USINFO) +
           Financial Activities (USFIRE) payroll supersectors — a proxy for
           office/knowledge-worker jobs, shown as YoY % change plus whether
-          that growth rate is accelerating or decelerating vs the prior month.
+          that growth rate is accelerating or decelerating vs the prior
+          month and vs 3 months ago.
 
     # === Trend / z-score config ===
     context:
@@ -1423,17 +1424,21 @@ families:
         label: "Credit card delinquency rate"
         primary_transform: raw          # already a percent, stationary
         also_display: [yoy_chg]         # pp change vs a year ago
+        display_unit: "%"               # rate LEVEL → changes render as pp
 
     components:
       - id: DRCLACBS
         label: "Consumer loan delinquency rate"
         primary_transform: raw
+        display_unit: "%"
       - id: DRSFRMACBS
         label: "Single-family mortgage delinquency rate"
         primary_transform: raw
+        display_unit: "%"
       - id: DRALACBS
         label: "All-loan delinquency rate"
         primary_transform: raw
+        display_unit: "%"
 
     context:
       anchor_series: DRCCLACBS

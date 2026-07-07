@@ -22,7 +22,11 @@ from .release_runner import ReleaseResult
 # rendered), + `definition` on headline/components/computed, + `prior` on
 # components (accel/decel context). Existing consumers (focus_today reads
 # headline[0].primary/prior_primary) are unaffected.
-SCHEMA_VERSION = "1.1"
+# 1.2 (2026-07-06, additive): + `display_unit` on headline (lets renderers
+# spot rate-level series and format their changes as percentage-point "pp"
+# deltas), + `prior_3m` on components and `prior_3m_primary` on computed
+# (second leg of the accel/decel read — vs prior month AND vs 3 months ago).
+SCHEMA_VERSION = "1.2"
 
 
 def outputs_root() -> Path:
@@ -147,12 +151,14 @@ def _serialize_headline(h) -> dict:
             if h.prior_primary
             else None
         ),
+        "display_unit": getattr(h, "display_unit", None),
         "definition": getattr(h, "definition", None),
     }
 
 
 def _serialize_component(c) -> dict:
     prior = getattr(c, "prior_transformed", None)
+    prior_3m = getattr(c, "prior_3m_transformed", None)
     return {
         "id": c.id,
         "label": c.label,
@@ -160,6 +166,11 @@ def _serialize_component(c) -> dict:
         "value": c.transformed.value,
         "prior": (
             {"transform": prior.transform, "value": prior.value} if prior else None
+        ),
+        "prior_3m": (
+            {"transform": prior_3m.transform, "value": prior_3m.value}
+            if prior_3m
+            else None
         ),
         "tags": c.tags,
         "definition": getattr(c, "definition", None),
@@ -185,6 +196,14 @@ def _serialize_computed(c) -> dict:
                 "value": c.prior_primary.value,
             }
             if c.prior_primary
+            else None
+        ),
+        "prior_3m_primary": (
+            {
+                "transform": c.prior_3m_primary.transform,
+                "value": c.prior_3m_primary.value,
+            }
+            if getattr(c, "prior_3m_primary", None)
             else None
         ),
         "tags": c.tags,
@@ -285,8 +304,8 @@ def _fmt_value(value: float | None, transform: str) -> str:
         return "—"
     if transform in {"yoy_pct", "mom_pct", "annualized_mom", "qoq_pct_saar"}:
         return f"{value:.2f}%"
-    if transform == "mom_chg":
-        # Levels — payrolls in thousands, etc. Caller's label clarifies units.
+    if transform in {"mom_chg", "yoy_chg"}:
+        # Level changes — payrolls in thousands, etc. Caller's label clarifies units.
         return f"{value:+,.1f}"
     if transform == "raw":
         return f"{value:.2f}"
@@ -294,18 +313,38 @@ def _fmt_value(value: float | None, transform: str) -> str:
 
 
 def _render_headline_table(payload: dict) -> str:
+    from .release_runner import is_rate_level
+
     rows = []
     for h in payload["headline"]:
         primary = h["primary"]
-        primary_str = _fmt_value(primary["value"], primary["transform"])
-        also = " · ".join(
-            f"{ad['transform']} {_fmt_value(ad['value'], ad['transform'])}"
-            for ad in h["also_display"]
+        # Rate-LEVEL series (U-3, U-6…): level renders with its %, and the
+        # mom_chg/yoy_chg context renders as percentage points ("pp") —
+        # never a bare number or a relative %-of-a-% (JP 2026-07-04).
+        rate_level = is_rate_level(
+            primary.get("transform", "raw"), h.get("display_unit")
         )
+        primary_str = _fmt_value(primary["value"], primary["transform"])
+        if rate_level and primary["value"] is not None:
+            primary_str += "%"
+
+        def _also_str(ad, _rate_level=rate_level) -> str:
+            if (
+                _rate_level
+                and ad["transform"] in {"mom_chg", "yoy_chg"}
+                and ad["value"] is not None
+            ):
+                label = "MoM" if ad["transform"] == "mom_chg" else "YoY"
+                return f"{label} {ad['value']:+.2f}pp"
+            return f"{ad['transform']} {_fmt_value(ad['value'], ad['transform'])}"
+
+        also = " · ".join(_also_str(ad) for ad in h["also_display"])
         prior = h.get("prior_primary")
         prior_str = (
             _fmt_value(prior["value"], prior["transform"]) if prior else "—"
         )
+        if rate_level and prior and prior.get("value") is not None:
+            prior_str += "%"
         rows.append(
             f"<tr><td><strong>{html.escape(h['label'])}</strong> "
             f"<small style='color:#888'>({html.escape(h['id'])})</small></td>"
