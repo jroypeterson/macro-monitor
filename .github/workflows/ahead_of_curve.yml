@@ -46,9 +46,13 @@ jobs:
       - name: Rebuild Ahead-of-the-Curve charts
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          # [ClaudeFin] weekly-rebuild email alert (CONVENTIONS.md "Email alerts").
+          # Non-gating: send failure = a ::warning:: annotation, never a red run.
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
-        run: python -m macro_monitor.cli ahead-of-curve
+        run: python -m macro_monitor.cli ahead-of-curve --email
 
       - name: Commit refreshed charts
         run: |

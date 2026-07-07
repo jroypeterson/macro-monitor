@@ -41,6 +41,34 @@ _OBS_START = "1854-01-01"
 # Suffix "" is the default "both" image the gallery shows first.
 BAND_VARIANTS = {"both": "", "bear": "_bear", "recession": "_rec", "none": "_none"}
 
+# Public URL of the deployed gallery (pages_deploy.yml merges readable/ into the
+# site root, so readable/ahead_of_curve/ -> /ahead_of_curve/).
+GALLERY_URL = "https://jroypeterson.github.io/macro-monitor/ahead_of_curve/"
+
+
+def build_email_alert(rendered: dict[str, Path]) -> tuple[str, str]:
+    """Pure (subject, body) builder for the weekly-rebuild [ClaudeFin] email.
+
+    ``rendered`` is ``build()``'s return value ({figure_id: png_path} plus
+    'index' -> gallery html). Subject is ONLY the ``<what>`` part — the sender
+    prefixes ``[ClaudeFin] macro_monitor — `` per the fleet subject grammar.
+    The body is deliberately short: it points AT the gallery, it isn't the report.
+    """
+    n_figs = sum(1 for k in rendered if k != "index")
+    index_built = "index" in rendered
+    subject = f"Weekly AoC gallery rebuild — {n_figs} figures"
+    lines = [
+        "Ahead-of-the-Curve weekly chart gallery rebuilt (Joseph Ellis chartpack).",
+        "",
+        f"Figures rendered: {n_figs}",
+        f"Gallery index: {'rebuilt' if index_built else 'NOT rebuilt (check the run log)'}",
+        "",
+        f"View: {GALLERY_URL}",
+        "Local: macro_monitor/readable/ahead_of_curve/index.html",
+        "Release-driven AoC figure posts continue to thread in Slack #macro-and-markets.",
+    ]
+    return subject, "\n".join(lines)
+
 # Glossary of the terms used across this chartpack — rendered at the bottom of the
 # page so a reader new to Ellis's lens can decode the charts without leaving it.
 # (term, definition) pairs, kept static; HTML-escape-safe plain text.

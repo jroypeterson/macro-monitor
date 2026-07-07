@@ -611,6 +611,12 @@ def build_parser() -> argparse.ArgumentParser:
         "ahead-of-curve",
         help="Build the Ahead-of-the-Curve charts (FRED) into readable/ahead_of_curve/",
     )
+    sp.add_argument(
+        "--email",
+        action="store_true",
+        help="After the build, send the [ClaudeFin] weekly-rebuild email alert "
+        "(non-gating; used by the weekly ahead_of_curve.yml lane)",
+    )
     sp.set_defaults(func=cmd_ahead_of_curve)
 
     sp = sub.add_parser(
@@ -1442,6 +1448,30 @@ def cmd_ahead_of_curve(args: argparse.Namespace) -> int:
         print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
     if "index" in rendered:
         print(f"\nOpen the gallery: file://{rendered['index'].absolute()}")
+
+    # [ClaudeFin] weekly-rebuild email (CONVENTIONS.md "Email alerts"). Strictly
+    # non-gating: a failed send is a loud warning (stderr + an Actions ::warning::
+    # annotation in CI), NEVER a failed run — the rebuild itself already succeeded.
+    if getattr(args, "email", False):
+        import os
+
+        from .ahead_of_curve.build import build_email_alert
+        from .email_alert_client import send_alert
+
+        subject, body = build_email_alert(rendered)
+        if send_alert("macro_monitor", subject, body):
+            print("Email alert sent.", file=sys.stderr)
+        else:
+            print(
+                "[WARN] ahead-of-curve: [ClaudeFin] email alert failed "
+                "(non-gating; the gallery rebuild itself succeeded)",
+                file=sys.stderr,
+            )
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(
+                    "::warning ::ahead-of-curve: weekly [ClaudeFin] email alert "
+                    "failed (non-gating)"
+                )
     return 0
 
 
