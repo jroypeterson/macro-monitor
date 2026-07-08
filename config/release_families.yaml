@@ -37,11 +37,19 @@ families:
     # and statistically near-useless as a "is this print unusual" signal.
     headline:
       - id: CPIAUCSL
+        definition: >-
+          Consumer Price Index, All Items (CPIAUCSL): the average change in
+          prices urban consumers pay for a full basket of goods and services
+          -- the headline inflation number.
         label: "Headline"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
         basis: "MoM annualized"
       - id: CPILFESL
+        definition: >-
+          Core CPI (CPILFESL): CPI excluding food and energy -- the less-
+          volatile underlying inflation trend, watched more closely than
+          headline for policy signal.
         label: "Core"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
@@ -191,6 +199,10 @@ families:
     # z-score the change directly. UNRATE is already a rate.
     headline:
       - id: PAYEMS
+        definition: >-
+          Nonfarm Payrolls (PAYEMS): total US jobs added or lost in the
+          month across all employers except farms -- the headline jobs
+          number from the BLS Employment Situation.
         label: "Nonfarm payrolls"
         primary_transform: mom_chg     # the "+175K" people read
         also_display: [yoy_pct]
@@ -270,6 +282,11 @@ families:
     # is "true Health Care," so we sum here.
     computed:
       - id: HC_TOTAL
+        definition: >-
+          Health Care Employment (HC_TOTAL, computed): sum of the Ambulatory
+          Care + Hospitals + Nursing & Residential Care payroll series
+          (NAICS 621+622+623) -- total healthcare jobs, a direct
+          staffing/capacity read for provider names.
         label: "Health Care employment (NAICS 621+622+623)"
         method: sum_of
         inputs:
@@ -442,21 +459,37 @@ families:
     # parens so "PCE" can't be misread as price-index vs spending.
     headline:
       - id: PCEC96
+        definition: >-
+          Real Personal Consumption Expenditures (PCEC96): inflation-
+          adjusted consumer spending -- the volume of what households
+          actually bought, the biggest block of GDP.
         label: "Real consumer spending — Real Personal Consumption Expenditures (real PCE)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
         basis: "YoY, inflation-adjusted"
       - id: PCE
+        definition: >-
+          Personal Consumption Expenditures (PCE): consumer spending in
+          current dollars -- nominal outlays, before stripping out
+          inflation.
         label: "Nominal consumer spending — Personal Consumption Expenditures (nominal PCE)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
         basis: "YoY, current dollars"
       - id: PCEPI
+        definition: >-
+          PCE Price Index (PCEPI): the Fed's preferred headline inflation
+          gauge -- broader than CPI and re-weights as spending patterns
+          shift.
         label: "Headline PCE price index — Personal Consumption Expenditures inflation (PCEPI)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
         basis: "MoM annualized"
       - id: PCEPILFE
+        definition: >-
+          Core PCE Price Index (PCEPILFE): PCE inflation excluding food and
+          energy -- the specific number the Fed's 2% inflation target refers
+          to.
         label: "Core PCE price index — ex food & energy (PCEPILFE)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
@@ -577,6 +610,10 @@ families:
     # === Headline ===
     headline:
       - id: ICSA
+        definition: >-
+          Initial Jobless Claims (ICSA): people filing for unemployment
+          insurance for the first time that week -- the fastest-turning
+          labor-market indicator, published weekly.
         label: "Initial claims"
         primary_transform: raw        # already a count; already stationary
         also_display: [yoy_pct_weekly, mom_pct_weekly]   # % context, not a bare count
@@ -653,12 +690,19 @@ families:
     # with what the market quotes).
     headline:
       - id: A191RL1Q225SBEA
+        definition: >-
+          Real GDP Growth (A191RL1Q225SBEA): quarter-over-quarter growth of
+          inflation-adjusted US output, annualized -- the headline economic
+          growth number.
         label: "Real GDP (inflation-adjusted)"
         primary_transform: raw         # the series IS the QoQ SAAR percent
         also_display: []
         display_unit: "%"
         basis: "QoQ SAAR"            # raw default would wrongly read "(level)"
       - id: A191RP1Q027SBEA
+        definition: >-
+          Nominal GDP Growth (A191RP1Q027SBEA): annualized quarterly growth
+          of GDP in current dollars -- real growth plus inflation.
         label: "Nominal GDP (actual $)"
         primary_transform: raw         # official BEA nominal %-change SAAR
         also_display: []
@@ -782,11 +826,20 @@ families:
     # in tight markets. The rate is what's stationary.
     headline:
       - id: JTSJOL
+        definition: >-
+          Job Openings (JTSJOL): total unfilled job openings from the BLS
+          JOLTS survey -- the labor-demand side; openings per unemployed
+          worker is the tightness read.
         label: "Job openings"
         primary_transform: raw
         also_display: [yoy_pct, mom_chg]   # % + level-change context
         basis: "level"
       - id: JTSQUR
+        definition: >-
+          Quits Rate (JTSQUR): the share of workers voluntarily quitting
+          each month, from JOLTS -- workers quit more when confident they
+          can find something better, so a falling quits rate = cooling labor
+          market.
         label: "Quits rate"
         primary_transform: raw
         also_display: [mom_chg, yoy_chg]   # pp change context, not a bare rate
@@ -871,11 +924,18 @@ families:
     # Same inflation pattern as CPI / PCE: display YoY+MoM, anchor on annualized_mom.
     headline:
       - id: PPIFIS
+        definition: >-
+          Producer Price Index, Final Demand (PPIFIS): prices received by
+          domestic producers -- upstream/pipeline inflation that often shows
+          up in consumer prices later.
         label: "Headline (Final Demand)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
         basis: "MoM annualized"
       - id: PPIFES
+        definition: >-
+          Core PPI (PPIFES): producer prices excluding food and energy --
+          the underlying pipeline-inflation trend.
         label: "Core (Final Demand less Food & Energy)"
         primary_transform: annualized_mom
         also_display: [yoy_pct, mom_pct]
@@ -988,6 +1048,10 @@ families:
     # Retail sales is MoM-led in how it's reported; YoY for context.
     headline:
       - id: RSAFS
+        definition: >-
+          Retail Sales (RSAFS): total monthly receipts at retail stores,
+          online sellers, and food services -- the consumer-spending pulse,
+          in nominal dollars (not inflation-adjusted).
         label: "Headline (Retail trade + food services)"
         primary_transform: mom_pct
         also_display: [yoy_pct]
@@ -1060,6 +1124,11 @@ families:
     # NOT the wages+benefits split. Split goes in thread per v5 plan.
     headline:
       - id: ECIALLCIV
+        definition: >-
+          Employment Cost Index (ECIALLCIV): quarterly change in total
+          compensation (wages plus benefits) for civilian workers -- the
+          cleanest wage-inflation measure because it holds the job mix
+          constant.
         label: "Total compensation (All Civilian)"
         primary_transform: yoy_pct
         also_display: [qoq_pct_saar]
@@ -1134,10 +1203,17 @@ families:
 
     headline:
       - id: INDPRO
+        definition: >-
+          Industrial Production (INDPRO): physical output of US factories,
+          mines, and utilities -- the goods-producing side of the economy.
         label: "Industrial Production Index"
         primary_transform: yoy_pct
         also_display: [mom_pct]
       - id: TCU
+        definition: >-
+          Capacity Utilization (TCU): the share of total industrial capacity
+          actually in use -- persistently high utilization signals capex
+          needs and potential inflation pressure.
         label: "Capacity Utilization"
         primary_transform: raw
         also_display: [mom_chg, yoy_chg]   # pp change context, not a bare level
@@ -1192,10 +1268,17 @@ families:
 
     headline:
       - id: HOUST
+        definition: >-
+          Housing Starts (HOUST): new residential construction projects
+          begun in the month, annualized -- new housing supply coming
+          online.
         label: "Housing starts (annualized rate)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
       - id: PERMIT
+        definition: >-
+          Building Permits (PERMIT): permits issued for future residential
+          construction -- the forward-looking companion to housing starts.
         label: "Building permits (annualized rate)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
@@ -1249,6 +1332,10 @@ families:
 
     headline:
       - id: DGORDER
+        definition: >-
+          Durable Goods Orders (DGORDER): new orders for goods built to last
+          3+ years (aircraft, machinery, appliances) -- a business-
+          investment and demand signal; volatile, driven by aircraft orders.
         label: "New orders: durable goods"
         primary_transform: mom_pct
         also_display: [yoy_pct]
@@ -1306,6 +1393,10 @@ families:
 
     headline:
       - id: BOPGSTB
+        definition: >-
+          Trade Balance, Goods & Services (BOPGSTB): US exports minus
+          imports -- negative = trade deficit; swings in the gap feed
+          directly into the GDP arithmetic.
         label: "Trade balance (goods & services, $M)"
         primary_transform: raw
         also_display: [mom_chg, yoy_chg]   # $M level-change context (YoY % of a deficit is meaningless)
@@ -1361,6 +1452,10 @@ families:
 
     headline:
       - id: TOTALSL
+        definition: >-
+          Total Consumer Credit (TOTALSL): outstanding consumer borrowing
+          excluding mortgages (credit cards, auto loans, student loans) --
+          whether households are leveraging up or paying down.
         label: "Total consumer credit"
         primary_transform: yoy_pct
         also_display: [mom_pct]
@@ -1421,6 +1516,10 @@ families:
 
     headline:
       - id: DRCCLACBS
+        definition: >-
+          Credit Card Delinquency Rate (DRCCLACBS): share of bank credit-
+          card balances 30+ days past due -- a direct consumer financial-
+          stress gauge, quarterly.
         label: "Credit card delinquency rate"
         primary_transform: raw          # already a percent, stationary
         also_display: [yoy_chg]         # pp change vs a year ago
@@ -1490,10 +1589,18 @@ families:
 
     headline:
       - id: OPHNFB
+        definition: >-
+          Nonfarm Labor Productivity (OPHNFB): output per hour worked -- how
+          much each hour of labor produces; the long-run driver of real
+          wages and corporate margins.
         label: "Output per hour (nonfarm business)"
         primary_transform: yoy_pct
         also_display: [qoq_pct_saar]
       - id: ULCNFB
+        definition: >-
+          Unit Labor Costs (ULCNFB): labor cost per unit of output, i.e.
+          compensation growth minus productivity growth -- rising unit labor
+          costs squeeze margins or get passed on as inflation.
         label: "Unit labor costs"
         primary_transform: yoy_pct
         also_display: [qoq_pct_saar]
@@ -1548,6 +1655,10 @@ families:
 
     headline:
       - id: UMCSENT
+        definition: >-
+          University of Michigan Consumer Sentiment (UMCSENT): monthly
+          survey of how households feel about their finances and the economy
+          -- soft data, but a leading read on spending willingness.
         label: "Consumer Sentiment Index"
         primary_transform: raw
         also_display: [yoy_pct, mom_chg]   # % + level-change context, not a bare index
@@ -1630,6 +1741,10 @@ families:
     # trend context.
     headline:
       - id: ADPMNUSNERSA
+        definition: >-
+          ADP Private Payrolls (ADPMNUSNERSA): private-sector jobs added per
+          ADP's actual payroll records -- the mid-week preview of the
+          official BLS number; the two often diverge month to month.
         label: "Private payrolls change (ADP)"
         primary_transform: mom_chg
         also_display: [yoy_pct]
@@ -1723,6 +1838,10 @@ families:
     # primary read.
     headline:
       - id: GASREGW
+        definition: >-
+          Regular Gasoline Price (GASREGW): average US pump price per
+          gallon, weekly -- the most visible household cost; moves consumer
+          sentiment and headline CPI.
         label: "US Regular ($/gal)"
         primary_transform: raw
         also_display: [yoy_pct_weekly, mom_pct_weekly]
@@ -1792,12 +1911,19 @@ families:
     # === Headline ===
     headline:
       - id: MORTGAGE30US
+        definition: >-
+          30-Year Fixed Mortgage Rate (MORTGAGE30US): the average rate on
+          the standard US home loan -- the affordability lever for the whole
+          housing market.
         label: "30-year fixed mortgage rate"
         primary_transform: raw
         also_display: [yoy_pct_weekly, mom_pct_weekly]
         basis: "level (%)"
         display_unit: "%"
       - id: MORTGAGE15US
+        definition: >-
+          15-Year Fixed Mortgage Rate (MORTGAGE15US): average rate on the
+          shorter standard loan -- mostly a refinance-demand read.
         label: "15-year fixed mortgage rate"
         primary_transform: raw
         also_display: [yoy_pct_weekly, mom_pct_weekly]
@@ -1866,6 +1992,10 @@ families:
     # === Headline ===
     headline:
       - id: EXHOSLUSM495S
+        definition: >-
+          Existing Home Sales (EXHOSLUSM495S): closed sales of previously-
+          owned homes, annualized -- the bulk of housing turnover; rate- and
+          inventory-sensitive.
         label: "Existing home sales (annualized rate)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
@@ -1930,6 +2060,10 @@ families:
     # === Headline ===
     headline:
       - id: HSN1F
+        definition: >-
+          New Home Sales (HSN1F): signed contracts on newly built single-
+          family homes, annualized -- the homebuilder demand read; leads
+          existing-home sales because it's contract-based.
         label: "New single-family home sales (annualized rate)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
@@ -1995,6 +2129,10 @@ families:
     # === Headline ===
     headline:
       - id: TTLCONS
+        definition: >-
+          Total Construction Spending (TTLCONS): dollar value of all
+          construction put in place -- residential, nonresidential (incl.
+          the data-center/manufacturing buildout), and public works.
         label: "Total construction spending (annualized)"
         primary_transform: yoy_pct
         also_display: [mom_pct]
