@@ -47,7 +47,18 @@ The practitioners with the best *data* are academics who publish it free; the in
 (ECRI, Rosenberg, Empirical Research Partners) guard theirs. French + AQR + Shiller are the free,
 directly-usable backbone for top-down factor/valuation analysis.
 
-## Phase 2 (deferred)
-Parse the raw files into normalized time series + charts: factor-return cumulative/rolling series,
-CAPE vs its history, value-spread (B/M decile) **dispersion** over time, and cross-source panels
-(Shiller CAPE + Damodaran implied ERP). Reuses the `ahead_of_curve` charting approach.
+## Phase 2 (in progress)
+Parse the raw files into normalized time series + reports.
+
+**Built:**
+- **Factor period-return table** (`factor_returns.py`, `cli market-factors`): parses the Ken
+  French monthly 5-factor + momentum CSVs from `data/latest/` and compounds them into a
+  per-period table — latest month / QTD / YTD / trailing-12m / full-year 2025 — written to
+  `readable/market/factor_returns_<YYYYMM>.md` (+ `_latest.md`). Answers "how did each factor
+  do lately." Tests: `tests/test_factor_returns.py`.
+- **Long-history factor + valuation charts** (`build_charts.py`, `cli market-charts`): cumulative
+  factor growth, CAPE vs history, implied ERP, value premium.
+
+**Still deferred:** AQR QMJ/BAB parsed into the return table (Excel; the table is FF-only today),
+value-spread (B/M decile) **dispersion** over time, and cross-source panels (Shiller CAPE +
+Damodaran implied ERP). Reuses the `ahead_of_curve` charting approach.

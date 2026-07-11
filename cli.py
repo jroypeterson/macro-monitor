@@ -652,6 +652,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_market_charts)
 
     sp = sub.add_parser(
+        "market-factors",
+        help="Build the factor period-return table (FF5 + momentum: latest mo / QTD / "
+             "YTD / trailing-12m / 2025) into readable/market/",
+    )
+    sp.set_defaults(func=cmd_market_factors)
+
+    sp = sub.add_parser(
         "growth",
         help="Build the YoY growth charts (real GDP/PCE/IP/capex, S&P 500 EPS, "
              "unemployment + S&P 500 earnings vs corporate profits) into readable/market/",
@@ -1355,6 +1362,15 @@ def cmd_market_charts(args: argparse.Namespace) -> int:
         print(f"  {name}: {path.relative_to(Path(__file__).parent)}")
     idx = path.parent / "index.html"
     print(f"\nOpen the gallery: file://{idx.absolute()}")
+    return 0
+
+
+def cmd_market_factors(args: argparse.Namespace) -> int:
+    """Build the factor period-return table into readable/market/."""
+    from .market.factor_returns import build
+
+    path = build()
+    print(f"Wrote factor-return table: {path.relative_to(Path(__file__).parent)}")
     return 0
 
 
