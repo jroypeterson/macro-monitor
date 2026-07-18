@@ -34,13 +34,13 @@ def test_figures_for_unknown_release_is_empty():
 
 def test_post_for_release_dry_run_lists_without_building(monkeypatch):
     # _build_once must NOT be called on a dry-run.
-    monkeypatch.setattr(post, "_build_once", lambda key: pytest.fail("built on dry-run"))
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: pytest.fail("built on dry-run"))
     ids = post.post_for_release(10, dry_run=True)
     assert ids == ["inflation_vs_rates"]
 
 
 def test_post_for_unknown_release_returns_empty(monkeypatch):
-    monkeypatch.setattr(post, "_build_once", lambda key: pytest.fail("built with no figs"))
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: pytest.fail("built with no figs"))
     assert post.post_for_release(999999) == []
 
 
@@ -71,7 +71,7 @@ class _FakeWebClient:
 def test_post_for_release_uploads_one_threaded_reply(monkeypatch, tmp_path):
     png = tmp_path / "inflation_vs_rates.png"
     png.write_bytes(b"\x89PNG fake")
-    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {"inflation_vs_rates": png})
     monkeypatch.setattr("slack_sdk.WebClient", _FakeWebClient)
 
     pub = _FakePublisher()
@@ -90,10 +90,30 @@ def test_post_for_release_uploads_one_threaded_reply(monkeypatch, tmp_path):
     assert not pub.alerts
 
 
+def test_post_for_release_anchors_rebuild_to_released_family(monkeypatch, tmp_path):
+    # H3: the rebuild's right-edge anchor must be THIS release's headline series
+    # (CPIAUCSL for CPI/release 10), not the default PCE — so the caption's "new
+    # <release> data" point is never cropped off the chart.
+    png = tmp_path / "inflation_vs_rates.png"
+    png.write_bytes(b"\x89PNG fake")
+    captured = {}
+
+    def _fake_build_once(key, anchor_ids=None):
+        captured["anchor_ids"] = anchor_ids
+        return {"inflation_vs_rates": png}
+
+    monkeypatch.setattr(post, "_build_once", _fake_build_once)
+    monkeypatch.setattr("slack_sdk.WebClient", _FakeWebClient)
+
+    posted = post.post_for_release(10, dry_run=False, publisher=_FakePublisher())
+    assert posted == ["inflation_vs_rates"]
+    assert captured["anchor_ids"] == ("CPIAUCSL",)  # NOT ("PCE",)
+
+
 def test_post_for_release_skips_missing_png(monkeypatch):
     # Build produced no png for a figure that WAS mapped to this release ->
     # nothing uploaded, no crash, but an alarm fires (H6: no silent empty).
-    monkeypatch.setattr(post, "_build_once", lambda key: {})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {})
     monkeypatch.setattr("slack_sdk.WebClient", _FakeWebClient)
     _FakeWebClient.last = {}
     pub = _FakePublisher()
@@ -115,7 +135,7 @@ def test_post_for_release_upload_failure_is_nonfatal(monkeypatch, tmp_path):
         def files_upload_v2(self, **kwargs):
             raise SlackApiError("boom", {"error": "upload_failed"})
 
-    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {"inflation_vs_rates": png})
     monkeypatch.setattr("slack_sdk.WebClient", _BoomClient)
     pub = _FakePublisher()
     assert post.post_for_release(10, dry_run=False, publisher=pub) == []
@@ -142,7 +162,7 @@ def test_upload_retries_transient_file_update_failed_then_succeeds(monkeypatch, 
                 raise SlackApiError("boom", {"error": "file_update_failed"})
             return {"ok": True}
 
-    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {"inflation_vs_rates": png})
     monkeypatch.setattr("slack_sdk.WebClient", _FlakyClient)
     monkeypatch.setattr(post.time, "sleep", lambda s: None)  # no real backoff in tests
 
@@ -170,7 +190,7 @@ def test_upload_does_not_retry_permanent_error(monkeypatch, tmp_path):
             calls["n"] += 1
             raise SlackApiError("boom", {"error": "invalid_auth"})
 
-    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {"inflation_vs_rates": png})
     monkeypatch.setattr("slack_sdk.WebClient", _AuthFailClient)
     monkeypatch.setattr(post.time, "sleep", lambda s: pytest.fail("slept on permanent error"))
 
@@ -196,7 +216,7 @@ def test_upload_alerts_after_exhausting_retries(monkeypatch, tmp_path):
             calls["n"] += 1
             raise SlackApiError("boom", {"error": "file_update_failed"})
 
-    monkeypatch.setattr(post, "_build_once", lambda key: {"inflation_vs_rates": png})
+    monkeypatch.setattr(post, "_build_once", lambda key, anchor_ids=None: {"inflation_vs_rates": png})
     monkeypatch.setattr("slack_sdk.WebClient", _AlwaysFlaky)
     monkeypatch.setattr(post.time, "sleep", lambda s: None)
 

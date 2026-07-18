@@ -25,6 +25,38 @@ def _monthly(values, start="2000-01-01"):
     return pd.Series(values, index=idx, dtype=float)
 
 
+def test_resolve_end_release_anchor_keeps_newer_released_point():
+    # H3: PCE's latest obs is May; a fresh Employment (PAYEMS) obs lands in June.
+    # A release-thread rebuild for Employment must anchor the right edge to the
+    # released family so its June point isn't cropped — NOT to PCE's stale May.
+    from macro_monitor.ahead_of_curve.build import _resolve_end
+
+    # Explicit indices so the anchor mismatch is unambiguous.
+    pce = pd.Series(
+        [1.0] * 5, index=pd.date_range("2026-01-01", periods=5, freq="MS"), dtype=float
+    )  # latest = 2026-05-01
+    payems = pd.Series(
+        [1.0] * 6, index=pd.date_range("2026-01-01", periods=6, freq="MS"), dtype=float
+    )  # latest = 2026-06-01 (newer)
+    fetched = {"PCE": pce, "PAYEMS": payems}
+
+    # Gallery build (default PCE anchor) → stable May right edge.
+    assert _resolve_end(fetched, ("PCE",)) == pd.Timestamp("2026-05-01")
+    # Employment release rebuild → June right edge, so the new point shows.
+    assert _resolve_end(fetched, ("PAYEMS",)) == pd.Timestamp("2026-06-01")
+
+
+def test_resolve_end_falls_back_when_anchor_missing():
+    from macro_monitor.ahead_of_curve.build import _resolve_end
+
+    other = pd.Series(
+        [1.0] * 3, index=pd.date_range("2026-01-01", periods=3, freq="MS"), dtype=float
+    )  # latest = 2026-03-01
+    fetched = {"GS10": other}
+    # Anchor series not fetched → newest date across all fetched series.
+    assert _resolve_end(fetched, ("PCE",)) == pd.Timestamp("2026-03-01")
+
+
 def test_yoy_pct_monthly_is_12_month_change():
     # 24 months: a clean +10% step exactly 12 months in.
     s = _monthly([100.0] * 12 + [110.0] * 12)

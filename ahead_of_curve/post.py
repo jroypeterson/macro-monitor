@@ -23,8 +23,10 @@ from .charts import FigureSpec, parse_figures
 from .schedule import RELEASE_NAME, SERIES_RELEASE_ID
 
 # The (expensive — deep FRED + yfinance) build is memoized per process+data-day
-# so a single poll run posting several AoC-relevant releases rebuilds only once.
-_BUILD_CACHE: dict[str, dict[str, Path]] = {}
+# AND per right-edge anchor, so a single poll run posting several AoC-relevant
+# releases rebuilds only once per distinct anchor (each release anchors the right
+# edge to its OWN family — see `post_for_release` / build's `anchor_ids`).
+_BUILD_CACHE: dict[tuple[str, tuple[str, ...]], dict[str, Path]] = {}
 
 # Backoff schedule (seconds) for retrying a transient Slack upload failure.
 # Mirrors scheduled_jobs_monitor's `_urlopen_retry` pattern.
@@ -85,12 +87,13 @@ def figures_for_release(release_id: int) -> list[FigureSpec]:
     ]
 
 
-def _build_once(key: str) -> dict[str, Path]:
-    cached = _BUILD_CACHE.get(key)
+def _build_once(key: str, anchor_ids: tuple[str, ...] = ("PCE",)) -> dict[str, Path]:
+    cache_key = (key, anchor_ids)
+    cached = _BUILD_CACHE.get(cache_key)
     if cached is None:
-        _BUILD_CACHE.clear()  # only ever keep the current day's build
-        cached = build()
-        _BUILD_CACHE[key] = cached
+        _BUILD_CACHE.clear()  # only ever keep the current day's build(s)
+        cached = build(anchor_ids=anchor_ids)
+        _BUILD_CACHE[cache_key] = cached
     return cached
 
 
@@ -124,7 +127,11 @@ def post_for_release(
     from ..publishers.slack import SlackPublisher
 
     pub = publisher or SlackPublisher(dry_run=False)
-    rendered = _build_once(date.today().isoformat())
+    # H3: anchor this rebuild's right edge to the RELEASED family's own headline
+    # series (deduped, priority order preserved) — not PCE — so a newer just-
+    # released point isn't cropped off the chart the caption says it updated.
+    anchor_ids = tuple(dict.fromkeys(f.series[0].fred for f in figs if f.series))
+    rendered = _build_once(date.today().isoformat(), anchor_ids)
 
     uploads, posted = [], []
     for f in figs:

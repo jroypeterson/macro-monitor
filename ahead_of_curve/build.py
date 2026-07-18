@@ -254,8 +254,37 @@ function setAll(cls, on){{
     return out_path
 
 
-def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[str, Path]:
-    """Fetch + render every figure. Returns {figure_id: png_path} plus 'index' -> html."""
+def _resolve_end(fetched: dict[str, pd.Series], anchor_ids: tuple[str, ...]) -> pd.Timestamp:
+    """Right-edge x-limit shared by every chart in a build.
+
+    The gallery build anchors to PCE (the core Ellis reference) for a stable,
+    consistent right edge across figures. A release-thread rebuild instead
+    passes the just-released family's own headline series first, so a newer
+    just-released point (e.g. a fresh Employment obs that post-dates the latest
+    PCE) is never cropped off the very chart whose caption says it was "updated
+    with the new <release> data" (H3). Falls back to the newest date across all
+    fetched series, then to today.
+    """
+    for anchor in anchor_ids:
+        s = fetched.get(anchor)
+        if s is not None and not s.dropna().empty:
+            return s.dropna().index.max()
+    all_idx = [s.dropna().index.max() for s in fetched.values() if not s.dropna().empty]
+    return max(all_idx) if all_idx else pd.Timestamp.today().normalize()
+
+
+def build(
+    client: FREDClient | None = None,
+    out_dir: Path = _OUT_DIR,
+    anchor_ids: tuple[str, ...] = ("PCE",),
+) -> dict[str, Path]:
+    """Fetch + render every figure. Returns {figure_id: png_path} plus 'index' -> html.
+
+    ``anchor_ids`` sets the priority order for the charts' right-edge x-limit
+    (see ``_resolve_end``): the default ``("PCE",)`` is the stable gallery
+    anchor; release-thread rebuilds pass the released family's series so its
+    newest point stays on-chart.
+    """
     figs, source_note = parse_figures(_load_yaml(_FIGURES_YAML))
     bears = parse_bear_markets(_load_yaml(_BEARS_YAML))
 
@@ -277,17 +306,9 @@ def build(client: FREDClient | None = None, out_dir: Path = _OUT_DIR) -> dict[st
             print(f"[WARN] ahead-of-curve: S&P 500 (yfinance) fetch failed: {exc}")
     recessions = recession_ranges(fetched["USREC"]) if "USREC" in fetched else []
 
-    # Anchor the right edge of every chart to the latest available real-PCE point,
-    # falling back to the newest date across all fetched series.
-    end = None
-    for anchor in ("PCE",):
-        s = fetched.get(anchor)
-        if s is not None and not s.dropna().empty:
-            end = s.dropna().index.max()
-            break
-    if end is None:
-        all_idx = [s.dropna().index.max() for s in fetched.values() if not s.dropna().empty]
-        end = max(all_idx) if all_idx else pd.Timestamp.today().normalize()
+    # Anchor the right edge of every chart per ``anchor_ids`` (PCE for the gallery,
+    # the released family for release-thread rebuilds — see ``_resolve_end``).
+    end = _resolve_end(fetched, anchor_ids)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     # Render four band variants per figure so the gallery can toggle overlays on/off
