@@ -73,6 +73,20 @@ def cmd_post_release(args: argparse.Namespace) -> int:
     print(f"  period: {result.period_label} ({result.period})")
     print(f"  stale: {result.is_stale} (latest={result.latest_observation_period}, expected={result.expected_observation_period})")
 
+    # C2: partial FRED ingest → a headline series is missing at target_period
+    # and would render a blank "—". Do NOT post an apparently-fresh release
+    # with a missing headline; skip cleanly and let the next poll retry once
+    # FRED has fully ingested the period. The ledger is untouched, so the
+    # release still posts on a later poll.
+    if result.is_stale:
+        print(
+            f"  SKIP: {family.display_name} target period {result.period_label} "
+            f"is stale/partially ingested (a headline series is missing at "
+            f"{result.period}); not posting a blank headline. Will retry next poll.",
+            file=sys.stderr,
+        )
+        return 0
+
     if family.charts is None:
         print(f"  no charts configured", file=sys.stderr)
         chart_paths: dict[str, Path] = {}

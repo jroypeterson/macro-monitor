@@ -224,6 +224,10 @@ def _serialize_context(ctx) -> dict:
                 "value": t.value,
                 "window_months": t.window_months,
                 "stat": t.stat,
+                # Carry the value's real transform + unit so the archive HTML
+                # formats a jobs-count trend as a count, not a forced % (H4).
+                "transform": getattr(t, "transform", None),
+                "display_unit": getattr(t, "display_unit", None),
             }
             for t in ctx.trends
         ],
@@ -422,10 +426,19 @@ def _render_context_section(payload: dict) -> str:
         return ""
     rows = []
     for t in ctx["trends"]:
+        # Format on the trend's real transform (H4) so a jobs-count mean
+        # (mom_chg) reads as a count, not a forced %. Older payloads without
+        # the field fall back to the prior percent behavior.
+        _t_transform = t.get("transform") or "yoy_pct"
+        _t_val = _fmt_value(t["value"], _t_transform)
+        if t["value"] is not None and _t_transform in {"mom_chg", "yoy_chg"}:
+            _unit = t.get("display_unit")
+            if _unit:
+                _t_val += _unit
         rows.append(
             f"<tr><td>{html.escape(t['label'])}</td>"
             f"<td>{html.escape(t['stat'])}</td>"
-            f"<td class='num'>{_fmt_value(t['value'], 'yoy_pct')}</td></tr>"
+            f"<td class='num'>{_t_val}</td></tr>"
         )
     zscore_str = (
         f"{ctx['zscore']:+.2f}σ" if ctx["zscore"] is not None else "—"

@@ -133,6 +133,12 @@ class TrendValue:
     value: float | None
     window_months: int
     stat: str
+    # What the value IS, so renderers don't force a bogus unit. An
+    # annualized_mom stat is always a percent; a `mean` stat carries the
+    # units of the family's anchor transform (mom_chg on payrolls/ADP = a
+    # jobs count in `display_unit`, NOT a %). See H4.
+    transform: str | None = None
+    display_unit: str | None = None
 
 
 @dataclass
@@ -310,12 +316,26 @@ def compute_release(
         expected_period = target_period
 
     # === Stale check ===
+    # Per-headline latest observation. In a healthy release every headline
+    # series carries an observation AT target_period. When FRED has only
+    # partially ingested a new period, a LEADING series pulls target_period
+    # forward while a LAGGARD still ends a period back — that laggard then
+    # renders a blank "—" headline, and (because compute_release was only
+    # ever called without expected_period, C2) the old guard never fired,
+    # so an apparently-fresh release posted with a missing headline. Treat
+    # any such gap as stale so the poller skips and retries next cron rather
+    # than posting a partial release.
+    headline_latests = [
+        latest_observation_period(series_cache[s.id]) for s in family.headline
+    ]
     headline_latest = max(
-        (latest_observation_period(series_cache[s.id]) for s in family.headline),
-        default=None,
+        (d for d in headline_latests if d is not None), default=None
     )
+    partial_ingest = any(d is None or d < target_period for d in headline_latests)
     is_stale = (
-        headline_latest is None or headline_latest < expected_period
+        headline_latest is None
+        or headline_latest < expected_period
+        or partial_ingest
     )
     source_lag_minutes: int | None = None
     if headline_latest is not None and headline_latest >= expected_period:
@@ -505,15 +525,43 @@ def compute_release(
     if family.context is not None:
         ctx = family.context
         anchor = series_cache[ctx.anchor_series]
-        trends = [
-            TrendValue(
-                label=t.label,
-                value=_compute_trend(anchor, target_period, t.window_months, t.stat),
-                window_months=t.window_months,
-                stat=t.stat,
+        # The anchor's display unit (e.g. "K" for PAYEMS) lives on its
+        # SeriesSpec — resolve it so a `mean`-of-mom_chg trend renders as a
+        # signed jobs count rather than a forced "%". None (ADP) → plain count.
+        _anchor_unit = next(
+            (
+                s.display_unit
+                for s in (*family.headline, *family.components)
+                if s.id == ctx.anchor_series
+            ),
+            None,
+        )
+        trends = []
+        for t in ctx.trends:
+            # An annualized_mom stat is a percent regardless of the anchor
+            # transform; every other stat carries the anchor transform's units.
+            if t.stat == "annualized_mom":
+                _t_transform: str | None = "annualized_mom"
+                _t_unit: str | None = None
+            else:
+                _t_transform = ctx.anchor_transform
+                _t_unit = _anchor_unit
+            trends.append(
+                TrendValue(
+                    label=t.label,
+                    value=_compute_trend(
+                        anchor,
+                        target_period,
+                        t.window_months,
+                        t.stat,
+                        ctx.anchor_transform,
+                    ),
+                    window_months=t.window_months,
+                    stat=t.stat,
+                    transform=_t_transform,
+                    display_unit=_t_unit,
+                )
             )
-            for t in ctx.trends
-        ]
         _zscore_fn = delta_zscore if ctx.zscore_kind == "delta" else level_zscore
         zscore_val = _zscore_fn(
             anchor,
@@ -553,22 +601,29 @@ def compute_release(
 
 
 def _compute_trend(
-    series: pd.Series, target: pd.Timestamp, window_months: int, stat: str
+    series: pd.Series,
+    target: pd.Timestamp,
+    window_months: int,
+    stat: str,
+    anchor_transform: str = "mom_pct",
 ) -> float | None:
     """Compute a single trend value. `stat` is one of:
       - annualized_mom: compound MoM over the window, annualize
-      - mean: simple mean of the window's MoM% (less useful; provided for completeness)
+      - mean: simple mean of the trailing window's `anchor_transform` values
+
+    The `mean` branch averages the FAMILY's anchor transform (H4) — for
+    payrolls/ADP that is `mom_chg` (a jobs count), NOT `mom_pct`; averaging
+    the % produced a bogus "3mo avg change: 0.11%" instead of "~+167K".
     """
     if stat == "annualized_mom":
         return annualized_n_month(series, target, window_months)
     if stat == "mean":
-        # mean of the trailing window's MoM% values
-        from .transforms import mom_pct
+        from .transforms import apply_transform
 
         values = []
         for i in range(window_months):
             d = target - pd.DateOffset(months=i)
-            v = mom_pct(series, d)
+            v = apply_transform(anchor_transform, series, d)
             if v is not None:
                 values.append(v)
         if not values:

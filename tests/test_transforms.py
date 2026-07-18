@@ -189,3 +189,36 @@ def test_level_zscore_none_when_constant_level():
     s = monthly_series([4.0] * 60)
     target = pd.Timestamp("2024-12-01")
     assert level_zscore(s, target, "raw", lookback_years=5) is None
+
+
+def test_delta_zscore_is_mean_centered():
+    """H5: the surprise z-score must measure the latest move against the
+    AVERAGE move, not against zero. A series whose transform drifts by a
+    roughly-constant amount each month (steady +150K/mo payrolls) has a
+    non-zero mean delta; without mean-centering an ordinary print scored at
+    many sigma and false-tripped the Tier B gate."""
+    import statistics
+
+    # raw transform on a series rising ~150/mo with mild noise around it,
+    # so deltas cluster tightly around a large positive mean (~150).
+    increments = [150, 152, 148, 151, 149, 150, 153, 147, 150, 151,
+                  149, 150, 152, 148, 150, 151, 149, 150, 152, 148,
+                  150, 151, 149, 150]
+    values = [1000.0]
+    for inc in increments:
+        values.append(values[-1] + inc)
+    s = monthly_series(values, start="2022-01-01")
+    target = s.index[-1]
+
+    z = delta_zscore(s, target, "raw", lookback_years=5)
+    assert z is not None
+    # The latest move (+150) is utterly ordinary → |z| must be tiny, NOT the
+    # ~10σ the un-centered `latest / std` formula produced.
+    assert abs(z) < 1.5
+
+    # Reproduce the expected value exactly. With transform="raw" the
+    # transformed series IS the level series, so its first differences (the
+    # `deltas` inside delta_zscore) ARE the monthly increments.
+    d = pd.Series([float(i) for i in increments])
+    expected = (d.iloc[-1] - d.mean()) / d.std()
+    assert z == pytest.approx(expected, rel=1e-9)

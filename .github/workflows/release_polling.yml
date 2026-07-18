@@ -64,7 +64,9 @@ jobs:
         # Commit changes back to the repo so the state survives across runs.
         # The ledger is what makes polling idempotent — without persistence
         # every run would think it was the first time and re-post everything.
-        if: success()
+        # Must run even if an earlier family raised (poll-all exits 1), else a
+        # posted release's ledger row is discarded and next cron re-posts it.
+        if: always()
         run: |
           git config user.name "claudebot"
           git config user.email "claudebot@users.noreply.github.com"

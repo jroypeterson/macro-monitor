@@ -91,11 +91,15 @@ def test_post_for_release_uploads_one_threaded_reply(monkeypatch, tmp_path):
 
 
 def test_post_for_release_skips_missing_png(monkeypatch):
-    # Build produced no png for the figure -> nothing uploaded, no crash.
+    # Build produced no png for a figure that WAS mapped to this release ->
+    # nothing uploaded, no crash, but an alarm fires (H6: no silent empty).
     monkeypatch.setattr(post, "_build_once", lambda key: {})
     monkeypatch.setattr("slack_sdk.WebClient", _FakeWebClient)
     _FakeWebClient.last = {}
-    assert post.post_for_release(10, dry_run=False, publisher=_FakePublisher()) == []
+    pub = _FakePublisher()
+    assert post.post_for_release(10, dry_run=False, publisher=pub) == []
+    # figs existed (release 10 → inflation_vs_rates) but none rendered → alarm.
+    assert pub.alerts and "none rendered" in pub.alerts[0]
 
 
 def test_post_for_release_upload_failure_is_nonfatal(monkeypatch, tmp_path):

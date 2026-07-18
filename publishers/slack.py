@@ -265,12 +265,28 @@ def _format_prior_line(result: ReleaseResult, headline_units: dict[str, str | No
     return f"{prefix}: {' · '.join(prior_parts)}"
 
 
+def _fmt_trend_value(t) -> str:
+    """Format a trend value honoring its underlying transform + unit (H4).
+
+    Percent trends (annualized rates, %-change means) render as an unsigned %
+    as before; a level-change mean — payrolls/ADP average monthly job change,
+    anchor transform `mom_chg` — renders as a signed count in the anchor's
+    display unit (e.g. "+167K"), never a bogus "%".
+    """
+    if t.value is None:
+        return "—"
+    transform = getattr(t, "transform", None)
+    if transform in {"mom_chg", "yoy_chg"}:
+        return _fmt_transformed(t, getattr(t, "display_unit", None))
+    return _fmt_unsigned_pct(t.value)
+
+
 def _format_trend_lines(result: ReleaseResult) -> list[str]:
     if result.context is None or not result.context.trends:
         return []
     lines = []
     for t in result.context.trends:
-        lines.append(f"{t.label}: {_fmt_unsigned_pct(t.value)}")
+        lines.append(f"{t.label}: {_fmt_trend_value(t)}")
     if result.context.zscore is not None:
         lines.append(
             f"{result.context.zscore_kind}-z vs {result.context.zscore_lookback_years}y: "

@@ -229,7 +229,12 @@ def delta_zscore(
     deltas = s.diff().dropna()
     if len(deltas) < 12 or deltas.std() == 0:
         return None
-    return float(deltas.iloc[-1] / deltas.std())
+    # Mean-center like the sibling `level_zscore`: a series with a steady
+    # non-zero drift (e.g. +150K/mo PAYEMS) has a non-zero mean delta, so
+    # dividing the raw latest delta by std scored an ordinary print at many
+    # sigma and false-tripped the Tier B surprise gate. The z-score of a
+    # move must be measured against the AVERAGE move, not against zero.
+    return float((deltas.iloc[-1] - deltas.mean()) / deltas.std())
 
 
 def level_zscore(

@@ -133,6 +133,13 @@ def post_for_release(
             uploads.append({"file": str(png), "title": f"Ahead of the Curve — {f.title}"})
             posted.append(f.id)
     if not uploads:
+        # H6: figures WERE mapped to this release (figs is non-empty) but none
+        # rendered / exist on disk — a silent degradation that used to return
+        # [] with no trace. Alarm so the missing charts are visible.
+        pub._alert_status_reports(
+            f"⚠️ macro_monitor: Ahead-of-the-Curve had {len(figs)} figure(s) "
+            f"mapped to {rname} ({fig_ids}) but none rendered — no charts posted."
+        )
         return []
 
     from slack_sdk import WebClient

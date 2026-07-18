@@ -66,7 +66,10 @@ jobs:
           python -m macro_monitor.cli poll-all --post --skip-window-check
 
       - name: Persist ledger updates
-        if: success() && steps.dst_guard.outputs.skip != 'true'
+        # always() (not success()) so a posted release's ledger row survives
+        # even when an earlier family raised and poll-all exited 1; otherwise
+        # the discarded ledger makes the next run re-post it.
+        if: always() && steps.dst_guard.outputs.skip != 'true'
         run: |
           git config user.name "claudebot"
           git config user.email "claudebot@users.noreply.github.com"
