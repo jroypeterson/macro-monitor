@@ -95,6 +95,9 @@ _HTML_TEMPLATE = """\
   .event {{ display: block; font-size: 0.7em; padding: 1px 3px; border-radius: 2px;
             color: white; margin-bottom: 1px; white-space: nowrap; overflow: hidden;
             text-overflow: ellipsis; }}
+  /* Tier A = top-tier / most market-moving. Bold + a bright inset ring so it
+     visually pops out of the routine (Tier B) releases in the grid. */
+  .event.tiera {{ font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65); }}
   .weekend {{ background: #fafafa; color: #aaa; }}
   .footer {{ font-size: 0.8em; color: #888; margin-top: 2em; padding-top: 1em; border-top: 1px solid #e0e0e0; }}
 </style>
@@ -102,7 +105,9 @@ _HTML_TEMPLATE = """\
 <body>
 
 <h1>{year} Macro Calendar</h1>
-<p class="subtitle">Tier A release dates pulled from FRED's calendar. Quarterly refresh; latest pull: {fetched_date}.</p>
+<p class="subtitle">All scheduled release dates pulled from FRED's calendar.
+  <strong>&#9733; bold = Tier A</strong> (top-tier, most market-moving); plain = Tier B (routine).
+  Quarterly refresh; latest pull: {fetched_date}.</p>
 
 <div class="legend">
   <h3>Legend</h3>
@@ -134,10 +139,12 @@ def _render_html(
     failed_families: list[str] | None = None,
 ) -> str:
     def _legend_label(fam: FamilyConfig) -> str:
-        # Tag Tier B (heartbeat-only) families so the curated Tier A set
-        # stays visually distinct from the broader schedule.
-        suffix = "" if fam.tier == "A" else " <span style='color:#999;font-size:0.85em'>(B)</span>"
-        return html.escape(fam.display_name) + suffix
+        # Tier A (top-tier) families get a ★ + bold so the market-moving set
+        # stands out from the routine Tier B (heartbeat-only) schedule — the
+        # same denotation used on the event chips in the grid.
+        if fam.tier == "A":
+            return "&#9733; <strong>" + html.escape(fam.display_name) + "</strong>"
+        return html.escape(fam.display_name) + " <span style='color:#999;font-size:0.85em'>(Tier B)</span>"
 
     legend_items = "\n".join(
         f"    <div class='legend-item'><span class='swatch' style='background:{family_color[fid]}'></span>"
@@ -145,9 +152,14 @@ def _render_html(
         for fid in sorted(cal_families)
     )
 
+    # family_id -> tier, so the grid can mark Tier A chips (see _render_month).
+    family_tier = {fid: fam.tier for fid, fam in cal_families.items()}
+
     months_html_parts = []
     for month in range(1, 13):
-        months_html_parts.append(_render_month(year, month, events, family_color))
+        months_html_parts.append(
+            _render_month(year, month, events, family_color, family_tier)
+        )
     months_html = "\n".join(months_html_parts)
 
     failed_html = ""
@@ -171,7 +183,7 @@ def _render_html(
 
 def _render_month(
     year: int, month: int, events: dict[date, list[tuple[str, str, str]]],
-    family_color: dict[str, str]
+    family_color: dict[str, str], family_tier: dict[str, str] | None = None,
 ) -> str:
     cal = calendar.Calendar(firstweekday=6)  # Sunday first
     month_name = calendar.month_name[month]
@@ -196,9 +208,16 @@ def _render_month(
             event_html = ""
             for fid, name, _time in day_events:
                 color = family_color.get(fid, "#666")
+                # Tier A (top-tier) chips get a ★ prefix + bold styling so the
+                # most market-moving releases stand out from routine Tier B.
+                is_tier_a = (family_tier or {}).get(fid) == "A"
+                chip_cls = "event tiera" if is_tier_a else "event"
+                star = "&#9733; " if is_tier_a else ""
+                tier_note = " (Tier A)" if is_tier_a else " (Tier B)"
                 event_html += (
-                    f"<span class='event' style='background:{color}' title='{html.escape(name)}'>"
-                    f"{html.escape(_abbrev(name))}</span>"
+                    f"<span class='{chip_cls}' style='background:{color}' "
+                    f"title='{html.escape(name)}{tier_note}'>"
+                    f"{star}{html.escape(_abbrev(name))}</span>"
                 )
             cls = " class='weekend'" if is_weekend and not day_events else ""
             cells.append(
