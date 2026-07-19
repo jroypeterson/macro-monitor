@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from .config import TRACKED, liquidity_flag
 from .client import Resolved
 from .history import Mover
-from .discovery import NewMarket
+from .discovery import NewMarket, is_biotech_catalyst
 
 # Compact aliases for the aggregated top-line (headline markets only).
 _SHORT = {
@@ -73,6 +73,13 @@ def _new_line(n: NewMarket) -> str:
     return f"{tag} *{n.title}* — {n.lead_label} {round(n.lead_prob * 100)}%  ({meta})"
 
 
+def _watch_line(n: NewMarket) -> str:
+    """HC/biotech watch line: 💊 for FDA/company catalysts, 🦠 for public health."""
+    tag = "💊" if is_biotech_catalyst(n.title) else "🦠"
+    meta = f"{_vol(n.volume)} · Polymarket" if n.volume else "Polymarket"
+    return f"{tag} *{n.title}* — {n.lead_label} {round(n.lead_prob * 100)}%  ({meta})"
+
+
 @dataclass
 class Rundown:
     generated: datetime
@@ -84,6 +91,9 @@ class Rundown:
     aggregated: list[str] = field(default_factory=list)
     movers: list[Mover] = field(default_factory=list)
     new_markets: list[NewMarket] = field(default_factory=list)
+    # Always-on live HC/biotech markets (auto-surfaced, deduped vs the curated
+    # board). Distinct from new_markets (which is "newly opened this week").
+    hc_watch: list[NewMarket] = field(default_factory=list)
 
     @property
     def live_count(self) -> int:
@@ -98,10 +108,12 @@ _POLICY_KEYS = {"rfk_out", "fda_commissioner"}
 
 def build(resolved: list[Resolved], now: datetime | None = None, *,
           movers: list[Mover] | None = None,
-          new_markets: list[NewMarket] | None = None) -> Rundown:
+          new_markets: list[NewMarket] | None = None,
+          hc_watch: list[NewMarket] | None = None) -> Rundown:
     now = now or datetime.now(timezone.utc)
     by_key = {r.key: r for r in resolved}
-    rd = Rundown(generated=now, movers=list(movers or []), new_markets=list(new_markets or []))
+    rd = Rundown(generated=now, movers=list(movers or []),
+                 new_markets=list(new_markets or []), hc_watch=list(hc_watch or []))
     for r in resolved:
         if r.lane == "macro":
             rd.macro.append(r)
@@ -147,6 +159,9 @@ def render_text(rd: Rundown) -> str:
     block("HEALTHCARE — pandemics & public health", rd.hc_pandemic)
     block("HEALTHCARE — policy", rd.hc_policy)
     block("BIOTECH — FDA-approval catalysts (thin liquidity; directional)", rd.biotech)
+    if rd.hc_watch:
+        out.append("\nHC/BIOTECH WATCH — live markets (auto-surfaced; deduped vs curated)")
+        out.extend("  " + _watch_line(n).replace("*", "") for n in rd.hc_watch)
     block("LEGISLATIVE — law-change odds", rd.legislative)
     if rd.new_markets:
         out.append("\nNEWLY-OPENED RELEVANT MARKETS")
@@ -176,6 +191,22 @@ def _section_lines(header: str, rows: list[Resolved]) -> list[dict]:
     return blocks
 
 
+def _watch_section(header: str, rows: list[NewMarket]) -> list[dict]:
+    if not rows:
+        return []
+    buf = f"*{header}*\n"
+    blocks: list[dict] = []
+    for n in rows:
+        ln = _watch_line(n) + "\n"
+        if len(buf) + len(ln) > 2900:
+            blocks.append(_section(buf.rstrip()))
+            buf = ""
+        buf += ln
+    if buf.strip():
+        blocks.append(_section(buf.rstrip()))
+    return blocks
+
+
 def build_blocks(rd: Rundown) -> list[dict]:
     blocks: list[dict] = [
         {"type": "header",
@@ -195,6 +226,12 @@ def build_blocks(rd: Rundown) -> list[dict]:
     if rd.biotech:
         blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
             "text": "_Biotech approval markets are thin — read as directional, not calibrated._"}]})
+    watch_blocks = _watch_section("💊 HC/Biotech watch — live markets (auto-surfaced)", rd.hc_watch)
+    blocks += watch_blocks
+    if watch_blocks:
+        blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
+            "text": "_Auto-surfaced live from Polymarket by keyword; deduped against the curated board. "
+                    "Mostly thin — directional. 💊 FDA/company catalyst · 🦠 public health._"}]})
     blocks += _section_lines("📜 Legislative — law-change odds", rd.legislative)
     if rd.new_markets:
         blocks.append(_section("*🆕 Newly-opened relevant markets*\n"
@@ -225,6 +262,18 @@ def _html_rows(rows: list[Resolved]) -> str:
     return "\n".join(cells)
 
 
+def _watch_html_rows(rows: list[NewMarket]) -> str:
+    cells = []
+    for n in rows:
+        tag = "💊" if is_biotech_catalyst(n.title) else "🦠"
+        link = f'<a href="{n.url}" target="_blank">{n.title}</a>' if n.url else n.title
+        meta = f"{_vol(n.volume)} · Polymarket" if n.volume else "Polymarket"
+        cells.append(f'<tr><td>{tag} {link}</td>'
+                     f'<td>{n.lead_label} {round(n.lead_prob * 100)}%</td>'
+                     f'<td class="dim">{meta}</td></tr>')
+    return "\n".join(cells)
+
+
 def render_html(rd: Rundown) -> str:
     def tbl(title, rows):
         if not rows:
@@ -240,6 +289,11 @@ def render_html(rd: Rundown) -> str:
             f"<td class='dim'>{'+' if m.delta_pp > 0 else '−'}{abs(round(m.delta_pp))}pp {m.period}</td></tr>"
             for m in rd.movers)
         movers_html = f"<h2>📈 Notable moves</h2><table>{rows}</table>"
+    watch_html = ""
+    if rd.hc_watch:
+        watch_html = (f"<h2>💊 HC/Biotech watch — live markets "
+                      f"<span class='sub'>(auto-surfaced; deduped vs curated · thin — directional)</span></h2>"
+                      f"<table>{_watch_html_rows(rd.hc_watch)}</table>")
     new_html = ""
     if rd.new_markets:
         rows = "\n".join(
@@ -268,6 +322,7 @@ def render_html(rd: Rundown) -> str:
 {tbl("🦠 Healthcare — pandemics &amp; public health", rd.hc_pandemic)}
 {tbl("🏛️ Healthcare — policy", rd.hc_policy)}
 {tbl("💊 Biotech — FDA-approval catalysts <span class='sub'>(thin liquidity — directional)</span>", rd.biotech)}
+{watch_html}
 {tbl("📜 Legislative — law-change odds", rd.legislative)}
 {new_html}
 <footer>{rd.live_count} live markets · source: Polymarket Gamma API · see PREDICTION_MARKETS.md</footer>

@@ -1450,13 +1450,19 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
     except Exception as e:                            # discovery is best-effort
         print(f"[warn] discovery failed: {type(e).__name__}: {e}", file=sys.stderr)
         new_markets = []
-    rd = RD.build(resolved, now, movers=movers, new_markets=new_markets)
+    try:
+        hc_watch = DISC.hc_watch()                   # live HC/biotech markets (always-on)
+    except Exception as e:                            # watch is best-effort
+        print(f"[warn] hc_watch failed: {type(e).__name__}: {e}", file=sys.stderr)
+        hc_watch = []
+    rd = RD.build(resolved, now, movers=movers, new_markets=new_markets, hc_watch=hc_watch)
     print(RD.render_text(rd))
     out = write_readable(RD.render_html(rd))
     print(f"\nReadable panel: file://{out.absolute()}", file=sys.stderr)
     misses = [r.label for r in (rd.macro + rd.hc_pandemic + rd.hc_policy + rd.biotech) if not r.ok]
     if misses:
         print(f"[warn] {len(misses)} market(s) had no live data: {', '.join(misses)}", file=sys.stderr)
+    print(f"HC/biotech watch: {len(hc_watch)} live market(s) auto-surfaced", file=sys.stderr)
     _, info = post_slack(
         RD.build_blocks(rd), f"Prediction Markets — {rd.generated:%Y-%m-%d}",
         dry_run=args.dry_run,

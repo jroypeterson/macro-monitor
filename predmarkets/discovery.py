@@ -218,3 +218,120 @@ def discover_new(now: datetime, *, min_volume: float = 10_000,
     # Polymarket (real volume) first, then by volume desc.
     out.sort(key=lambda m: (m.source != "polymarket", -m.volume))
     return out[:max_surface]
+
+
+# ---- always-on HC/biotech watch (live snapshot, NOT gated by the seen-set) ----
+# discover_new() only surfaces markets it has never seen before (after a per-source
+# seed), so a live FDA-approval or public-health market that opened before this
+# lane existed — or that no one curated into TRACKED — never shows up anywhere.
+# The curated biotech board (config.TRACKED, hand-picked 2026-06-12) also goes
+# stale as FDA markets resolve/roll. hc_watch() closes both gaps: every run it
+# reports the CURRENT live HC/biotech markets on Polymarket, deduped against the
+# curated board. Precise term/signal/noise sets keep out the "Academy" (esports)
+# and "RFK <soccer team>" false positives that a naive " aca"/"rfk" substring
+# match pulls in (verified live 2026-07-19: raw sweep → 24 noise hits, 0 here).
+_WATCH_TERMS = (
+    "FDA approval", "FDA approves", "PDUFA", "drug approval", "clinical trial",
+    "pandemic", "vaccine", "measles", "ebola", "bird flu", "H5N1", "COVID",
+    "coronavirus", "hantavirus", "obesity", "GLP-1", "Ozempic", "cancer",
+    "Alzheimer", "Medicare", "Medicaid", "opioid", "outbreak", "biotech", "pharma",
+)
+# Unambiguous HC/biotech tokens — a match here alone qualifies a market.
+_WATCH_STRONG = (
+    "fda ", "pdufa", "pandemic", "vaccine", "measles", "ebola", "covid",
+    "coronavirus", "hantavirus", "bird flu", "h5n1", "mpox", "monkeypox",
+    "clinical trial", "glp-1", "glp1", "ozempic", "wegovy",
+    "zepbound", "obesity", "alzheim", "medicare", "medicaid", "opioid",
+    "flu hospitalization", "drug approval", "pharma ipo", "eli lilly licenses",
+    "surgeon general",
+)
+# Ambiguous homonyms — common outside medicine ("cancer" the zodiac sign, a project
+# "phase 3", a "war outbreak"). These qualify ONLY with a co-occurring medical
+# context token, so "Will Cancer be the next zodiac sign to trend?" is NOT tagged HC.
+_WATCH_AMBIGUOUS = ("cancer", "phase 3", "outbreak")
+_WATCH_MED_CONTEXT = (
+    "fda", "drug", "treatment", "therapy", "patient", "trial", "tumor", "oncolog",
+    "diagnos", "cure", "vaccine", "clinical", "disease", "approval", "pharma",
+    "infect", "cases in", "epidemic", "virus", "health",
+)
+# Signals that make an HC market specifically a biotech/company catalyst (→ 💊,
+# vs a public-health market → 🦠). Ordering: caller checks this only for tagging.
+_WATCH_BIOTECH = (
+    "fda ", "pdufa", "clinical trial", "phase 3", "drug approval", "pharma ipo",
+    "licenses",
+)
+# Belt-and-suspenders exclusions (the precise _WATCH_STRONG set already excludes
+# these, but a future search term could surface a sports/entertainment market
+# that happens to contain an HC token).
+_WATCH_NOISE = (
+    "academy", "counter-strike", "dota", "lol:", "esport", "cs2", "bo3", "bo1",
+    "akhmat", "lokomotiv", "penta kill", "slay a drag", "oscar",
+    "zodiac", "astrolog", "horoscope",
+)
+
+
+def _is_hc_watch(title: str) -> bool:
+    t = title.lower()
+    if any(n in t for n in _WATCH_NOISE):
+        return False
+    if any(k in t for k in _WATCH_STRONG):
+        return True
+    # Ambiguous homonyms only count with medical context in the same title.
+    if any(k in t for k in _WATCH_AMBIGUOUS) and any(c in t for c in _WATCH_MED_CONTEXT):
+        return True
+    return False
+
+
+def is_biotech_catalyst(title: str) -> bool:
+    """True for FDA/company drug-catalyst markets (vs broad public-health ones).
+    Used only to pick the 💊/🦠 tag when rendering the watch."""
+    return any(k in title.lower() for k in _WATCH_BIOTECH)
+
+
+def hc_watch(*, min_volume: float = 0.0, max_surface: int = 12) -> list[NewMarket]:
+    """Live snapshot of the current HC/biotech markets on Polymarket, deduped
+    against the curated TRACKED set (so we never double-list e.g. Retatrutide).
+
+    Best-effort per term: one failed search term is skipped. But if EVERY term
+    fails (a Polymarket/DNS outage), raise so the caller can warn — otherwise a
+    total outage is indistinguishable from a genuinely-empty watch ("0 markets").
+    A failed per-event fetch is skipped. Sorted by USD volume desc, capped."""
+    found: dict[str, str] = {}
+    errors = 0
+    for term in _WATCH_TERMS:
+        try:
+            for e in client.search_events(term):
+                title, slug = e.get("title") or "", e.get("slug")
+                if slug and _is_hc_watch(title) and not _is_tracked(title):
+                    found.setdefault(slug, title)
+        except Exception:
+            errors += 1
+            continue  # one bad term must not sink the sweep
+    if errors == len(_WATCH_TERMS):
+        raise RuntimeError(
+            f"hc_watch: all {errors} Polymarket searches failed (data-source outage) "
+            "— not a genuinely-empty watch"
+        )
+    out: list[NewMarket] = []
+    for slug, title in found.items():
+        try:
+            full = client.fetch_event(slug)
+        except Exception:
+            continue
+        if not full or full.get("closed"):
+            continue
+        # Re-check against the canonical (full) title — search hits are thin.
+        ftitle = full.get("title") or title
+        if _is_tracked(ftitle) or not _is_hc_watch(ftitle):
+            continue
+        vol = client._vol(full)
+        if vol < min_volume:
+            continue
+        outs = client._normalize(full)
+        if not outs:
+            continue
+        out.append(NewMarket(
+            ftitle, f"https://polymarket.com/event/{slug}", "healthcare", vol,
+            str(full.get("endDate") or "")[:10], outs[0][0], outs[0][1], "polymarket"))
+    out.sort(key=lambda m: -m.volume)
+    return out[:max_surface]

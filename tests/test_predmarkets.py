@@ -319,6 +319,114 @@ def test_discovery_seeds_first_run_then_surfaces_new(tmp_path, monkeypatch):
     assert len(out) == 1 and out[0].lane == "healthcare" and out[0].lead_label == "Yes"
 
 
+# ---- always-on HC/biotech watch ----
+
+def test_is_biotech_catalyst_classifies():
+    assert DISC.is_biotech_catalyst("FDA approves Outlook Therapeutics' ONS-5010?")
+    assert DISC.is_biotech_catalyst("Tarsier Pharma IPO Closing Market Cap")
+    assert not DISC.is_biotech_catalyst("Hantavirus vaccine in 2026?")
+    assert not DISC.is_biotech_catalyst("New Coronavirus Pandemic in 2026?")
+
+
+def test_hc_watch_surfaces_untracked_and_dedups_tracked(monkeypatch):
+    # search returns a curated (tracked) market, a new biotech market, a public-
+    # health market, and an esports false-positive that must be filtered out.
+    hits = [
+        {"title": "FDA approves Retatrutide this year?", "slug": "reta"},   # tracked → drop
+        {"title": "FDA approves Outlook Therapeutics' ONS-5010?", "slug": "ons"},  # biotech
+        {"title": "Hantavirus vaccine in 2026?", "slug": "hanta-vax"},      # public health
+        {"title": "Counter-Strike: BIG Academy vs ReThink (BO3)", "slug": "cs"},   # noise → drop
+    ]
+    monkeypatch.setattr(DISC.client, "search_events", lambda term: hits)
+    fulls = {
+        "reta": _binary_event("FDA approves Retatrutide this year?", "reta", 576_000, 0.08),
+        "ons": _binary_event("FDA approves Outlook Therapeutics' ONS-5010?", "ons", 6_000, 0.89),
+        "hanta-vax": _binary_event("Hantavirus vaccine in 2026?", "hanta-vax", 128_000, 0.06),
+        "cs": _binary_event("Counter-Strike: BIG Academy vs ReThink (BO3)", "cs", 71_000, 0.5),
+    }
+    monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: fulls.get(slug))
+    out = DISC.hc_watch()
+    titles = {n.title for n in out}
+    assert "FDA approves Outlook Therapeutics' ONS-5010?" in titles
+    assert "Hantavirus vaccine in 2026?" in titles
+    assert "FDA approves Retatrutide this year?" not in titles  # curated → deduped
+    assert not any("Counter-Strike" in t for t in titles)       # esports noise filtered
+    # sorted by volume desc
+    assert out[0].volume >= out[-1].volume
+
+
+def test_hc_watch_partial_failure_survives(monkeypatch):
+    """One failing term is skipped; the sweep still returns the others' hits."""
+    calls = {"n": 0}
+
+    def flaky(term):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise DISC.requests.RequestException("dns")  # first term fails
+        return [{"title": "FDA approves BigBio's drug?", "slug": "big"}] if "fda" in term.lower() else []
+
+    monkeypatch.setattr(DISC.client, "search_events", flaky)
+    monkeypatch.setattr(DISC.client, "fetch_event",
+                        lambda slug: _binary_event("FDA approves BigBio's drug?", "big", 50_000, 0.4))
+    out = DISC.hc_watch()
+    assert any("BigBio" in m.title for m in out)  # partial failure didn't sink the sweep
+
+
+def test_hc_watch_total_outage_raises(monkeypatch):
+    """If EVERY search fails it must RAISE (caller warns) — never silently report
+    an empty watch as if there were 0 markets (Codex P1: no silent outage)."""
+    def boom(term):
+        raise DISC.requests.RequestException("dns")
+    monkeypatch.setattr(DISC.client, "search_events", boom)
+    import pytest
+    with pytest.raises(RuntimeError):
+        DISC.hc_watch()
+
+
+def test_hc_watch_rejects_ambiguous_homonyms():
+    # "cancer" the zodiac sign / a non-medical "outbreak" must NOT tag as HC.
+    assert DISC._is_hc_watch("Will Cancer be the next zodiac sign to trend?") is False
+    assert DISC._is_hc_watch("War outbreak in the region before 2027?") is False
+    # …but with medical context they do.
+    assert DISC._is_hc_watch("FDA approves new cancer drug?") is True
+
+
+def test_hc_watch_respects_min_volume(monkeypatch):
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "FDA approves TinyBio's drug?", "slug": "tiny"}])
+    monkeypatch.setattr(DISC.client, "fetch_event",
+                        lambda slug: _binary_event("FDA approves TinyBio's drug?", "tiny", 200, 0.5))
+    assert DISC.hc_watch(min_volume=10_000) == []
+
+
+def test_rundown_renders_hc_watch_section():
+    now = datetime(2026, 7, 19, tzinfo=_UTC)
+    watch = [
+        DISC.NewMarket("FDA approves Outlook Therapeutics' ONS-5010?",
+                       "https://polymarket.com/event/ons", "healthcare", 6_000,
+                       "2026-07-29", "Yes", 0.89),
+        DISC.NewMarket("Hantavirus vaccine in 2026?",
+                       "https://polymarket.com/event/hanta-vax", "healthcare", 128_000,
+                       "2026-12-31", "Yes", 0.06),
+    ]
+    rd = RD.build(_sample(), now, hc_watch=watch)
+    txt = RD.render_text(rd)
+    assert "HC/BIOTECH WATCH" in txt and "Outlook Therapeutics" in txt
+    blocks = RD.build_blocks(rd)
+    assert len(blocks) <= 50
+    assert any(b.get("type") == "section" and "HC/Biotech watch" in b["text"]["text"] for b in blocks)
+    for b in blocks:
+        if b.get("type") == "context":
+            assert "elements" in b and "text" not in b
+        if b.get("type") == "section":
+            assert len(b["text"]["text"]) <= 3000
+        assert b.get("type") != "rich_text"
+    html = RD.render_html(rd)
+    assert "HC/Biotech watch" in html and "polymarket.com/event/ons" in html
+    # 💊 for FDA catalyst, 🦠 for public-health vaccine market
+    assert "💊" in html and "🦠" in html
+
+
 def test_discovery_skips_low_volume(tmp_path, monkeypatch):
     p = tmp_path / "seen.json"
     p.write_text("[]", encoding="utf-8")  # not first run
