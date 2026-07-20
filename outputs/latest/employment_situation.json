@@ -4,9 +4,9 @@
   "family_display_name": "Employment Situation",
   "period": "2026-06",
   "period_label": "June 2026",
-  "posted_at": "2026-07-07T00:57:54.574808+00:00",
+  "posted_at": "2026-07-20T21:59:11.103750+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-07-07T00:57:47.769156+00:00",
+  "source_fetched_at": "2026-07-20T21:59:07.395202+00:00",
   "latest_observation_period": "2026-06",
   "expected_observation_period": "2026-06",
   "is_stale": false,
@@ -33,7 +33,7 @@
         "value": 129.0
       },
       "display_unit": "K",
-      "definition": null
+      "definition": "Nonfarm Payrolls (PAYEMS): total US jobs added or lost in the month across all employers except farms -- the headline jobs number from the BLS Employment Situation."
     },
     {
       "id": "UNRATE",
@@ -238,7 +238,7 @@
       "tags": [
         "healthcare"
       ],
-      "definition": null
+      "definition": "Health Care Employment (HC_TOTAL, computed): sum of the Ambulatory Care + Hospitals + Nursing & Residential Care payroll series (NAICS 621+622+623) -- total healthcare jobs, a direct staffing/capacity read for provider names."
     },
     {
       "id": "WC_TOTAL",
@@ -271,21 +271,25 @@
   "context": {
     "anchor_series": "PAYEMS",
     "anchor_transform": "mom_chg",
-    "zscore": -0.37320060658156,
+    "zscore": -0.31290106412926166,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": [
       {
         "label": "3mo avg change",
-        "value": 0.07012930439886193,
+        "value": 111.33333333333333,
         "window_months": 3,
-        "stat": "mean"
+        "stat": "mean",
+        "transform": "mom_chg",
+        "display_unit": "K"
       },
       {
         "label": "6mo avg change",
-        "value": 0.05801371785277102,
+        "value": 92.0,
         "window_months": 6,
-        "stat": "mean"
+        "stat": "mean",
+        "transform": "mom_chg",
+        "display_unit": "K"
       }
     ]
   },

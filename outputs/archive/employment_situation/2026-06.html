@@ -32,7 +32,7 @@
 
 <div class="freshness">
   <strong>Source:</strong> fred ·
-  <strong>Fetched:</strong> 2026-07-07T00:57:47.769156+00:00 ·
+  <strong>Fetched:</strong> 2026-07-20T21:59:07.395202+00:00 ·
   <strong>Latest observation:</strong> 2026-06 ·
   <strong>Expected:</strong> 2026-06 ·
   <strong>Stale:</strong> no
@@ -40,15 +40,17 @@
 
 <h2>Headline</h2>
 <table><thead><tr><th>Series</th><th>Primary</th><th>Also</th><th>Prior</th></tr></thead><tbody><tr><td><strong>Nonfarm payrolls</strong> <small style='color:#888'>(PAYEMS)</small></td><td class='num'>+57.0</td><td>yoy_pct 0.32%</td><td class='num'>+129.0</td></tr>
-<tr><td><strong>Unemployment rate (U-3)</strong> <small style='color:#888'>(UNRATE)</small></td><td class='num'>4.20%</td><td>MoM -0.10pp · YoY +0.10pp</td><td class='num'>4.30%</td></tr>
-<tr><td><strong>Underemployment rate (U-6)</strong> <small style='color:#888'>(U6RATE)</small></td><td class='num'>7.90%</td><td>MoM -0.20pp · YoY +0.20pp</td><td class='num'>8.10%</td></tr></tbody></table>
+<tr><td><strong>Unemployment rate (U-3)</strong> <small style='color:#888'>(UNRATE)</small></td><td class='num'>4.20%</td><td>MoM -0.1pp · YoY +0.1pp</td><td class='num'>4.30%</td></tr>
+<tr><td><strong>Underemployment rate (U-6)</strong> <small style='color:#888'>(U6RATE)</small></td><td class='num'>7.90%</td><td>MoM -0.2pp · YoY +0.2pp</td><td class='num'>8.10%</td></tr></tbody></table>
 
-<div class='freshness'><strong>Definitions</strong><ul style='margin:0.4em 0 0 1.2em; padding:0'><li>U-3 Unemployment Rate (UNRATE): the official/headline unemployment rate — people with no job who actively looked for work in the prior 4 weeks, as a % of the civilian labor force.</li>
+<div class='freshness'><strong>Definitions</strong><ul style='margin:0.4em 0 0 1.2em; padding:0'><li>Nonfarm Payrolls (PAYEMS): total US jobs added or lost in the month across all employers except farms -- the headline jobs number from the BLS Employment Situation.</li>
+<li>U-3 Unemployment Rate (UNRATE): the official/headline unemployment rate — people with no job who actively looked for work in the prior 4 weeks, as a % of the civilian labor force.</li>
 <li>U-6 Underemployment Rate (U6RATE): the broadest BLS labor-underutilization measure — the U-3 unemployed PLUS marginally attached workers (want a job, looked in the past year but not the past 4 weeks, incl. discouraged workers) PLUS people working part-time for economic reasons (want full-time work but can&#x27;t get the hours), as a % of the labor force plus the marginally attached.</li>
+<li>Health Care Employment (HC_TOTAL, computed): sum of the Ambulatory Care + Hospitals + Nursing &amp; Residential Care payroll series (NAICS 621+622+623) -- total healthcare jobs, a direct staffing/capacity read for provider names.</li>
 <li>White-Collar Employment (WC_TOTAL, computed): sum of the Professional &amp; Business Services (USPBS) + Information (USINFO) + Financial Activities (USFIRE) payroll supersectors — a proxy for office/knowledge-worker jobs, shown as YoY % change plus whether that growth rate is accelerating or decelerating vs the prior month and vs 3 months ago.</li></ul></div>
 
-<h2>Context</h2><p><strong>Anchor:</strong> PAYEMS (mom_chg) · <strong>delta z-score vs 5y:</strong> -0.37σ</p><table><thead><tr><th>Trend</th><th>Stat</th><th>Value</th></tr></thead><tbody><tr><td>3mo avg change</td><td>mean</td><td class='num'>0.07%</td></tr>
-<tr><td>6mo avg change</td><td>mean</td><td class='num'>0.06%</td></tr></tbody></table>
+<h2>Context</h2><p><strong>Anchor:</strong> PAYEMS (mom_chg) · <strong>delta z-score vs 5y:</strong> -0.31σ</p><table><thead><tr><th>Trend</th><th>Stat</th><th>Value</th></tr></thead><tbody><tr><td>3mo avg change</td><td>mean</td><td class='num'>+111.3K</td></tr>
+<tr><td>6mo avg change</td><td>mean</td><td class='num'>+92.0K</td></tr></tbody></table>
 
 <h2>Components (thread)</h2><table><thead><tr><th>Series</th><th>Transform</th><th>Value</th></tr></thead><tbody><tr><td><strong>Health Care employment (NAICS 621+622+623)</strong> <small style='color:#888'>(HC_TOTAL, computed)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.42%</td></tr>
 <tr><td><strong>White-collar employment (Prof &amp; Business + Info + Financial)</strong> <small style='color:#888'>(WC_TOTAL, computed)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-0.29%</td></tr>

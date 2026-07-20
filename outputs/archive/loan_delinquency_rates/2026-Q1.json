@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.2",
+  "family_id": "loan_delinquency_rates",
+  "family_display_name": "Loan Delinquency Rates",
+  "period": "2026-Q1",
+  "period_label": "Q1 2026",
+  "posted_at": "2026-07-20T22:05:18.413508+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-07-20T22:05:16.693103+00:00",
+  "latest_observation_period": "2026-Q1",
+  "expected_observation_period": "2026-Q1",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "DRCCLACBS",
+      "label": "Credit card delinquency rate",
+      "primary": {
+        "transform": "raw",
+        "value": 2.92,
+        "raw_value": 2.92
+      },
+      "also_display": [
+        {
+          "transform": "yoy_chg",
+          "value": -0.14000000000000012
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 2.94
+      },
+      "display_unit": "%",
+      "definition": "Credit Card Delinquency Rate (DRCCLACBS): share of bank credit- card balances 30+ days past due -- a direct consumer financial- stress gauge, quarterly."
+    }
+  ],
+  "components": [
+    {
+      "id": "DRCLACBS",
+      "label": "Consumer loan delinquency rate",
+      "transform": "raw",
+      "value": 2.64,
+      "prior": {
+        "transform": "raw",
+        "value": 2.62
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 2.75
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "DRSFRMACBS",
+      "label": "Single-family mortgage delinquency rate",
+      "transform": "raw",
+      "value": 1.89,
+      "prior": {
+        "transform": "raw",
+        "value": 1.79
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1.78
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "DRALACBS",
+      "label": "All-loan delinquency rate",
+      "transform": "raw",
+      "value": 1.48,
+      "prior": {
+        "transform": "raw",
+        "value": 1.48
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1.52
+      },
+      "tags": [],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "DRCCLACBS",
+    "anchor_transform": "raw",
+    "zscore": 0.6071870022569731,
+    "zscore_kind": "level",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "delinquency_15y_2026-Q1.png"
+  },
+  "agency_pdf_url": null
+}

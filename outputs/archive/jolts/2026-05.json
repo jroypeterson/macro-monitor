@@ -4,9 +4,9 @@
   "family_display_name": "JOLTS",
   "period": "2026-05",
   "period_label": "May 2026",
-  "posted_at": "2026-07-07T00:58:21.899368+00:00",
+  "posted_at": "2026-07-20T22:04:41.059229+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-07-07T00:58:19.480418+00:00",
+  "source_fetched_at": "2026-07-20T22:04:38.033013+00:00",
   "latest_observation_period": "2026-05",
   "expected_observation_period": "2026-05",
   "is_stale": false,
@@ -37,7 +37,7 @@
         "value": 7585.0
       },
       "display_unit": null,
-      "definition": null
+      "definition": "Job Openings (JTSJOL): total unfilled job openings from the BLS JOLTS survey -- the labor-demand side; openings per unemployed worker is the tightness read."
     },
     {
       "id": "JTSQUR",
@@ -62,7 +62,7 @@
         "value": 1.9
       },
       "display_unit": "%",
-      "definition": null
+      "definition": "Quits Rate (JTSQUR): the share of workers voluntarily quitting each month, from JOLTS -- workers quit more when confident they can find something better, so a falling quits rate = cooling labor market."
     }
   ],
   "components": [
@@ -119,7 +119,7 @@
   "context": {
     "anchor_series": "JTSJOR",
     "anchor_transform": "raw",
-    "zscore": 0.0,
+    "zscore": 0.13117446442298097,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
