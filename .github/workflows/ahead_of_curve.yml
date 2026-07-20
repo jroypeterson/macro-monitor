@@ -66,6 +66,6 @@ jobs:
             # Rebase onto any concurrent commits (e.g. a release-polling push)
             # before pushing, and DON'T swallow a push failure — a bare
             # `git push || true` hid every failed refresh. Mirrors release_polling.yml.
-            git pull --rebase
+            git pull --rebase --autostash
             git push
           fi

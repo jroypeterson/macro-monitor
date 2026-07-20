@@ -92,6 +92,6 @@ jobs:
           git add state/research_posted.db 2>/dev/null || true
           if ! git diff --staged --quiet; then
             git commit -m "research-digest: $(date -u +%FT%TZ)"
-            git pull --rebase
+            git pull --rebase --autostash
             git push
           fi

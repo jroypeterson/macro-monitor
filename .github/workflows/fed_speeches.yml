@@ -75,6 +75,6 @@ jobs:
           git add state/fed_speeches_posted.db data/fed_speeches.db readable/fed_speeches.md 2>/dev/null || true
           if ! git diff --staged --quiet; then
             git commit -m "fed-speeches: $(date -u +%FT%TZ)"
-            git pull --rebase
+            git pull --rebase --autostash
             git push
           fi

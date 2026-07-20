@@ -73,6 +73,6 @@ jobs:
           git add state/posts.db outputs/ data/ 2>/dev/null || true
           if ! git diff --staged --quiet; then
             git commit -m "poll-all: $(date -u +%FT%TZ)"
-            git pull --rebase
+            git pull --rebase --autostash
             git push
           fi

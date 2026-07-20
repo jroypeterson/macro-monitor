@@ -61,6 +61,6 @@ jobs:
           git add outputs/calendar/
           if ! git diff --staged --quiet; then
             git commit -m "annual-calendar refresh: $(date -u +%FT%TZ)"
-            git pull --rebase
+            git pull --rebase --autostash
             git push
           fi
