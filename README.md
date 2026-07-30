@@ -79,7 +79,7 @@ See Appendix B of the plan for the full table. Highlights:
 - **2b** ✅ Macro-focus keyword filters + mainstream feeds (NYT/FT/Bloomberg/WSJ/Economist) + Gmail senders (Torsten Slok / Yardeni / Economist Today) + multi-account Gmail (jroypeterson + floridabusinessman)
 - **2c** ✅ Haiku 4.5 read-worthiness scorer + macro classifier + curated top picks + table of contents + per-source staleness probe
 - **2 deeper HC subsector** ✅ CPI medical breakdown (commodities / hospital & related / professional services alongside medical-care-services) + PPI HC cuts (hospitals, physician offices, pharma mfg, surgical & medical instruments), each with a dedicated thread chart + Healthcare-context lines
-- **2 international (Global macro)** ✅ Eurozone / UK / China / Japan CPI, core CPI, GDP, unemployment & policy rates from native sources (Eurostat · ECB · ONS · BoE · OECD · FRED), surfaced as a weekly `#macro` "Global macro" digest + `outputs/international/` dashboard panel — separate from the US Tier A/B feed. Japan CPI/GDP need a free `ESTAT_APP_ID` (see `.env.example`); all other regions are keyless.
+- **2 international (Global macro)** ✅ Eurozone / UK / China / Japan CPI, core CPI, GDP, unemployment, **business confidence (OECD BCI)** & policy rates from native sources (Eurostat · ECB · ONS · BoE · OECD · FRED), surfaced as a weekly `#macro` "Global macro" digest + `outputs/international/` dashboard panel — separate from the US Tier A/B feed. Japan CPI/GDP need a free `ESTAT_APP_ID` (see `.env.example`); all other regions are keyless.
 - **3** Earnings-transcript macro commentary
 
 ### International "Global macro" layer
@@ -96,6 +96,23 @@ python -m macro_monitor.cli global-macro --post
 Series are declarative in `international/series.yaml` (region + indicator +
 source + locator). Each region pulls from its authoritative source; one dead
 endpoint is isolated to a single "unavailable" row rather than sinking the run.
+
+**Business confidence (OECD BCI)** rides the generic OECD SDMX adapter — flow
+`OECD.SDD.STES,DSD_STES@DF_CLI,4.1`, key `<AREA>.M.BCICP...AA...H`. Two traps
+worth knowing before touching it:
+
+- **Never use FRED's OECD mirrors.** `BSCICP03USM665S` and its siblings are
+  discontinued but still return HTTP 200 and a well-formed CSV whose last
+  observation is **2024-01** — silently stale data that looks healthy. Go
+  direct to OECD SDMX.
+- **It is an index, not a percent** (100 = each country's *own* long-run
+  average), hence `unit: ""`. Cross-country *levels* are weak; it is also a
+  filtered/smoothed series, so recent months revise. `EA19` is frozen — use
+  `EA20`. China runs ~1 month behind the others by design.
+
+US BCI is available from the identical call but is deliberately **not** charted
+— the layer has no `us` region, and the US cycle read is the Ellis real-PCE-YoY
+spine. See `data_inventory/datasets.yaml` (`oecd_bci`).
 
 ### Daily research digest
 
