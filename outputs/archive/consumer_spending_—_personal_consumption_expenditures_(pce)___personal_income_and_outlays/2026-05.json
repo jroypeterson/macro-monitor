@@ -4,9 +4,9 @@
   "family_display_name": "Consumer Spending \u2014 Personal Consumption Expenditures (PCE) / Personal Income & Outlays",
   "period": "2026-05",
   "period_label": "May 2026",
-  "posted_at": "2026-07-30T12:28:30.034457+00:00",
+  "posted_at": "2026-07-30T14:42:58.347203+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-07-30T12:28:26.745911+00:00",
+  "source_fetched_at": "2026-07-30T14:42:55.353469+00:00",
   "latest_observation_period": "2026-05",
   "expected_observation_period": "2026-05",
   "is_stale": false,
@@ -112,10 +112,10 @@
       "id": "PI",
       "label": "Personal income (PI)",
       "transform": "yoy_pct",
-      "value": 3.820904272963621,
+      "value": 3.9084618411003635,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.5850789107136674
+        "value": 2.668728488053085
       },
       "prior_3m": {
         "transform": "yoy_pct",
@@ -128,7 +128,7 @@
       "id": "PSAVERT",
       "label": "Personal saving rate (PSAVERT)",
       "transform": "raw",
-      "value": 3.0,
+      "value": 2.8,
       "prior": {
         "transform": "raw",
         "value": 3.0
@@ -144,10 +144,10 @@
       "id": "DSPIC96",
       "label": "Real disposable personal income (real DPI)",
       "transform": "yoy_pct",
-      "value": 0.016128224949785164,
+      "value": 0.10511153501771009,
       "prior": {
         "transform": "yoy_pct",
-        "value": -1.0704299918931959
+        "value": -0.9744718164220845
       },
       "prior_3m": {
         "transform": "yoy_pct",
