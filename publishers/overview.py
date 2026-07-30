@@ -67,6 +67,64 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
     tier_a_lines = _lines(tier_a)
     tier_b_lines = _lines(tier_b)
 
+    # The "what does this tier mean" notes are DERIVED from the family
+    # config, never asserted in prose — a hand-written "1σ vs trailing 5y"
+    # silently becomes a lie the moment a family is added with a different
+    # gate. Anything non-uniform is named explicitly rather than averaged
+    # away, so the pin can't quietly misdescribe a family.
+    # `context` and `tier_b_gate` are both optional on FamilyConfig, so every
+    # read is guarded — a family missing either must degrade the note, never
+    # raise and take the whole pin down with it.
+    _thresholds = {f.tier_b_gate.threshold for _, f in tier_b if f.tier_b_gate}
+    _scored = [(fid, f) for fid, f in tier_b if f.context is not None]
+    _lookbacks = {f.context.zscore_lookback_years for _, f in _scored}
+    _gate = (
+        f"|z| ≥ {min(_thresholds):g}σ" if len(_thresholds) == 1
+        else f"|z| ≥ {min(_thresholds):g}–{max(_thresholds):g}σ (varies by family)"
+        if _thresholds else "|z| over its gate"
+    )
+    _window = (
+        f"trailing {min(_lookbacks)}y" if len(_lookbacks) == 1
+        else f"trailing {min(_lookbacks)}–{max(_lookbacks)}y" if _lookbacks
+        else "trailing"
+    )
+    # Most families gate on the MOVE (delta z); a few ask "how elevated is
+    # the level" instead. Name the minority so the sentence stays true.
+    _level_gated = sorted(
+        f.display_name for _, f in _scored if f.context.zscore_kind == "level"
+    )
+    _delta_n = len(_scored) - len(_level_gated)
+    if not _scored:
+        _kind_note = ""
+    elif not _level_gated:
+        _kind_note = (
+            " Notably, the test is on the *move* — how big this period's change was, "
+            "not the level."
+        )
+    elif not _delta_n:
+        _kind_note = (
+            f" Notably, the test is on the level, not the move ({', '.join(_level_gated)})."
+        )
+    else:
+        _kind_note = (
+            f" Notably, for {_delta_n} of {len(_scored)} the test is on the *move* — how big "
+            f"this period's change was, not the level. {', '.join(_level_gated)} is gated on "
+            "the level instead, since \"how elevated is it\" is the real question there."
+        )
+
+    tier_a_note = (
+        "_The core, market-moving releases — deliberately curated, not exhaustive. "
+        "Every print lands the same day it publishes (~1h after the agency), with a 5y "
+        "chart and a long-history thread. Tier A alone drives the Google Calendar events "
+        "and the 4-week lookahead in the Sunday preview._"
+    )
+    tier_b_note = (
+        "_The second ring: worth knowing, not worth a post every time. Always listed in "
+        f"the Sunday preview, but only posts when the print is unusual — {_gate} against "
+        f"that series' own {_window} history.{_kind_note} A series without enough history "
+        "to score is skipped, not posted._"
+    )
+
     text = (
         "Macro & Markets Monitor — channel overview\n"
         f"Macro release feed ({len(tier_a)} Tier A + {len(tier_b)} Tier B families) plus "
@@ -102,6 +160,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "type": "mrkdwn",
                 "text": (
                     f"*Tier A ({len(tier_a)} series) — always posts on release*\n"
+                    + tier_a_note + "\n"
                     + "\n".join(tier_a_lines)
                 ),
             },
@@ -111,8 +170,8 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Tier B ({len(tier_b)} series) — preview always; post only on "
-                    "material surprise (|z| ≥ 1σ vs trailing 5y)*\n"
+                    f"*Tier B ({len(tier_b)} series) — posts only on a material surprise*\n"
+                    + tier_b_note + "\n"
                     + "\n".join(tier_b_lines)
                 ),
             },

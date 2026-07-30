@@ -119,3 +119,96 @@ def test_fmt_bp_bond_coloring():
     dn_txt, dn_cls = _fmt_bp(-4.0)
     assert dn_txt == "-4 bp" and dn_cls == "t-down"    # fall → green
     assert _fmt_bp(None) == ("—", "")
+
+
+# ── Tier A / Tier B explainer notes ────────────────────────────────────────
+# The pin states what each tier MEANS, including the Tier B gate. Those
+# numbers are derived from the family config, never hand-written prose --
+# a literal "1σ vs trailing 5y" in the pin silently becomes a lie the
+# moment a family ships with a different gate. These tests are the pin.
+
+def _gated_family(display_name: str, *, threshold: float, lookback: int,
+                  zscore_kind: str) -> FamilyConfig:
+    fam = _family(display_name, "B").model_dump()
+    fam["tier_b_gate"] = {"vs": "trailing_5y_volatility", "threshold": threshold}
+    fam["context"] = {
+        "anchor_series": "TEST",
+        "anchor_transform": "raw",
+        "zscore_lookback_years": lookback,
+        "zscore_kind": zscore_kind,
+    }
+    return FamilyConfig.model_validate(fam)
+
+
+def test_tier_headers_carry_series_counts():
+    fams = {
+        "cpi": _family("Consumer Price Index", "A"),
+        "gdp": _family("Gross Domestic Product", "A"),
+        "umich": _gated_family("UMich Sentiment", threshold=1.0, lookback=5,
+                               zscore_kind="delta"),
+    }
+    _text, blocks = build_overview_blocks(fams)
+    txt = _all_text(blocks)
+    assert "*Tier A (2 series)" in txt
+    assert "*Tier B (1 series)" in txt
+
+
+def test_tier_b_note_derives_gate_from_config_not_prose():
+    """Change the threshold/lookback in config and the pin must follow."""
+    fams = {
+        "cpi": _family("Consumer Price Index", "A"),
+        "umich": _gated_family("UMich Sentiment", threshold=2.5, lookback=10,
+                               zscore_kind="delta"),
+    }
+    txt = _all_text(build_overview_blocks(fams)[1])
+    assert "|z| ≥ 2.5σ" in txt, "gate threshold must come from tier_b_gate"
+    assert "trailing 10y" in txt, "lookback must come from context"
+    assert "1σ" not in txt.split("Tier B")[1].split("•")[0], "no hardcoded 1σ"
+    # All-delta => the note claims the move, and names no level exception.
+    assert "the test is on the *move*" in txt
+    assert "gated on the level instead" not in txt
+
+
+def test_tier_b_note_names_the_level_gated_minority():
+    """A level-gated family must be called out by name, not averaged away."""
+    fams = {
+        "cpi": _family("Consumer Price Index", "A"),
+        "umich": _gated_family("UMich Sentiment", threshold=1.0, lookback=5,
+                               zscore_kind="delta"),
+        "ip": _gated_family("Industrial Production", threshold=1.0, lookback=5,
+                            zscore_kind="delta"),
+        "delinq": _gated_family("Loan Delinquency Rates", threshold=1.0, lookback=5,
+                                zscore_kind="level"),
+    }
+    txt = _all_text(build_overview_blocks(fams)[1])
+    assert "for 2 of 3 the test is on the *move*" in txt
+    assert "Loan Delinquency Rates is gated on the level instead" in txt
+
+
+def test_tier_b_note_reports_a_mixed_threshold_range():
+    fams = {
+        "a": _gated_family("Alpha", threshold=1.0, lookback=5, zscore_kind="delta"),
+        "b": _gated_family("Beta", threshold=2.0, lookback=5, zscore_kind="delta"),
+    }
+    txt = _all_text(build_overview_blocks(fams)[1])
+    assert "|z| ≥ 1–2σ (varies by family)" in txt
+
+
+def test_tier_notes_survive_families_without_gate_or_context():
+    """FamilyConfig.context and .tier_b_gate are both Optional. A family
+    missing either must degrade the note, never raise."""
+    fams = {
+        "cpi": _family("Consumer Price Index", "A"),
+        "bare": _family("Bare Tier B", "B"),          # no gate, no context
+    }
+    _text, blocks = build_overview_blocks(fams)      # must not raise
+    txt = _all_text(blocks)
+    assert "*Tier B (1 series)" in txt
+    assert "Notably," not in txt.split("Tier B")[1].split("•")[0]
+
+
+def test_tier_a_note_states_what_membership_earns():
+    fams = {"cpi": _family("Consumer Price Index", "A")}
+    txt = _all_text(build_overview_blocks(fams)[1])
+    assert "curated, not exhaustive" in txt
+    assert "Google Calendar" in txt
