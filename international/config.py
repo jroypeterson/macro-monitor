@@ -22,7 +22,7 @@ REGION_LABELS = {
     "japan": "🇯🇵 Japan",
 }
 INDICATOR_ORDER = [
-    "cpi_yoy", "core_cpi_yoy", "gdp_yoy", "unemployment", "policy_rate",
+    "cpi_yoy", "core_cpi_yoy", "gdp_yoy", "unemployment", "bci", "policy_rate",
     "yield_2y", "yield_10y",
 ]
 INDICATOR_LABELS = {
@@ -30,6 +30,10 @@ INDICATOR_LABELS = {
     "core_cpi_yoy": "Core CPI (YoY)",
     "gdp_yoy": "GDP (YoY)",
     "unemployment": "Unemployment",
+    # OECD Business Confidence Index: an amplitude-adjusted INDEX, not a
+    # percent — 100 = the series' own long-run average, so the level only
+    # means anything relative to 100 (above = above-trend sentiment).
+    "bci": "Business confidence (100 = trend)",
     "policy_rate": "Policy rate",
     "yield_2y": "2Y gov't yield",
     "yield_10y": "10Y gov't yield",

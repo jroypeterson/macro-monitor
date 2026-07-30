@@ -1,8 +1,14 @@
 # Macro Data Inventory
 
-_Generated from `data_inventory/datasets.yaml` — 21 datasets (19 reachable via a single FRED id). Schema: `data_inventory/SCHEMA.md`. Edit the YAML, not this file._
+_Generated from `data_inventory/datasets.yaml` — 22 datasets (19 reachable via a single FRED id). Schema: `data_inventory/SCHEMA.md`. Edit the YAML, not this file._
 
 _Seeded from the "Ahead of the Curve" (Joseph Ellis) chart-recreation work. Ellis's lens is year-over-year rate of change (`yoy_roc`); real consumer spending (real PCE) is the leading indicator the rest of the cycle follows._
+
+## ✅ Shipped (1)
+
+| Dataset | Publisher | Category | Access (method · detail · effort) | Cadence · lag | Transform | Ellis fig(s) | Relevance |
+|---|---|---|---|---|---|---|---|
+| **Business Confidence Index (BCI)** | OECD (Short-Term Economic Statistics / Composite Leading Indicators) | sentiment | rest_api · `SDMX flow OECD.SDD.STES,DSD_STES@DF_CLI,4.1 · key <AREA>.M.BCICP...AA...H` · low | monthly · ~1 month (China ~2) | raw | (none — not a book figure; a business-side counterpart to the UMich consumer read in 9-3) | medium — the only business-side survey read in the fleet, and the only one giving comparable cross-country sentiment (EA/UK/CN/JP) from a single keyless call |
 
 ## ⏸ Staged (FRED path confirmed) (18)
 

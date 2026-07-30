@@ -19,7 +19,7 @@ probed it (row counts, date range, a latest value), and bump `last_inventoried`.
 | `id` | ✓ | short snake/kebab slug, unique (e.g. `fred_real_pce`) |
 | `name` | ✓ | full dataset/series name as the publisher calls it |
 | `publisher` | ✓ | the org that produces it (BEA, BLS, Federal Reserve, U. Michigan, S&P…) |
-| `publisher_type` | ✓ | `federal_gov` · `central_bank` · `academic_survey` · `trade_assoc` · `commercial_vendor` · `nonprofit_research` |
+| `publisher_type` | ✓ | `federal_gov` · `central_bank` · `intergovernmental` (OECD, IMF, World Bank…) · `academic_survey` · `trade_assoc` · `commercial_vendor` · `nonprofit_research` |
 | `category` | ✓ | macro spine tag(s): `consumption` · `output` · `production` · `investment` · `labor` · `earnings` · `prices` · `rates` · `credit` · `debt` · `sentiment` · `markets` · `reference` |
 | `url` | ✓ | landing page / documentation |
 | `access` | ✓ | how to get it — object, see below |

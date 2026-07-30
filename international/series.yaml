@@ -200,3 +200,78 @@ series:
     decimals: 2
     params:
       series: IRLTLT01JPM156N
+
+  # ────────────── Business confidence (OECD BCI) — all regions ────────────
+  # Grouped by indicator rather than by region: the flow and key layout are
+  # identical across regions, so the gotchas below are documented once.
+  #
+  # UNIT: an INDEX, not a percent — amplitude-adjusted and normalized so that
+  # 100 = the series' own long-run average. Only the distance from 100 means
+  # anything; hence `unit: ""` (a "%" suffix would be a lie).
+  #
+  # KEY LAYOUT (9 dims, DSD_STES 4.1):
+  #   REF_AREA.FREQ.MEASURE.UNIT_MEASURE.ACTIVITY.ADJUSTMENT.TRANSFORMATION.TIME_HORIZ.METHODOLOGY
+  #   → "<AREA>.M.BCICP...AA...H"  (MEASURE=BCICP, ADJUSTMENT=AA, METHODOLOGY=H)
+  #
+  # DO NOT reach for FRED's mirror (BSCICP03USM665S et al). Those series are
+  # DISCONTINUED — FRED still serves HTTP 200 and a well-formed CSV whose last
+  # observation is 2024-01. Stale data that looks perfectly healthy.
+  #
+  # REVISIONS: the BCI is a filtered/smoothed index, so the most recent few
+  # months get revised as the filter re-fits. Treat the latest point as
+  # provisional; it is not a clean release-day print.
+  - id: ez_bci
+    region: eurozone
+    indicator: bci
+    label: Business confidence (OECD BCI)
+    source: oecd
+    freq: monthly
+    unit: ""
+    decimals: 1
+    params:
+      # EA20 — NOT EA19, which OECD froze (last obs 2026-01). Same EA-vintage
+      # trap as the Eurostat rows above (HICP=EA20 but unemployment=EA21).
+      flow: "OECD.SDD.STES,DSD_STES@DF_CLI,4.1"
+      key: EA20.M.BCICP...AA...H
+      start: "2024-01"
+
+  - id: uk_bci
+    region: uk
+    indicator: bci
+    label: Business confidence (OECD BCI)
+    source: oecd
+    freq: monthly
+    unit: ""
+    decimals: 1
+    params:
+      flow: "OECD.SDD.STES,DSD_STES@DF_CLI,4.1"
+      key: GBR.M.BCICP...AA...H
+      start: "2024-01"
+
+  - id: cn_bci
+    region: china
+    indicator: bci
+    label: Business confidence (OECD BCI)
+    source: oecd
+    freq: monthly
+    unit: ""
+    decimals: 1
+    params:
+      # China runs ~1 month behind the others (2026-05 when EA/UK/JP had
+      # 2026-06) — expected, not a fetch failure.
+      flow: "OECD.SDD.STES,DSD_STES@DF_CLI,4.1"
+      key: CHN.M.BCICP...AA...H
+      start: "2024-01"
+
+  - id: jp_bci
+    region: japan
+    indicator: bci
+    label: Business confidence (OECD BCI)
+    source: oecd
+    freq: monthly
+    unit: ""
+    decimals: 1
+    params:
+      flow: "OECD.SDD.STES,DSD_STES@DF_CLI,4.1"
+      key: JPN.M.BCICP...AA...H
+      start: "2024-01"

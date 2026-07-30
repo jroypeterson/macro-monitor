@@ -379,6 +379,43 @@ datasets:
     last_inventoried: 2026-06-03
     notes: "The Conference Board Consumer Confidence series the book also uses is proprietary (see conference_board_confidence); UMich is the free FRED-able stand-in."
 
+  - id: oecd_bci
+    name: "Business Confidence Index (BCI)"
+    publisher: "OECD (Short-Term Economic Statistics / Composite Leading Indicators)"
+    publisher_type: intergovernmental
+    category: [sentiment]
+    url: "https://www.oecd.org/en/data/indicators/business-confidence-index-bci.html"
+    access: {method: rest_api, detail: "SDMX flow OECD.SDD.STES,DSD_STES@DF_CLI,4.1 · key <AREA>.M.BCICP...AA...H", format: json, cost: free, auth: none, effort: low}
+    cadence: monthly
+    release_timing: "~monthly with the OECD CLI update"
+    lag: "~1 month (China ~2)"
+    revises: true
+    coverage: "Business tendency survey composite — manufacturers' assessments of production, order books and finished-goods stocks. Amplitude-adjusted and normalized so 100 = the series' own long-run average; above 100 = above-trend business sentiment. Available per country (USA, GBR, JPN, DEU, CHN…), for EA20, and for the OECD aggregate."
+    geography: national
+    time_span: "1950s → present (varies by country); config pulls 2024-01 →"
+    key_fields: [bci_index]
+    transform: raw
+    ellis_figures: "(none — not a book figure; a business-side counterpart to the UMich consumer read in 9-3)"
+    stats:
+      observations: "13 monthly points per region on the 2025-06 → probe"
+      time_range: "probed 2026-07-30: USA/EA20/GBR/JPN through 2026-06, CHN through 2026-05"
+      latest: "USA 100.10 · EA20 99.46 · GBR 97.64 · JPN 101.36 · CHN 98.81 (2026-05)"
+      units: "index, long-run average = 100"
+    gaps: >-
+      (1) FRED's mirrors (BSCICP03USM665S and siblings) are DISCONTINUED — they still return
+      HTTP 200 and a well-formed CSV, but the last observation is 2024-01. Silently stale;
+      always go direct to OECD SDMX. (2) It is a filtered/smoothed index, so the most recent
+      few months revise as the filter re-fits — the latest point is provisional, not a clean
+      release-day print. (3) A level index, not a percent: only distance from 100 is meaningful,
+      and cross-country level comparisons are weak because each country is normalized to its
+      OWN history. (4) Manufacturing-weighted, so it under-represents services economies.
+      (5) EA19 is frozen (last obs 2026-01) — use EA20.
+    relevance: "medium — the only business-side survey read in the fleet, and the only one giving comparable cross-country sentiment (EA/UK/CN/JP) from a single keyless call"
+    status: shipped
+    our_series: [ez_bci, uk_bci, cn_bci, jp_bci]
+    last_inventoried: 2026-07-30
+    notes: "Live in the Global-macro layer (international/series.yaml) for eurozone/UK/China/Japan. US BCI (REF_AREA=USA) is available from the identical call but is NOT charted — the international layer has no `us` region, and the US cycle read is already carried by the Ellis framework's real-PCE-YoY spine. Add a US row only if the international layer grows a US region."
+
   - id: conference_board_confidence
     name: "Conference Board Consumer Confidence Index"
     publisher: "The Conference Board"
