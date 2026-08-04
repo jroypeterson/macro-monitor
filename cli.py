@@ -1229,14 +1229,20 @@ def cmd_overview(args: argparse.Namespace) -> int:
         return 2
 
     client = WebClient(token=bot_token)
+    # Self-pinning since 2026-08-04 (board #258: ClaudeBot gained pins:read +
+    # pins:write, and the token did not rotate). Retire OUR superseded card BEFORE
+    # posting, so a failed post leaves no pin rather than two that disagree. This
+    # matters here specifically: the header states config-derived facts, and a stale
+    # pinned copy asserting an old gate is exactly the failure this project already
+    # recorded once.
+    from .publishers import slack_pin
     try:
+        retired = slack_pin.retire_own_pins(bot_token, channel_id, text)
         resp = client.chat_postMessage(channel=channel_id, text=text, blocks=blocks)
-        print(f"  Posted overview to {resp['channel']} ts={resp['ts']}", file=sys.stderr)
-        print(
-            f"  Now: open #macro in Slack, click ⋯ on this message, "
-            f"choose 'Pin to channel'.",
-            file=sys.stderr,
-        )
+        pinned = slack_pin.pin(bot_token, channel_id, resp["ts"])
+        print(f"  Posted overview to {resp['channel']} ts={resp['ts']}; "
+              f"retired {retired} superseded pin(s); "
+              f"pinned={'yes' if pinned else 'NO - pin by hand'}", file=sys.stderr)
     except SlackApiError as e:
         print(f"  ⚠️ Post failed: {e.response.get('error')}", file=sys.stderr)
         return 1
