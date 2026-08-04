@@ -19,6 +19,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import slack_blocks_client
 from ..posts_ledger import PostDecision
 from ..release_runner import ReleaseResult, is_rate_level
 
@@ -744,12 +745,21 @@ class SlackPublisher:
         client = WebClient(token=self.bot_token)
         upload_errors: list[str] = []
 
+        # Slack rejects a message carrying more than 50 blocks with `invalid_blocks`,
+        # which names nothing. These digests build blocks in a loop over components and
+        # trends, so the count scales with how eventful the release was — the payload is
+        # biggest on exactly the days worth reading. Name any violation, then SPLIT
+        # rather than truncate: a shorter digest would silently drop components.
+        for problem in slack_blocks_client.problems(blocks):
+            print(f"[macro_monitor] Block Kit: {problem}", file=sys.stderr)
+        chunks = slack_blocks_client.chunk(blocks)
+
         # 1. Main text post — this is the critical path. Land it first.
         try:
             main_resp = client.chat_postMessage(
                 channel=self.channel_id,
                 text=text,
-                blocks=blocks,
+                blocks=chunks[0],
             )
         except SlackApiError as e:
             self._alert_status_reports(
@@ -760,6 +770,31 @@ class SlackPublisher:
 
         main_ts = main_resp["ts"]
         main_channel = main_resp["channel"]
+
+        # 1b. Continuation blocks go in the THREAD, which is where this publisher
+        # already puts its substantive extras (every chart is a threaded reply). A
+        # second top-level post would read as a separate release. A continuation that
+        # fails must NOT take down an already-landed main post, so it warns and
+        # proceeds — the alternative is losing a good digest to a partial failure.
+        if len(chunks) > 1:
+            msg = (f"digest split into {len(chunks)} messages "
+                   f"({len(blocks)} blocks > 50); continuations threaded")
+            print(f"[macro_monitor] {msg}", file=sys.stderr)
+            for n, chunk in enumerate(chunks[1:], start=2):
+                try:
+                    client.chat_postMessage(
+                        channel=main_channel,
+                        text=f"{text} (cont. {n}/{len(chunks)})",
+                        blocks=chunk,
+                        thread_ts=main_ts,
+                    )
+                except SlackApiError as e:
+                    err = (f"⚠️ macro_monitor: continuation {n}/{len(chunks)} failed "
+                           f"for {result.family_display_name} {result.period_label}: "
+                           f"{e.response.get('error')} — main post landed, "
+                           f"{len(chunk)} block(s) not delivered")
+                    upload_errors.append(err)
+                    self._alert_status_reports(err)
 
         # 2. Main chart attached as a reply to the same channel/thread.
         main_chart = chart_paths.get("main")
