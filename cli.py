@@ -1242,8 +1242,9 @@ def cmd_overview(args: argparse.Namespace) -> int:
         return 0
     try:
         retired = slack_pin.retire_own_pins(bot_token, channel_id, text,
-                                            marker="Macro & Markets Monitor")
-        resp = client.chat_postMessage(channel=channel_id, text=text, blocks=blocks)
+                                            marker="Markets Monitor")
+        resp = client.chat_postMessage(channel=channel_id, text=text,
+                                       blocks=slack_pin.stamp(blocks))
         pinned = slack_pin.pin(bot_token, channel_id, resp["ts"])
         print(f"  Posted overview to {resp['channel']} ts={resp['ts']}; "
               f"retired {retired} superseded pin(s); "

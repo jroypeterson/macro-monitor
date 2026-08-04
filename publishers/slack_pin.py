@@ -15,6 +15,7 @@ something someone chose to keep".
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -66,8 +67,14 @@ def retire_own_pins(token: str, channel: str, fallback_text: str,
         if not msg.get("bot_id"):
             continue          # a human's pin - never touch it
         if marker:
+            # Search the ENTITY-NORMALISED blob: Slack stores "&" as "&amp;", so a
+            # marker containing an ampersand ("Macro & Markets Monitor") would never
+            # match its own card. Cost us a duplicate pin before it was spotted.
             blob = json.dumps(msg.get("blocks") or [], ensure_ascii=False)
-            if marker not in blob and marker not in (msg.get("text") or ""):
+            blob = (blob.replace("&amp;", "&").replace("&lt;", "<")
+                        .replace("&gt;", ">"))
+            body = (msg.get("text") or "").replace("&amp;", "&")
+            if marker not in blob and marker not in body:
                 continue      # another lane's card in the same channel
         elif (msg.get("text") or "") != fallback_text:
             continue
@@ -94,23 +101,59 @@ def pin(token: str, channel: str, ts: str) -> bool:
     print(f"[pin] pins.add failed: {res.get('error')} - pin by hand", file=sys.stderr)
     return False
 
+def stamp(blocks: list) -> list:
+    """Append a short content hash to the card, so freshness is a lookup not a guess.
+
+    WHY THIS REPLACED TEXT COMPARISON. Slack does not store what you post, and the list
+    of rewrites is longer than it looks: channel names become mentions, `&` becomes
+    `&amp;`, literal emoji become shortcodes, keycaps collapse, bare URLs auto-link,
+    newlines in the fallback text become spaces, and every block gains a `block_id`.
+    Each one was found by a card reposting itself forever, and after fixing six of them
+    a seventh appeared. Reversing a transformation you do not control is the wrong
+    shape of problem.
+
+    So the card carries its own identity instead: a hash of the blocks WE built, which
+    Slack stores verbatim because it is lowercase hex. Comparing it is exact, and it is
+    immune to every present and future rewrite.
+    """
+    body = json.dumps(blocks, sort_keys=True, ensure_ascii=False)
+    h = hashlib.sha256(body.encode("utf-8")).hexdigest()[:12]
+    out = [dict(b) for b in blocks]
+    tag = f"card:{h}"
+    for b in reversed(out):
+        if b.get("type") == "context" and b.get("elements"):
+            els = [dict(e) for e in b["elements"]]
+            els[-1] = dict(els[-1])
+            els[-1]["text"] = f"{els[-1].get('text', '')}  ·  {tag}"
+            b["elements"] = els
+            return out
+    out.append({"type": "context",
+                "elements": [{"type": "mrkdwn", "text": tag}]})
+    return out
+
+
+def _stamped_hash(blocks: list) -> str | None:
+    for b in reversed(blocks or []):
+        if (b or {}).get("type") == "context":
+            for e in reversed(b.get("elements") or []):
+                m = re.search(r"card:([0-9a-f]{12})", (e or {}).get("text", "") or "")
+                if m:
+                    return m.group(1)
+    return None
+
+
 def pin_is_current(token: str, channel: str, fallback_text: str,
                    blocks: list) -> bool:
-    """True when the pinned card is byte-identical to the one we would post.
+    """True when the pinned card carries the same content hash we would post.
 
-    THIS IS WHAT MAKES A SCHEDULED SWEEP SAFE. These cards derive every number from
-    live config, so re-posting is harmless in content -- but a weekly repost would put
-    a fresh message in every channel every week regardless of whether anything changed,
-    which is noise, and noise is how a channel stops being read.
-
-    Comparing first means the sweep is SILENT unless the config actually drifted. On a
-    quiet week nothing is posted, nothing is unpinned, and the pin keeps its original
-    date -- which is itself useful information ("this has been true since June").
-
-    Any doubt resolves to False (i.e. do refresh): a spurious repost is a cosmetic
-    cost, whereas wrongly concluding "still current" leaves a stale card asserting an
-    old threshold, which is the failure the whole exercise exists to prevent.
+    `blocks` may be stamped or unstamped -- both work, so callers cannot get it wrong.
+    Any doubt resolves to False (refresh): a spurious repost is cosmetic, whereas
+    wrongly concluding "still current" leaves a card asserting an old threshold, which
+    is the entire failure this exists to prevent.
     """
+    want = _stamped_hash(blocks) or _stamped_hash(stamp(blocks))
+    if not want:
+        return False
     try:
         listing = _call(token, "pins.list", {"channel": channel}, get=True)
     except Exception as e:  # noqa: BLE001
@@ -119,76 +162,8 @@ def pin_is_current(token: str, channel: str, fallback_text: str,
         return False
     for item in listing.get("items", []):
         msg = item.get("message") or {}
-        if not msg.get("bot_id") or (msg.get("text") or "") != fallback_text:
+        if not msg.get("bot_id"):
             continue
-        return _canon(token, msg.get("blocks")) == _canon(token, blocks)
-    return False   # no pin of ours at all -> definitely needs one
-
-_CHAN_CACHE: dict = {}
-
-
-def _expand_mentions(token: str, text: str) -> str:
-    """Turn `<#C123>` / `<#C123|name>` back into `#name`.
-
-    Slack rewrites what you post before storing it, in at least three ways, all found
-    the hard way while making a change-detector stop reporting false positives:
-      1. channel names -> `<#C0BKUQUPYS0>` mentions (handled here)
-      2. `&` -> `&amp;`, `<` -> `&lt;`, `>` -> `&gt;` (handled here)
-      3. `block_id` on every block, `verbatim: false` on every text object (handled by
-         _canon's whitelist)
-
-    SLACK REWRITES CHANNEL NAMES ON STORAGE. Post a card saying `#portfolio-management`
-    and Slack stores `<#C0BKUQUPYS0>`, so a byte comparison against the stored message
-    NEVER matches for any card that names a channel -- which made a change-detector
-    report "changed" on every single run.
-
-    Resolved rather than blanked on purpose: replacing every mention with a neutral
-    placeholder would also hide a REAL change, e.g. a card whose routing moved from
-    one channel to another. Expanding to the actual name keeps that detectable.
-    """
-    def repl(m):
-        cid, name = m.group(1), m.group(2)
-        if name:
-            return "#" + name
-        if cid not in _CHAN_CACHE:
-            try:
-                info = _call(token, "conversations.info", {"channel": cid}, get=True)
-                _CHAN_CACHE[cid] = (info.get("channel") or {}).get("name") or cid
-            except Exception:  # noqa: BLE001
-                _CHAN_CACHE[cid] = cid
-        return "#" + _CHAN_CACHE[cid]
-    out = re.sub(r"<#([A-Z0-9]+)(?:\|([^>]*))?>", repl, text or "")
-    # Slack also HTML-escapes &, < and > on storage, so "A & B" comes back as
-    # "A &amp; B". Normalise both sides or any card containing an ampersand looks
-    # changed forever.
-    return (out.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">"))
-
-
-def _canon(token: str, blocks: list) -> str:
-    """Canonical form of a block list, for comparing what we would post against what
-    Slack stored.
-
-    WHITELISTS the keys we author rather than blacklisting the ones Slack adds. Slack
-    decorates stored blocks with its own fields -- `block_id` on every block and
-    `verbatim: false` on every text object were both found the hard way -- and a
-    blacklist is a losing game: the next field Slack adds silently makes every card
-    look changed, and the sweep starts reposting weekly again for no reason.
-    """
-    def text_obj(t):
-        if not isinstance(t, dict):
-            return t
-        return {"type": t.get("type"),
-                "text": _expand_mentions(token, t.get("text", ""))}
-
-    out = []
-    for b in blocks or []:
-        b = b or {}
-        keep = {"type": b.get("type")}
-        if isinstance(b.get("text"), dict):
-            keep["text"] = text_obj(b["text"])
-        if b.get("fields"):
-            keep["fields"] = [text_obj(f) for f in b["fields"]]
-        if b.get("elements"):
-            keep["elements"] = [text_obj(e) for e in b["elements"]]
-        out.append(keep)
-    return json.dumps(out, sort_keys=True, ensure_ascii=False)
+        if _stamped_hash(msg.get("blocks")) == want:
+            return True
+    return False

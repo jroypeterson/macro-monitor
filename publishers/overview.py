@@ -44,7 +44,14 @@ RELEASE_WINDOWS: dict[str, str] = {
 
 
 def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[dict]]:
-    """Return (text_fallback, blocks) for the channel overview message."""
+    """Return (text_fallback, blocks) for the channel overview message.
+
+    EMOJI MUST BE SHORTCODES, NOT LITERALS. Slack rewrites a literal emoji to its
+    shortcode when storing the message, so a card built with literals can never
+    byte-match what Slack stored -- and the check that stops this card being reposted
+    every week would fire forever. Arrows and maths symbols are not emoji and are
+    stored verbatim, so they are fine.
+    """
 
     tier_a = sorted(
         ((fid, f) for fid, f in families.items() if f.tier == "A"),
@@ -136,7 +143,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": "📊 Macro & Markets Monitor — channel overview",
+                "text": ":bar_chart: Macro & Markets Monitor — channel overview",
                 "emoji": True,
             },
         },
@@ -203,9 +210,9 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                 "type": "mrkdwn",
                 "text": (
                     "*When and what posts*\n"
-                    "• 📅 *Sun 07:00 ET* — week-ahead + 4-week lookout\n"
+                    "• :date: *Sun 07:00 ET* — week-ahead + 4-week lookout\n"
                     "• 🌍 *Sun 08:00 ET* — Global macro digest (Eurozone / UK / China / Japan)\n"
-                    "• 🔴 *Release time* — main post with headline + 5y chart; "
+                    "• :red_circle: *Release time* — main post with headline + 5y chart; "
                     "thread with long-history + components + (for payrolls) "
                     "HC-employment two-pane chart\n"
                     "• 🔁 *Revisions* — new REVISED post with diff; "
@@ -240,12 +247,12 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
                     "(3-year CMS payment-rule cycles + key data releases), "
                     "<https://jroypeterson.github.io/hc-macro-policy-pages/cms_rates.html|CMS Rates> "
                     "(headline update %, proposed vs final, by payment system).\n"
-                    "• 📊 <https://jroypeterson.github.io/macro-monitor/dashboard/|US current state dashboard> — "
+                    "• :bar_chart: <https://jroypeterson.github.io/macro-monitor/dashboard/|US current state dashboard> — "
                     "latest value per family, mini-charts, links into release reports. Auto-refreshes after every release post.\n"
                     "• 🌍 <https://jroypeterson.github.io/macro-monitor/international/|Global macro dashboard> — "
                     "latest CPI / GDP / unemployment / business confidence / policy rates for "
                     "the eurozone, UK, China & Japan. Refreshed weekly.\n"
-                    "• 📅 <https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html|2026 Annual Macro Calendar> — "
+                    "• :date: <https://jroypeterson.github.io/macro-monitor/calendar/2026_macro_calendar.html|2026 Annual Macro Calendar> — "
                     "year-long release schedule (all tiers; Tier B tagged), refreshed quarterly\n"
                     "• `#status-reports` — daily 08:00 ET heartbeat + operator alerts\n"
                     "• *Google Calendar* (floridabusinessman@gmail.com) — "
