@@ -1236,8 +1236,13 @@ def cmd_overview(args: argparse.Namespace) -> int:
     # pinned copy asserting an old gate is exactly the failure this project already
     # recorded once.
     from .publishers import slack_pin
+    if not getattr(args, "force", False) and slack_pin.pin_is_current(
+            bot_token, channel_id, text, blocks):
+        print("  Pinned overview already current - nothing posted", file=sys.stderr)
+        return 0
     try:
-        retired = slack_pin.retire_own_pins(bot_token, channel_id, text)
+        retired = slack_pin.retire_own_pins(bot_token, channel_id, text,
+                                            marker="Macro & Markets Monitor")
         resp = client.chat_postMessage(channel=channel_id, text=text, blocks=blocks)
         pinned = slack_pin.pin(bot_token, channel_id, resp["ts"])
         print(f"  Posted overview to {resp['channel']} ts={resp['ts']}; "
