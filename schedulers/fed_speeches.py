@@ -370,16 +370,15 @@ def post_speeches_to_macro(payload: SpeechDigestPayload) -> tuple[bool, str]:
         return False, "SLACK_BOT_TOKEN + SLACK_MACRO_CHANNEL_ID required"
 
     from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
+
+    # Guarded: this digest's blocks are built in a loop over new speeches, so the
+    # count scales with how eventful the day was and can cross Slack's 50-block
+    # ceiling on exactly the days worth reading (#268). Splits into threaded
+    # continuations rather than truncating, which would silently drop speeches.
+    from ..publishers.guarded_post import post_guarded
 
     client = WebClient(token=bot_token)
-    try:
-        resp = client.chat_postMessage(
-            channel=channel_id, text=payload.text, blocks=payload.blocks
-        )
-        return True, f"posted ts={resp['ts']}"
-    except SlackApiError as e:
-        return False, f"slack error: {e.response.get('error')}"
+    return post_guarded(client, channel_id, payload.text, payload.blocks)
 
 
 def record_posted(

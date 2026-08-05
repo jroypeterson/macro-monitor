@@ -400,16 +400,15 @@ def post_to_macro(payload: DigestPayload) -> tuple[bool, str]:
         return False, "SLACK_BOT_TOKEN + SLACK_MACRO_CHANNEL_ID required"
 
     from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
+
+    # Guarded: blocks are built in a loop over new research posts, so the count
+    # scales with the day's volume and can cross Slack's 50-block ceiling exactly
+    # when the digest is most worth reading (#268). Splits into threaded
+    # continuations rather than truncating, which would silently drop posts.
+    from ..publishers.guarded_post import post_guarded
 
     client = WebClient(token=bot_token)
-    try:
-        resp = client.chat_postMessage(
-            channel=channel_id, text=payload.text, blocks=payload.blocks
-        )
-        return True, f"posted ts={resp['ts']}"
-    except SlackApiError as e:
-        return False, f"slack error: {e.response.get('error')}"
+    return post_guarded(client, channel_id, payload.text, payload.blocks)
 
 
 def record_posted(payload: DigestPayload, ledger: ResearchLedger | None = None) -> None:
