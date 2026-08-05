@@ -75,13 +75,24 @@ def test_the_first_chunk_failing_is_a_failure():
     assert not ok and "boom" in msg
 
 
-def test_a_continuation_failing_is_reported_but_the_run_still_counts_as_posted():
-    """The reader HAS the digest at that point. Losing a continuation is a partial,
-    not a total failure — but it must be said out loud, not swallowed."""
+def test_a_lost_continuation_FAILS_the_run_so_the_ledger_is_not_written():
+    """Codex round 1, and my first version got this backwards.
+
+    I reasoned "the reader has the digest, so a lost continuation is a partial, not a
+    failure" and returned True. But BOTH callers do `if ok: record_posted(payload)`,
+    which permanently dedupes every URL in the payload — including the chunk Slack
+    never received. Those speeches would never be re-sent by any future run.
+
+    So the trade is: return False and next run re-posts some already-delivered items
+    (duplicates, recoverable), or return True and lose items permanently. This project
+    already made that call elsewhere in the fleet, in exactly these words: "do NOT
+    record so a retry re-alerts (no silent loss)".
+    """
     c = FakeClient(fail_on=2)
     ok, msg = gp.post_guarded(c, "C1", "text", blocks(120))
-    assert ok
+    assert not ok, "a lost continuation must not let the caller write the ledger"
     assert "continuation" in msg.lower()
+    assert "re-alert" in msg.lower() or "not recorded" in msg.lower()
 
 
 def test_violations_are_named_on_stderr(capsys):

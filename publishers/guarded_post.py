@@ -27,9 +27,13 @@ def post_guarded(client, channel: str, text: str,
                  blocks: list[dict]) -> tuple[bool, str]:
     """chat_postMessage with ceiling validation + threaded continuations.
 
-    Returns (ok, message). `ok` reflects whether the READER got the digest: the first
-    chunk landing is what matters, so a failed continuation is a loud partial rather
-    than a total failure.
+    Returns (ok, message). `ok` gates the caller's LEDGER WRITE, not the reader's
+    experience -- both callers do `if ok: record_posted(payload)`, which permanently
+    dedupes every URL in the payload. So a lost continuation must return False: its
+    items were never delivered, and recording them would bury them forever. The cost
+    of False is that the next run re-posts some already-delivered items; duplicates
+    are recoverable, permanent loss is not. Same rule the fr-feed lane states in its
+    own words: "do NOT record so a retry re-alerts (no silent loss)".
     """
     for problem in slack_blocks_client.problems(blocks or []):
         # `invalid_blocks` names nothing, so name it ourselves before Slack is asked.
@@ -54,9 +58,12 @@ def post_guarded(client, channel: str, text: str,
             lost.append(f"{i}: {e}")
 
     if lost:
-        # Partial, and said out loud. The digest IS delivered; some of it is not.
-        return True, (f"posted ts={ts} but {len(lost)} continuation(s) FAILED "
-                      f"({'; '.join(lost)})")
+        # FAILS the run on purpose. The reader got the first chunk, but the caller
+        # must not write its dedupe ledger: doing so would mark the undelivered
+        # items as posted and no future run would ever re-send them.
+        return False, (f"posted ts={ts} but {len(lost)} continuation(s) FAILED "
+                       f"({'; '.join(lost)}) -- NOT recorded, so the next run will "
+                       f"re-alert rather than lose them")
     if len(chunks) > 1:
         return True, f"posted ts={ts} in {len(chunks)} parts (threaded)"
     return True, f"posted ts={ts}"
