@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.2",
+  "family_id": "initial_jobless_claims",
+  "family_display_name": "Initial Jobless Claims",
+  "period": "2026-06-27",
+  "period_label": "Week ending Jun 27, 2026",
+  "posted_at": "2026-07-08T18:48:25.077848+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-07-08T18:48:24.019644+00:00",
+  "latest_observation_period": "2026-06-27",
+  "expected_observation_period": "2026-06-27",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ICSA",
+      "label": "Initial claims",
+      "primary": {
+        "transform": "raw",
+        "value": 215000.0,
+        "raw_value": 215000.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": -6.926406926406925
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": -4.444444444444439
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 216000.0
+      },
+      "display_unit": null,
+      "definition": "Initial Jobless Claims (ICSA): people filing for unemployment insurance for the first time that week -- the fastest-turning labor-market indicator, published weekly."
+    }
+  ],
+  "components": [
+    {
+      "id": "CCSA",
+      "label": "Continued claims (insured unemployment)",
+      "transform": "raw",
+      "value": null,
+      "prior": {
+        "transform": "raw",
+        "value": 1814000.0
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1800000.0
+      },
+      "tags": [],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "ICSA",
+    "anchor_transform": "raw",
+    "zscore": -0.08534993702330348,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "claims_2y_2026-06-27.png",
+    "claims_5y": "claims_5y_2026-06-27.png"
+  },
+  "agency_pdf_url": null
+}

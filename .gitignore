@@ -23,6 +23,11 @@ market/data/latest/
 # Agency PDFs — non-blocking convenience mirror; gitignored per design.
 pdfs/
 
+# Adversarial-review output. Committed feedback fed Codex its own prior output
+# on the next round, compounding token burn (fixed fleet-wide 2026-07-20 — this
+# repo was one of 8 the fix never reached, and had accrued 1.9MB untracked).
+codex_feedback/
+
 # Python
 __pycache__/
 *.py[cod]
