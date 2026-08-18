@@ -66,6 +66,38 @@ def test_yoy_pct_monthly_is_12_month_change():
     assert out.index[0] == s.index[12]
 
 
+def test_yoy_pct_pairs_by_date_when_a_month_is_missing():
+    """The October-2025 shape. BLS published no CPI that month, so CPIAUCSL and
+    CE16OV each carry one hole; a ROW lag then reached back thirteen months for the
+    twelve prints after it, and the published charts were wrong by up to 0.4pp on a
+    chartpack whose whole subject is the rate of change.
+    """
+    s = _monthly([100.0 + i for i in range(30)])          # +1/month ramp
+    gapped = s.drop(s.index[15])                          # one month vanishes
+    out = yoy_pct(gapped)
+    for ts, value in out.items():
+        base_ts = ts - pd.DateOffset(years=1)
+        assert base_ts in gapped.index
+        assert value == pytest.approx((gapped[ts] / gapped[base_ts] - 1) * 100)
+
+
+def test_yoy_pct_drops_the_point_whose_partner_is_missing():
+    s = _monthly([100.0 + i for i in range(30)])
+    missing = s.index[15]
+    out = yoy_pct(s.drop(missing))
+    assert missing not in out.index                        # the hole itself
+    assert missing + pd.DateOffset(years=1) not in out.index   # and its partner
+
+
+def test_yoy_accel_is_also_date_aligned():
+    s = _monthly([100.0 * (1.01 ** i) for i in range(40)])
+    gapped = s.drop(s.index[20])
+    out = charts.yoy_accel(gapped)
+    y = yoy_pct(gapped)
+    for ts, value in out.items():
+        assert value == pytest.approx(y[ts] - y[ts - pd.DateOffset(years=1)])
+
+
 def test_infer_periods_per_year():
     monthly = _monthly([1.0] * 30)
     quarterly = pd.Series(range(20), index=pd.date_range("2000-01-01", periods=20, freq="QS"), dtype=float)

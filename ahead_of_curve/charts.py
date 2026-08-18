@@ -47,22 +47,55 @@ def _infer_periods_per_year(series: pd.Series) -> int:
     return 1
 
 
+def _lagged_by_a_year(series: pd.Series) -> pd.Series:
+    """`series` with its index moved forward one calendar year, reindexed onto the
+    original dates — so each point is paired with the same month a year earlier, or
+    with nothing at all."""
+    lagged = series.copy()
+    lagged.index = lagged.index + pd.DateOffset(years=1)
+    return lagged.reindex(series.index)
+
+
 def yoy_pct(series: pd.Series) -> pd.Series:
     """Year-over-year percent change — the Ellis transform. Vectorized (unlike the
-    scalar transforms.yoy_pct used for the digest); returns the whole YoY series."""
+    scalar transforms.yoy_pct used for the digest); returns the whole YoY series.
+
+    Aligned by DATE, not by row position. This was `dropna().pct_change(periods)`,
+    which lags by ROWS and therefore equals year-over-year only when every period is
+    present. It usually is — and then, in October 2025, BLS published no CPI at all.
+    `CPIAUCSL` and `CE16OV` each carry exactly one missing month there, so for the
+    twelve prints after the gap the row lag reached back THIRTEEN months.
+
+    Measured 2026-08-17, against the corrected values:
+      * real average hourly earnings YoY (7 of the 23 figures use CPIAUCSL, mostly
+        as the deflator) — wrong by up to **0.39pp**, e.g. March 2026 published as
+        +0.64% against a true +0.25%;
+      * civilian employment YoY (3 figures) — wrong by up to **0.40pp**, e.g. May
+        2026 published as -0.69% against a true -0.29%.
+
+    On a chartpack whose entire thesis is the rate of change and its inflections,
+    four tenths of a point is not rounding. `TCMDO` also has six missing quarters in
+    1950-51, affecting one figure at the far-left edge only.
+
+    Reindexing onto a complete grid before calling this does NOT work: the
+    `.dropna()` here collapses it straight back. The alignment has to happen with
+    the lag, which is what this does. Points with no partner a year earlier are
+    dropped rather than paired with whatever row sits N positions away.
+    """
     s = series.dropna()
-    periods = _infer_periods_per_year(s)
-    return (s.pct_change(periods) * 100).dropna()
+    return ((s / _lagged_by_a_year(s) - 1.0) * 100.0).dropna()
 
 
 def yoy_accel(series: pd.Series) -> pd.Series:
     """Rate of change of the YoY growth rate: the 12-month change in the YoY series,
     in percentage points. Positive => growth is accelerating, negative => decelerating.
     Answers the book's 'is the rate of change increasing or decreasing?' The 12-month
-    differencing smooths the otherwise-noisy month-to-month derivative."""
-    s = series.dropna()
-    periods = _infer_periods_per_year(s)
-    return yoy_pct(s).diff(periods).dropna()
+    differencing smooths the otherwise-noisy month-to-month derivative.
+
+    Date-aligned for the same reason as `yoy_pct` — and doubly exposed to it, since
+    it lags an already-lagged series."""
+    y = yoy_pct(series.dropna())
+    return (y - _lagged_by_a_year(y)).dropna()
 
 
 def real_deflate(nominal: pd.Series, deflator: pd.Series) -> pd.Series:
