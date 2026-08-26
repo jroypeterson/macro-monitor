@@ -4,9 +4,9 @@
   "family_display_name": "GDP",
   "period": "2026-Q2",
   "period_label": "Q2 2026",
-  "posted_at": "2026-08-25T21:25:33.298398+00:00",
+  "posted_at": "2026-08-26T12:54:51.420945+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-08-25T21:25:30.332497+00:00",
+  "source_fetched_at": "2026-08-26T12:54:48.762933+00:00",
   "latest_observation_period": "2026-Q2",
   "expected_observation_period": "2026-Q2",
   "is_stale": false,
@@ -35,8 +35,8 @@
       "label": "Nominal GDP (actual $)",
       "primary": {
         "transform": "raw",
-        "value": 7.9,
-        "raw_value": 7.9
+        "value": 8.0,
+        "raw_value": 8.0
       },
       "also_display": [],
       "prior_primary": {
@@ -52,7 +52,7 @@
       "id": "GDPC1",
       "label": "Real GDP (level)",
       "transform": "yoy_pct",
-      "value": 2.1018194625243902,
+      "value": 2.097671547016011,
       "prior": {
         "transform": "yoy_pct",
         "value": 2.684743341425966
@@ -68,7 +68,7 @@
       "id": "PCECC96",
       "label": "\u21b3 Consumer spending (real PCE)",
       "transform": "yoy_pct",
-      "value": 2.263529916814022,
+      "value": 2.334934665232846,
       "prior": {
         "transform": "yoy_pct",
         "value": 2.091883826009533
@@ -84,7 +84,7 @@
       "id": "GPDIC1",
       "label": "\u21b3 Private investment (real)",
       "transform": "yoy_pct",
-      "value": 3.2734411345757053,
+      "value": 3.2060644074053624,
       "prior": {
         "transform": "yoy_pct",
         "value": -1.211139883556256
@@ -100,7 +100,7 @@
       "id": "GCEC1",
       "label": "\u21b3 Government (real)",
       "transform": "yoy_pct",
-      "value": -0.019108564193015543,
+      "value": -0.06103220306469259,
       "prior": {
         "transform": "yoy_pct",
         "value": 0.1573891134105443
@@ -116,7 +116,7 @@
       "id": "DHLCRC1Q027SBEA",
       "label": "PCE Health Services",
       "transform": "yoy_pct",
-      "value": 5.815074060912062,
+      "value": 7.22595726919113,
       "prior": {
         "transform": "yoy_pct",
         "value": 6.781215200445434
