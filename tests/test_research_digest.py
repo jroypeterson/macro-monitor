@@ -48,11 +48,22 @@ def test_load_sources_reads_yaml():
 
 
 def test_fetch_source_returns_empty_with_error_on_bad_url():
-    """A broken URL should return (empty list, error message) — not raise."""
+    """A broken URL should return (empty list, error message) — not raise.
+
+    ⛑ The unreachable endpoint is LOOPBACK, not a `.invalid` hostname. Measured
+    2026-09-11 by scripts/pytest_fleet_guard.py, which logged this test opening
+    `('this-domain-definitely-does-not-resolve.invalid', 80)`: an unresolvable
+    name still sends a real DNS query off the machine, and after
+    `tests/conftest.py::_no_live_network` landed it would have been the fixture's
+    RuntimeError being caught here rather than a transport failure -- a test of
+    the guard, not of `fetch_source`. Port 1 on 127.0.0.1 has nothing listening,
+    so the connection is refused locally: the same code path, no wire, and the
+    same answer every run.
+    """
     src = ResearchSource(
         id="test",
         display_name="Test",
-        url="http://this-domain-definitely-does-not-resolve.invalid/feed",
+        url="http://127.0.0.1:1/feed",
         max_items_per_run=5,
     )
     posts, err = fetch_source(src)

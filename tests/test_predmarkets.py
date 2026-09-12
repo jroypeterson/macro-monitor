@@ -299,8 +299,33 @@ def test_movers_multi_outcome_matches_by_label():
 
 # ---- discovery ----
 
+def _polymarket_is_the_only_source(monkeypatch):
+    """Stub the two sources `discover_new` gathers from besides Polymarket.
+
+    ⛑ Measured 2026-09-11 by scripts/pytest_fleet_guard.py: without this, the two
+    discovery tests below opened 15 live HTTPS connections between them --
+    PredictIt (`104.18.29.246:443`, three retries with sleeps) and Kalshi
+    (`13.33.82.32:443`, once per category). Stubbing `client.search_events` and
+    `client.fetch_event` covers `_gather_polymarket` and nothing else, and both
+    other gatherers wrap their call in `except Exception: continue`, so the live
+    calls showed up neither in the stub list nor in the assertions -- the tests
+    passed the same online and offline.
+
+    `tests/conftest.py::_no_live_network` now shuts the wire for the whole suite,
+    but a refusal it raises lands in those same `except Exception` handlers. So
+    these stubs are not belt-and-braces: they are what makes "PredictIt and Kalshi
+    contributed nothing to this result" a stated fact rather than a swallowed
+    error. `_kget` is private and patched as such on purpose -- naming it here
+    fails loudly if the Kalshi call is ever renamed, which a `requests`-level
+    patch would not.
+    """
+    monkeypatch.setattr(predictit, "fetch_all", lambda force=False: [])
+    monkeypatch.setattr(DISC, "_kget", lambda path, params: {})
+
+
 def test_discovery_seeds_first_run_then_surfaces_new(tmp_path, monkeypatch):
     p = tmp_path / "seen.json"
+    _polymarket_is_the_only_source(monkeypatch)
     monkeypatch.setattr(DISC.client, "search_events",
                         lambda term: [{"title": "FDA approves NewDrug Z?", "slug": "newdrug-z"}])
     # first run seeds silently
@@ -430,6 +455,7 @@ def test_rundown_renders_hc_watch_section():
 def test_discovery_skips_low_volume(tmp_path, monkeypatch):
     p = tmp_path / "seen.json"
     p.write_text("[]", encoding="utf-8")  # not first run
+    _polymarket_is_the_only_source(monkeypatch)
     monkeypatch.setattr(DISC.client, "search_events",
                         lambda term: [{"title": "Recession in Canada in 2027?", "slug": "ca-rec"}])
     monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: {
