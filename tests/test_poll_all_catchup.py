@@ -145,7 +145,7 @@ def test_poll_all_revised_headline_same_period_still_posts_revised(harness, monk
         assert ledger.get(FAMILY, "2026-08").revision_count == 1
 
 
-@pytest.mark.parametrize("wf", ["release_polling.yml", "fomc_statement.yml"])
+@pytest.mark.parametrize("wf", ["release_polling.yml", "fomc_statement.yml", "reconciliation.yml"])
 def test_posting_workflows_share_concurrency_group(wf):
     """Both lanes post to #macro-and-markets and commit state; with the clock
     gate gone, late runs can overlap. One queue, never cancelled mid-post."""

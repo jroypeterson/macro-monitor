@@ -14,6 +14,12 @@ on:
 permissions:
   contents: write   # needed for the git push step
 
+# Same group as release_polling / fomc_statement: this job also runs poll-all --post
+# and commits state/posts.db, so with the clock gate gone a late poll could overlap it.
+concurrency:
+  group: macro-posts
+  cancel-in-progress: false
+
 jobs:
   reconcile:
     runs-on: ubuntu-latest
