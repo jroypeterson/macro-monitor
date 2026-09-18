@@ -595,8 +595,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-window-check",
         action="store_true",
         help=(
-            "By default poll-all skips outside the 8:25–11:00 ET window "
-            "(plus 13:55–14:35 for FOMC). Override for manual testing."
+            "Deprecated no-op, kept so old workflow_dispatch invocations still "
+            "parse. poll-all no longer gates on the ET clock (late cron runs "
+            "must still post); the posts ledger is the dedupe."
         ),
     )
     sp.set_defaults(func=cmd_poll_all)
@@ -1524,31 +1525,22 @@ def cmd_ahead_of_curve(args: argparse.Namespace) -> int:
 
 
 def cmd_poll_all(args: argparse.Namespace) -> int:
-    """Master polling entry point — run every 15 min by GitHub Actions cron.
-    Iterates every numeric Tier A family, runs the same `post-release`
-    path the manual command uses. Idempotent via the posts ledger.
+    """Master polling entry point, fired by the GitHub Actions */15 cron.
+    Iterates every numeric family and runs the same `post-release` path the
+    manual command uses.
+
+    There is deliberately NO wall-clock window here. Until 2026-09-18 this
+    returned 0 outside 08:25-11:00 / 13:55-14:35 ET; once GitHub began
+    creating scheduled runs 3-4h late (and dropping most), every late run
+    exited green without polling, and Retail Sales, Industrial Production
+    (09-16) and Claims (09-17) were never posted. Dedupe is the ledger's job,
+    not the clock's: `posts` PK (family_id, period) + compute_diff (UNCHANGED
+    -> no post, changed headline -> REVISED) and the stale/partial-ingest skip
+    in release_runner. Do not add "owed"/calendar gating on this fetch path:
+    re-releases (GDP advance/second/third) share a period key and must still
+    reach the REVISED path. See plans/missed_releases_diagnosis_2026-09-17.md.
+    `--skip-window-check` is accepted as a no-op for old dispatch invocations.
     """
-    from datetime import datetime, time
-    from zoneinfo import ZoneInfo
-
-    ET = ZoneInfo("America/New_York")
-
-    # Window check (skippable via --skip-window-check)
-    if not args.skip_window_check:
-        now_et = datetime.now(ET)
-        weekday = now_et.weekday()  # Mon=0..Sun=6
-        t = now_et.time()
-        # Tier A 8:30 ET releases — fetch from 8:25 to 11:00 ET
-        morning_window = time(8, 25) <= t <= time(11, 0)
-        # FOMC 14:00 ET — 13:55 to 14:35
-        fomc_window = time(13, 55) <= t <= time(14, 35)
-        if weekday >= 5 or not (morning_window or fomc_window):
-            print(
-                f"  Outside polling window (now={now_et.strftime('%a %H:%M ET')}); "
-                f"exit clean.",
-                file=sys.stderr,
-            )
-            return 0
 
     path = Path(args.config) if args.config else default_config_path()
     families = load_config(path)

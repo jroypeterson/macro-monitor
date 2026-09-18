@@ -11,6 +11,13 @@ on:
     - cron: "5 19 * * *"   # 14:05 EST (winter)
   workflow_dispatch: {}
 
+# Shared with release_polling.yml, which no longer gates on the ET clock and so
+# can run at 14:xx ET too. Queue, never cancel: a cancelled run could die
+# between the Slack post and any state commit.
+concurrency:
+  group: macro-posts
+  cancel-in-progress: false
+
 jobs:
   statement:
     runs-on: ubuntu-latest
