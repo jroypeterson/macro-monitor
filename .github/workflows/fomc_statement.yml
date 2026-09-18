@@ -1,9 +1,15 @@
 name: FOMC statement
 
-# Runs at ~14:05 ET but ONLY on actual FOMC decision days (8/year) — guarded by
-# macro_monitor.fomc's meeting calendar. Fetches the just-released statement +
-# the prior one, redlines the language changes, tags the decision + lean, and
-# posts to #macro-and-markets.
+# Fetches the just-released FOMC statement + the prior one, redlines the
+# language changes, tags the decision + lean, and posts to #macro-and-markets.
+#
+# The gate is in Python (`cli fomc-statement`), not a clock hour: GitHub starts
+# this account's scheduled runs 3-4h late, and the old bash ET_HOUR==14 step
+# skipped the 2026-09-16 statement on a green run. A run posts when a decision
+# day is on/before today (ET) within a 2-day lookback, the statement text is
+# non-empty, and state/posts.db has no ('fomc_statement', decision date) row.
+# Text not up yet -> exit 1 (red) with no row, so the next run retries.
+# Non-decision days exit 0 without fetching anything.
 
 on:
   schedule:
@@ -11,9 +17,16 @@ on:
     - cron: "5 19 * * *"   # 14:05 EST (winter)
   workflow_dispatch: {}
 
+permissions:
+  contents: write   # needed for the git push step
+
 # Deliberately NOT in the macro-posts concurrency group (Fable review 2026-09-17):
-# this job commits no state, and GitHub keeps only ONE pending run per group --
-# a poll created behind a pending FOMC run would silently CANCEL it.
+# GitHub keeps only ONE pending run per group, so a poll queued behind a
+# pending FOMC run would silently CANCEL it. Its own group serialises the two
+# daily crons (both can land late and overlap) so they never race the ledger.
+concurrency:
+  group: fomc-statement
+  cancel-in-progress: false
 
 jobs:
   statement:
@@ -34,24 +47,7 @@ jobs:
           mkdir -p /tmp/pkg
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
-      - name: Skip unless FOMC decision day at 14:00 ET
-        id: guard
-        env:
-          PYTHONPATH: /tmp/pkg
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "skip=false" >> $GITHUB_OUTPUT; exit 0
-          fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          DECISION=$(python -c "from datetime import date; from macro_monitor import fomc; t=date.today(); print('yes' if any(m.end==t for m in fomc.all_meetings()) else 'no')")
-          if [ "$ET_HOUR" = "14" ] && [ "$DECISION" = "yes" ]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-          else
-            echo "skip=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Post FOMC statement redline
-        if: steps.guard.outputs.skip != 'true'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
@@ -60,3 +56,17 @@ jobs:
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
         run: python -m macro_monitor.cli fomc-statement --post
+
+      - name: Persist posts ledger
+        # Commit the ledger back so the next run sees this decision as posted.
+        # Must run even if the post step failed, mirroring release_polling.yml.
+        if: always()
+        run: |
+          git config user.name "claudebot"
+          git config user.email "claudebot@users.noreply.github.com"
+          git add state/posts.db outputs/ data/ 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "fomc-statement: $(date -u +%FT%TZ)"
+            git pull --rebase --autostash
+            git push
+          fi

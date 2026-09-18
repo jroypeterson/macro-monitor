@@ -17,8 +17,9 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from . import fomc
 
@@ -27,6 +28,15 @@ from . import fomc
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 1500
 MAX_STMT_CHARS = 6000
+
+# posts_ledger family for decision-day posts; period = decision date (ISO).
+LEDGER_FAMILY = "fomc_statement"
+# How many days after a decision a run may still post it. GitHub starts this
+# account's scheduled runs 3-4h late (and sometimes drops them), so the gate is
+# "a decision is owed and unposted", never "it is 14:00 ET now".
+LOOKBACK_DAYS = 2
+
+ET = ZoneInfo("America/New_York")
 
 ACTIONS = ("cut", "hold", "hike")
 STANCES = ("hawkish", "dovish", "neutral")
@@ -43,6 +53,7 @@ class StatementVerdict:
     dissents: str = ""              # dissent description, or ""
     sep: bool = False               # was this a Summary-of-Economic-Projections mtg
     why: str = ""                   # fallback reason
+    has_text: bool = True           # False when the Fed page had no statement yet
 
 
 def statement_url(decision_date: date) -> str:
@@ -106,7 +117,8 @@ def analyze_statement(
     a minimal fallback verdict on any API/parse error."""
     iso = decision_date.isoformat()
     if not current_text:
-        return StatementVerdict(decision_date=iso, sep=sep, why="statement text unavailable")
+        return StatementVerdict(decision_date=iso, sep=sep, has_text=False,
+                                why="statement text unavailable")
 
     if client is None:
         try:
@@ -213,6 +225,20 @@ def latest_meeting_on_or_before(today: date) -> "fomc.FOMCMeeting | None":
     recent statement)."""
     past = [m for m in fomc.all_meetings() if m.end <= today]
     return past[-1] if past else None
+
+
+def _now_et() -> datetime:
+    return datetime.now(ET)
+
+
+def due_meeting(today: date, lookback_days: int = LOOKBACK_DAYS) -> "fomc.FOMCMeeting | None":
+    """The decision owed a post on `today`: the latest meeting whose decision
+    day is on/before today and at most `lookback_days` old. No clock-hour test:
+    a late run must still post (2026-09-16 ran at 17:13 ET and was skipped)."""
+    m = latest_meeting_on_or_before(today)
+    if m is None or today - m.end > timedelta(days=lookback_days):
+        return None
+    return m
 
 
 def build_statement_report(

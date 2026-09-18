@@ -778,6 +778,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model", default=None, help="Override the LLM model")
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument("--force", action="store_true",
+                    help="Post even if the ledger shows this decision already posted")
     sp.set_defaults(func=cmd_fomc_statement)
 
     sp = sub.add_parser(
@@ -1118,18 +1120,49 @@ def cmd_fed_speeches_speaker(args: argparse.Namespace) -> int:
 
 
 def cmd_fomc_statement(args: argparse.Namespace) -> int:
-    """Parse + redline the latest FOMC statement and post to #macro."""
+    """Parse + redline the latest FOMC statement and post to #macro.
+
+    The gate is "a decision is owed and unposted", not a clock hour: GitHub
+    starts the 14:05 ET cron 3-4h late, and the old bash ET_HOUR==14 check
+    skipped the 2026-09-16 statement on a green run. Posts when a decision
+    day is on/before today within LOOKBACK_DAYS, the statement text is
+    non-empty, and posts.db has no ('fomc_statement', decision date) row.
+    Empty text exits 1 with no row, so the run is red and the next one retries.
+    The row is written only after Slack accepts the post.
+    """
     from datetime import date as _date
 
-    from .fomc_statement import build_statement_report, post_to_macro
+    from . import fomc_statement as fs
+    from .posts_ledger import PostsLedger
 
-    on_date = _date.fromisoformat(args.date) if args.date else None
-    verdict, text, blocks = build_statement_report(on_date=on_date, model=args.model)
+    today = _date.fromisoformat(args.date) if args.date else fs._now_et().date()
+    meeting = fs.due_meeting(today)
+    if meeting is None:
+        print(f"  No FOMC decision owed on {today} (none in the last "
+              f"{fs.LOOKBACK_DAYS} days).", file=sys.stderr)
+        return 0
+    period = meeting.end.isoformat()
+    force = getattr(args, "force", False)
+
+    if not force:
+        with PostsLedger() as ledger:
+            if ledger.get(fs.LEDGER_FAMILY, period) is not None:
+                print(f"  FOMC {period} statement already posted (ledger); "
+                      "use --force to repost.", file=sys.stderr)
+                return 0
+
+    verdict, text, blocks = fs.build_statement_report(on_date=today, model=args.model)
 
     if verdict is None:
         print("  No FOMC statement to report (no meeting on/before that date).",
               file=sys.stderr)
         return 0
+
+    if not verdict.has_text:
+        print(f"  ⚠️ FOMC {period}: statement text unavailable at "
+              f"{fs.statement_url(meeting.end)}; not posting, will retry next run.",
+              file=sys.stderr)
+        return 1
 
     print(f"  FOMC {verdict.decision_date}: {verdict.action.upper()} · "
           f"target {verdict.target_range or '—'} · {verdict.stance}")
@@ -1142,9 +1175,20 @@ def cmd_fomc_statement(args: argparse.Namespace) -> int:
         print("\n  Use --post to publish.", file=sys.stderr)
         return 0
 
-    ok, msg = post_to_macro(text, blocks)
+    ok, msg = fs.post_to_macro(text, blocks)
     print(f"  {'posted: ' + msg if ok else '⚠️ ' + msg}", file=sys.stderr)
-    return 0 if ok else 1
+    if not ok:
+        return 1
+    with PostsLedger() as ledger:
+        ledger.record_post(
+            family_id=fs.LEDGER_FAMILY,
+            period=period,
+            headline_values={"action": verdict.action,
+                             "target_range": verdict.target_range,
+                             "stance": verdict.stance},
+            component_values={},
+        )
+    return 0
 
 
 def cmd_fed_speeches_export(args: argparse.Namespace) -> int:
