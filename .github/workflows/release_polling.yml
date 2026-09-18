@@ -10,8 +10,8 @@ name: Release polling
 # Idempotency comes from state/posts.db: a release that has already been
 # posted for a given period won't double-post on the next fire, and a changed
 # headline for the same period posts as a REVISION. The concurrency group
-# below serialises this lane with fomc_statement.yml so two runs never race
-# on the ledger commit or the channel.
+# below serialises this lane with reconciliation.yml (both run poll-all --post
+# and commit state/posts.db) so two runs never race on the ledger commit.
 
 on:
   schedule:
@@ -26,7 +26,7 @@ on:
 permissions:
   contents: write   # needed for the git push step
 
-# Shared with fomc_statement.yml. Queue, never cancel: a cancelled run could
+# Shared with reconciliation.yml. Queue, never cancel: a cancelled run could
 # die between the Slack post and the ledger commit, and the next run re-posts.
 concurrency:
   group: macro-posts

@@ -145,7 +145,7 @@ def test_poll_all_revised_headline_same_period_still_posts_revised(harness, monk
         assert ledger.get(FAMILY, "2026-08").revision_count == 1
 
 
-@pytest.mark.parametrize("wf", ["release_polling.yml", "fomc_statement.yml", "reconciliation.yml"])
+@pytest.mark.parametrize("wf", ["release_polling.yml", "reconciliation.yml"])
 def test_posting_workflows_share_concurrency_group(wf):
     """Both lanes post to #macro-and-markets and commit state; with the clock
     gate gone, late runs can overlap. One queue, never cancelled mid-post."""
@@ -154,3 +154,12 @@ def test_posting_workflows_share_concurrency_group(wf):
     assert isinstance(conc, dict), f"{wf}: no top-level concurrency block"
     assert conc.get("group") == "macro-posts"
     assert conc.get("cancel-in-progress") is False
+
+
+def test_fomc_statement_is_not_in_the_shared_group():
+    """GitHub keeps one pending run per concurrency group; a poll queued behind a
+    pending FOMC run would cancel it silently. FOMC commits no state, so it stays out."""
+    from pathlib import Path
+    wf = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
+          "fomc_statement.yml").read_text(encoding="utf-8")
+    assert "group: macro-posts" not in wf
