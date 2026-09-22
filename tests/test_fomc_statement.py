@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import MagicMock
 
+import pytest
+
 from macro_monitor import fomc_statement as fs
 
 
@@ -51,9 +53,41 @@ def test_parse_valid():
     assert "Miran" in v.dissents
 
 
-def test_parse_unknown_action_stance_default():
-    v = fs._parse('{"action": "pivot", "stance": "spicy", "summary": "x"}', "2026-04-29", False)
-    assert v.action == "hold" and v.stance == "neutral"
+def test_parse_REJECTS_an_unknown_action_or_stance():
+    """Reversed 2026-09-21 (Codex P1, round 2). This asserted COERCION.
+
+    `_parse` used to fall back to "hold" / "neutral" for a missing or invalid
+    field, so `{}` and `{"action": "banana"}` both produced a complete,
+    plausible HOLD verdict. Once round 1 added `analysed`, that fabricated
+    verdict also carried `analysed=True` -- the exact flag that tells the CLI
+    to post it and write the ledger row that suppresses the retry. The
+    round-1 fix is what made this reachable.
+
+    A missing field is not a hold. Reject; `analyze_statement`'s handler turns
+    the raise into a failure verdict that retries next run.
+    """
+    for bad in ('{"action": "pivot", "stance": "hawkish", "summary": "x"}',
+                '{"action": "hold", "stance": "spicy", "summary": "x"}',
+                '{"action": "hold", "stance": "neutral", "summary": "  "}',
+                "{}"):
+        with pytest.raises(ValueError):
+            fs._parse(bad, "2026-04-29", False)
+
+
+def test_parse_keeps_target_range_OPTIONAL():
+    """⛑ The one field that must NOT be required.
+
+    The genuine 2026-09-16 analysis rendered "target —": the Fed's statement
+    did not restate the range in the form the prompt asks for. Requiring it
+    would reject a real, correct read -- the over-correction that turns a
+    validation fix into an outage. Required is what the model must DECIDE
+    (action, stance) plus the summary that makes the post worth sending.
+    """
+    v = fs._parse('{"action": "hike", "stance": "hawkish", "summary": "Raised."}',
+                  "2026-09-16", True)
+    assert v.analysed is True
+    assert v.target_range == ""
+    assert v.action == "hike"
 
 
 def test_parse_strips_fences():

@@ -212,12 +212,30 @@ def _parse(raw: str, iso: str, sep: bool) -> StatementVerdict:
     if not isinstance(p, dict):
         raise ValueError("expected JSON object")
 
+    # COERCION IS WHAT MAKES A FABRICATION LOOK REAL. Codex P1 round 2,
+    # 2026-09-21: these two fields used to fall back to "hold" / "neutral" when
+    # missing or invalid, so `_parse("{}")` returned a complete, plausible
+    # "HOLD, neutral" verdict -- and after round 1 it also carried
+    # `analysed=True`, which is precisely the flag that tells the CLI to post
+    # and then record it. The round-1 fix made the round-2 defect reachable.
+    #
+    # A missing field is not a hold. Reject, and let the caller's handler turn
+    # it into a failure verdict that retries.
+    #
+    # ⚑ `target_range` stays OPTIONAL on purpose. The genuine 2026-09-16
+    # analysis rendered "target —" -- the Fed's own statement did not restate
+    # the range in the form the prompt asks for -- so requiring it would reject
+    # a real, correct read. Required is what the model must DECIDE (action,
+    # stance) and what makes the post worth sending (summary); everything else
+    # is allowed to be absent.
     action = str(p.get("action", "")).strip().lower()
     if action not in ACTIONS:
-        action = "hold"
+        raise ValueError(f"action {p.get('action')!r} not one of {ACTIONS}")
     stance = str(p.get("stance", "")).strip().lower()
     if stance not in STANCES:
-        stance = "neutral"
+        raise ValueError(f"stance {p.get('stance')!r} not one of {STANCES}")
+    if not str(p.get("summary", "") or "").strip():
+        raise ValueError("summary is empty")
     changes_raw = p.get("changes") or []
     changes = tuple(
         str(c).strip()[:160] for c in changes_raw[:5] if str(c).strip()

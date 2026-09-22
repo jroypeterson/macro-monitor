@@ -54,6 +54,20 @@ jobs:
           mkdir -p /tmp/pkg
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
+      - name: Refresh the ledger from the default branch
+        # ⛑ A concurrency group serialises EXECUTION, not the checkout.
+        # A run that sat pending keeps the `github.sha` it was queued with, so
+        # without this it reads a posts.db from before the previous run's push,
+        # concludes the period is unposted, and posts a DUPLICATE -- then loses
+        # its own row to the binary rebase below. Serialising made the race
+        # rarer, not impossible; this is what closes it.
+        # Hard reset rather than a path checkout: the tree is pristine at this
+        # point, and it leaves the later `git pull --rebase` with nothing to
+        # reconcile instead of a binary conflict it cannot merge.
+        run: |
+          git fetch --depth=1 origin "${{ github.event.repository.default_branch }}"
+          git reset --hard FETCH_HEAD
+
       - name: Poll Tier A families
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}

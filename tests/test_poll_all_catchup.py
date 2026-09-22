@@ -194,3 +194,37 @@ def test_every_posts_db_writer_shares_one_concurrency_group():
         assert conc.get("cancel-in-progress") is False, (
             f"{wf}: cancel-in-progress would kill a run mid-post"
         )
+
+
+def test_every_ledger_writer_refreshes_before_it_posts():
+    """A concurrency group serialises execution, not the checkout snapshot.
+
+    Codex P1, round 2 (2026-09-21). A run that sat pending keeps the
+    `github.sha` it was queued with, so it can check out a posts.db from before
+    the previous run's push, conclude the period is unposted, post a DUPLICATE,
+    and only then lose its own row to the binary rebase. Rejoining one
+    concurrency group made the race rarer; this step is what closes it.
+
+    Asserts ORDER, not just presence: a refresh that runs after the post is
+    the guard-after-the-thing-it-protects shape, and would read as a fix while
+    fixing nothing.
+    """
+    for wf in _posts_db_writers():
+        doc = yaml.safe_load((REPO / ".github" / "workflows" / wf).read_text(encoding="utf-8"))
+        steps = next(iter(doc["jobs"].values()))["steps"]
+        names = [s.get("name", "") for s in steps]
+        runs = [s.get("run", "") or "" for s in steps]
+
+        refresh = [i for i, r in enumerate(runs) if "reset --hard FETCH_HEAD" in r]
+        posts = [i for i, r in enumerate(runs) if "--post" in r]
+        persists = [i for i, r in enumerate(runs) if "git add state/posts.db" in r]
+
+        assert refresh, f"{wf}: no step refreshes the ledger before posting ({names})"
+        assert posts, f"{wf}: no posting step found; this test is looking at the wrong file"
+        assert refresh[0] < posts[0], (
+            f"{wf}: the ledger refresh runs AFTER the post -- it cannot prevent "
+            f"the duplicate it exists to prevent"
+        )
+        assert persists and posts[0] < persists[0], (
+            f"{wf}: the ledger is persisted before the post"
+        )
