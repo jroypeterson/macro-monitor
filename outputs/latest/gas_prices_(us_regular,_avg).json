@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "gas_prices_(us_regular,_avg)",
   "family_display_name": "Gas Prices (US Regular, avg)",
-  "period": "2026-09-14",
-  "period_label": "Week ending Sep 14, 2026",
-  "posted_at": "2026-09-18T18:06:11.707543+00:00",
+  "period": "2026-09-07",
+  "period_label": "Week ending Sep 07, 2026",
+  "posted_at": "2026-09-22T15:26:53.177156+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-09-18T18:06:10.605180+00:00",
-  "latest_observation_period": "2026-09-14",
-  "expected_observation_period": "2026-09-14",
+  "source_fetched_at": "2026-09-22T15:26:51.981344+00:00",
+  "latest_observation_period": "2026-09-07",
+  "expected_observation_period": "2026-09-07",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "US Regular ($/gal)",
       "primary": {
         "transform": "raw",
-        "value": 4.319,
-        "raw_value": 4.319
+        "value": 4.157,
+        "raw_value": 4.157
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": 36.3320707070707
+          "value": 30.23182957393482
         },
         {
           "transform": "mom_pct_weekly",
-          "value": 6.668313163744122
+          "value": 3.769345981028449
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 4.157
+        "value": 4.071
       },
       "display_unit": null,
       "definition": "Regular Gasoline Price (GASREGW): average US pump price per gallon, weekly -- the most visible household cost; moves consumer sentiment and headline CPI."
@@ -45,13 +45,13 @@
   "context": {
     "anchor_series": "GASREGW",
     "anchor_transform": "yoy_pct_weekly",
-    "zscore": 2.04220323479035,
+    "zscore": 0.7198815409241166,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "gas_5y_2026-09-14.png"
+    "main": "gas_5y_2026-09-07.png"
   },
   "agency_pdf_url": null
 }
