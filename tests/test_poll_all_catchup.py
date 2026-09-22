@@ -145,21 +145,52 @@ def test_poll_all_revised_headline_same_period_still_posts_revised(harness, monk
         assert ledger.get(FAMILY, "2026-08").revision_count == 1
 
 
-@pytest.mark.parametrize("wf", ["release_polling.yml", "reconciliation.yml"])
-def test_posting_workflows_share_concurrency_group(wf):
-    """Both lanes post to #macro-and-markets and commit state; with the clock
-    gate gone, late runs can overlap. One queue, never cancelled mid-post."""
-    doc = yaml.safe_load((REPO / ".github" / "workflows" / wf).read_text(encoding="utf-8"))
-    conc = doc.get("concurrency")
-    assert isinstance(conc, dict), f"{wf}: no top-level concurrency block"
-    assert conc.get("group") == "macro-posts"
-    assert conc.get("cancel-in-progress") is False
+def _posts_db_writers():
+    """Every workflow that commits state/posts.db, read off the workflows.
+
+    ⛑ DERIVED, never enumerated. This test used to hardcode
+    ["release_polling.yml", "reconciliation.yml"] and a sibling asserted that
+    fomc_statement.yml stayed OUT -- and then a commit on the same branch gave
+    FOMC a posts.db write. The hand-maintained list did not notice, so two
+    writers raced a binary SQLite file with the suite green. A stub list rots
+    on the first member someone adds; a derived one cannot.
+    """
+    out = []
+    for wf in sorted((REPO / ".github" / "workflows").glob("*.yml")):
+        text = wf.read_text(encoding="utf-8")
+        if "git add state/posts.db" in text:
+            out.append(wf.name)
+    return out
 
 
-def test_fomc_statement_is_not_in_the_shared_group():
-    """GitHub keeps one pending run per concurrency group; a poll queued behind a
-    pending FOMC run would cancel it silently. FOMC commits no state, so it stays out."""
-    from pathlib import Path
-    wf = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
-          "fomc_statement.yml").read_text(encoding="utf-8")
-    assert "group: macro-posts" not in wf
+def test_every_posts_db_writer_shares_one_concurrency_group():
+    """One queue for everything that mutates the ledger, never cancelled mid-post.
+
+    Reversal recorded 2026-09-21 (Codex P1). FOMC was moved OUT of this group
+    on the reasoning that it "commits no state" -- true when written, made
+    false by a later commit on the same branch. Two writers from the same base
+    both post, the loser's `git pull --rebase` hits a binary conflict AFTER
+    Slack has the message, its row dies with the runner, and the next run posts
+    a DUPLICATE Fed decision to a markets channel.
+
+    The competing hazard is real too -- GitHub keeps one pending run per group,
+    so a queued FOMC run can be cancelled -- but the "owed and unposted" gate
+    makes that cost LATENESS, which the next cron repairs. A late post beats a
+    double post.
+    """
+    writers = _posts_db_writers()
+    assert len(writers) >= 3, (
+        f"expected at least release_polling, reconciliation and fomc_statement "
+        f"to write the ledger; found {writers}"
+    )
+    for wf in writers:
+        doc = yaml.safe_load((REPO / ".github" / "workflows" / wf).read_text(encoding="utf-8"))
+        conc = doc.get("concurrency")
+        assert isinstance(conc, dict), f"{wf}: writes posts.db with no concurrency block"
+        assert conc.get("group") == "macro-posts", (
+            f"{wf} writes state/posts.db but queues in {conc.get('group')!r}; "
+            f"it can race the other writers and lose a ledger row after posting"
+        )
+        assert conc.get("cancel-in-progress") is False, (
+            f"{wf}: cancel-in-progress would kill a run mid-post"
+        )

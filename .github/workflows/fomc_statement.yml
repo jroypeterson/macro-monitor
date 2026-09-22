@@ -21,11 +21,41 @@ permissions:
   contents: write   # needed for the git push step
 
 # Deliberately NOT in the macro-posts concurrency group (Fable review 2026-09-17):
-# GitHub keeps only ONE pending run per group, so a poll queued behind a
-# pending FOMC run would silently CANCEL it. Its own group serialises the two
-# daily crons (both can land late and overlap) so they never race the ledger.
+# ⛑ BACK IN macro-posts, and the flip-flop is the point — read this before
+# moving it again.
+#
+# Round 1 (Fable) moved FOMC OUT: GitHub keeps only ONE pending run per group,
+# so a release poll queued behind a pending FOMC run silently CANCELS it, and
+# — its stated premise — "fomc_statement.yml commits no state, so the group
+# bought it nothing."
+#
+# That premise was made FALSE by a later commit on this same branch. This
+# workflow now does `git add state/posts.db && git pull --rebase && git push`
+# (see the persist step below), so it is a third writer to the same binary
+# SQLite file as release_polling and reconciliation. Round 2 (Codex, P1,
+# 2026-09-21) caught it: two writers from the same commit both post, the
+# loser's rebase hits a binary conflict AFTER Slack already has the message,
+# its ledger row dies with the runner, and the next run POSTS AGAIN.
+# `prose-outliving-the-artifact-it-describes`, and the comment that used to
+# sit here was the prose — it claimed this group "serialises ... so they never
+# race the ledger" while serialising FOMC only against ITSELF.
+#
+# Both hazards are real; they are not equally bad, and the branch changed
+# which one costs more:
+#
+#   Cancelled FOMC run  -> nothing posts at 14:05. The gate is now "owed and
+#                          unposted", so the next daily cron posts it, late.
+#                          Self-correcting; lateness is what this branch fixes.
+#   Lost ledger row     -> a DUPLICATE Fed rate decision in a markets channel.
+#                          Wrong output, and the system repeats it rather than
+#                          correcting it.
+#
+# So: serialise. A late post beats a double post. If a future round wants FOMC
+# out of this group again, the prerequisite is making the ledger write survive
+# a concurrent push (merge the row rather than rebase the file) — not moving
+# the workflow.
 concurrency:
-  group: fomc-statement
+  group: macro-posts
   cancel-in-progress: false
 
 jobs:

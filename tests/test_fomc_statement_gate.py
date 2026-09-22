@@ -200,10 +200,18 @@ def test_workflow_persists_the_ledger():
     assert "git pull --rebase --autostash" in run and "git push" in run
 
 
-def test_workflow_has_its_own_concurrency_group():
+def test_workflow_queues_with_the_other_ledger_writers():
+    """Reversed 2026-09-21 (Codex P1) -- see the reasoning in the workflow.
+
+    This file gave FOMC a `git add state/posts.db` push, which made it a third
+    writer to a binary SQLite file shared with release_polling and
+    reconciliation. Its own group serialised it against ITSELF and nothing
+    else. The full argument, and what would have to change to move it back
+    out, is in the concurrency comment in fomc_statement.yml.
+    """
     conc = yaml.safe_load(_wf_text()).get("concurrency")
     assert isinstance(conc, dict)
-    assert conc.get("group") == "fomc-statement"
+    assert conc.get("group") == "macro-posts"
     assert conc.get("cancel-in-progress") is False
 
 
