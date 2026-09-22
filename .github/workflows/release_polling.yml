@@ -1,12 +1,17 @@
 name: Release polling
 
 # Fires every 15 minutes during a UTC window that covers ET morning
-# releases under BOTH EDT (UTC-4) and EST (UTC-5). The Python script
-# gates by the actual ET window (8:25–11:00 ET + 13:55–14:35 ET for FOMC)
-# and exits cleanly outside that — so most of these runs are no-ops.
+# releases under BOTH EDT (UTC-4) and EST (UTC-5). Every run POLLS: there is
+# no ET wall-clock gate any more. GitHub creates this account's scheduled runs
+# 3-4h late and drops most (measured Aug-Sep 2026), and the old 8:25-11:00 /
+# 13:55-14:35 ET gate made each late run exit green having posted nothing
+# (Retail Sales, Industrial Production, Claims missed 2026-09-16/17).
 #
 # Idempotency comes from state/posts.db: a release that has already been
-# posted for a given period won't double-post on the next fire.
+# posted for a given period won't double-post on the next fire, and a changed
+# headline for the same period posts as a REVISION. The concurrency group
+# below serialises this lane with reconciliation.yml (both run poll-all --post
+# and commit state/posts.db) so two runs never race on the ledger commit.
 
 on:
   schedule:
@@ -17,14 +22,15 @@ on:
     - cron: "*/15 11-18 * * 1-5"
   workflow_dispatch:
     # Manual trigger for one-off polls (e.g., post-hours catch-up)
-    inputs:
-      skip_window_check:
-        description: "Skip the ET-window guard (force polling)"
-        required: false
-        default: "false"
 
 permissions:
   contents: write   # needed for the git push step
+
+# Shared with reconciliation.yml. Queue, never cancel: a cancelled run could
+# die between the Slack post and the ledger commit, and the next run re-posts.
+concurrency:
+  group: macro-posts
+  cancel-in-progress: false
 
 jobs:
   poll:
@@ -48,6 +54,20 @@ jobs:
           mkdir -p /tmp/pkg
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
+      - name: Refresh the ledger from the default branch
+        # ⛑ A concurrency group serialises EXECUTION, not the checkout.
+        # A run that sat pending keeps the `github.sha` it was queued with, so
+        # without this it reads a posts.db from before the previous run's push,
+        # concludes the period is unposted, and posts a DUPLICATE -- then loses
+        # its own row to the binary rebase below. Serialising made the race
+        # rarer, not impossible; this is what closes it.
+        # Hard reset rather than a path checkout: the tree is pristine at this
+        # point, and it leaves the later `git pull --rebase` with nothing to
+        # reconcile instead of a binary conflict it cannot merge.
+        run: |
+          git fetch --depth=1 origin "${{ github.event.repository.default_branch }}"
+          git reset --hard FETCH_HEAD
+
       - name: Poll Tier A families
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -57,8 +77,7 @@ jobs:
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
         run: |
-          python -m macro_monitor.cli poll-all --post \
-            ${{ github.event.inputs.skip_window_check == 'true' && '--skip-window-check' || '' }}
+          python -m macro_monitor.cli poll-all --post
 
       - name: Persist posts ledger and outputs
         # Commit changes back to the repo so the state survives across runs.

@@ -595,8 +595,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-window-check",
         action="store_true",
         help=(
-            "By default poll-all skips outside the 8:25–11:00 ET window "
-            "(plus 13:55–14:35 for FOMC). Override for manual testing."
+            "Deprecated no-op, kept so old workflow_dispatch invocations still "
+            "parse. poll-all no longer gates on the ET clock (late cron runs "
+            "must still post); the posts ledger is the dedupe."
         ),
     )
     sp.set_defaults(func=cmd_poll_all)
@@ -777,6 +778,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model", default=None, help="Override the LLM model")
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument("--force", action="store_true",
+                    help="Post even if the ledger shows this decision already posted")
     sp.set_defaults(func=cmd_fomc_statement)
 
     sp = sub.add_parser(
@@ -1117,18 +1120,68 @@ def cmd_fed_speeches_speaker(args: argparse.Namespace) -> int:
 
 
 def cmd_fomc_statement(args: argparse.Namespace) -> int:
-    """Parse + redline the latest FOMC statement and post to #macro."""
+    """Parse + redline the latest FOMC statement and post to #macro.
+
+    The gate is "a decision is owed and unposted", not a clock hour: GitHub
+    starts the 14:05 ET cron 3-4h late, and the old bash ET_HOUR==14 check
+    skipped the 2026-09-16 statement on a green run. Posts when a decision
+    day is on/before today within LOOKBACK_DAYS, the statement text is
+    non-empty, and posts.db has no ('fomc_statement', decision date) row.
+    Empty text exits 1 with no row, so the run is red and the next one retries.
+    The row is written only after Slack accepts the post.
+    """
     from datetime import date as _date
 
-    from .fomc_statement import build_statement_report, post_to_macro
+    from . import fomc_statement as fs
+    from .posts_ledger import PostsLedger
 
-    on_date = _date.fromisoformat(args.date) if args.date else None
-    verdict, text, blocks = build_statement_report(on_date=on_date, model=args.model)
+    today = _date.fromisoformat(args.date) if args.date else fs._now_et().date()
+    meeting = fs.due_meeting(today)
+    if meeting is None:
+        print(f"  No FOMC decision owed on {today} (none in the last "
+              f"{fs.LOOKBACK_DAYS} days).", file=sys.stderr)
+        return 0
+    period = meeting.end.isoformat()
+    force = getattr(args, "force", False)
+
+    if not force:
+        with PostsLedger() as ledger:
+            if ledger.get(fs.LEDGER_FAMILY, period) is not None:
+                print(f"  FOMC {period} statement already posted (ledger); "
+                      "use --force to repost.", file=sys.stderr)
+                return 0
+
+    verdict, text, blocks = fs.build_statement_report(on_date=today, model=args.model)
 
     if verdict is None:
         print("  No FOMC statement to report (no meeting on/before that date).",
               file=sys.stderr)
         return 0
+
+    if not verdict.has_text:
+        print(f"  ⚠️ FOMC {period}: statement text unavailable at "
+              f"{fs.statement_url(meeting.end)}; not posting, will retry next run.",
+              file=sys.stderr)
+        return 1
+
+    # ⛑ A FAILED ANALYSIS IS NOT A DECISION. Codex P1, 2026-09-21: only the
+    # missing-text case was guarded, so an SDK/API-key/API/parse failure --
+    # each of which returns the verdict DEFAULTS, i.e. a plausible-looking
+    # "hold / neutral" -- was posted to #macro-and-markets as a real Fed
+    # decision and then written to the ledger, permanently suppressing the
+    # repost that would have corrected it.
+    #
+    # Returning 1 WITHOUT recording is the whole point: the next scheduled run
+    # finds no ledger row, retries, and posts the real verdict once the
+    # transient cause clears. Posting a wrong rate decision to a markets
+    # channel is worse than posting nothing, and silently recording it is
+    # worse than both.
+    if not verdict.analysed:
+        reason = verdict.why or "no reason given"
+        print(f"  ⚠️ FOMC {period}: analysis did not complete ({reason}); NOT "
+              f"posting and NOT recording, so the next run retries.",
+              file=sys.stderr)
+        return 1
 
     print(f"  FOMC {verdict.decision_date}: {verdict.action.upper()} · "
           f"target {verdict.target_range or '—'} · {verdict.stance}")
@@ -1141,9 +1194,20 @@ def cmd_fomc_statement(args: argparse.Namespace) -> int:
         print("\n  Use --post to publish.", file=sys.stderr)
         return 0
 
-    ok, msg = post_to_macro(text, blocks)
+    ok, msg = fs.post_to_macro(text, blocks)
     print(f"  {'posted: ' + msg if ok else '⚠️ ' + msg}", file=sys.stderr)
-    return 0 if ok else 1
+    if not ok:
+        return 1
+    with PostsLedger() as ledger:
+        ledger.record_post(
+            family_id=fs.LEDGER_FAMILY,
+            period=period,
+            headline_values={"action": verdict.action,
+                             "target_range": verdict.target_range,
+                             "stance": verdict.stance},
+            component_values={},
+        )
+    return 0
 
 
 def cmd_fed_speeches_export(args: argparse.Namespace) -> int:
@@ -1524,31 +1588,22 @@ def cmd_ahead_of_curve(args: argparse.Namespace) -> int:
 
 
 def cmd_poll_all(args: argparse.Namespace) -> int:
-    """Master polling entry point — run every 15 min by GitHub Actions cron.
-    Iterates every numeric Tier A family, runs the same `post-release`
-    path the manual command uses. Idempotent via the posts ledger.
+    """Master polling entry point, fired by the GitHub Actions */15 cron.
+    Iterates every numeric family and runs the same `post-release` path the
+    manual command uses.
+
+    There is deliberately NO wall-clock window here. Until 2026-09-18 this
+    returned 0 outside 08:25-11:00 / 13:55-14:35 ET; once GitHub began
+    creating scheduled runs 3-4h late (and dropping most), every late run
+    exited green without polling, and Retail Sales, Industrial Production
+    (09-16) and Claims (09-17) were never posted. Dedupe is the ledger's job,
+    not the clock's: `posts` PK (family_id, period) + compute_diff (UNCHANGED
+    -> no post, changed headline -> REVISED) and the stale/partial-ingest skip
+    in release_runner. Do not add "owed"/calendar gating on this fetch path:
+    re-releases (GDP advance/second/third) share a period key and must still
+    reach the REVISED path. See plans/missed_releases_diagnosis_2026-09-17.md.
+    `--skip-window-check` is accepted as a no-op for old dispatch invocations.
     """
-    from datetime import datetime, time
-    from zoneinfo import ZoneInfo
-
-    ET = ZoneInfo("America/New_York")
-
-    # Window check (skippable via --skip-window-check)
-    if not args.skip_window_check:
-        now_et = datetime.now(ET)
-        weekday = now_et.weekday()  # Mon=0..Sun=6
-        t = now_et.time()
-        # Tier A 8:30 ET releases — fetch from 8:25 to 11:00 ET
-        morning_window = time(8, 25) <= t <= time(11, 0)
-        # FOMC 14:00 ET — 13:55 to 14:35
-        fomc_window = time(13, 55) <= t <= time(14, 35)
-        if weekday >= 5 or not (morning_window or fomc_window):
-            print(
-                f"  Outside polling window (now={now_et.strftime('%a %H:%M ET')}); "
-                f"exit clean.",
-                file=sys.stderr,
-            )
-            return 0
 
     path = Path(args.config) if args.config else default_config_path()
     families = load_config(path)

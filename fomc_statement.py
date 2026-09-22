@@ -17,8 +17,9 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from . import fomc
 
@@ -27,6 +28,15 @@ from . import fomc
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 1500
 MAX_STMT_CHARS = 6000
+
+# posts_ledger family for decision-day posts; period = decision date (ISO).
+LEDGER_FAMILY = "fomc_statement"
+# How many days after a decision a run may still post it. GitHub starts this
+# account's scheduled runs 3-4h late (and sometimes drops them), so the gate is
+# "a decision is owed and unposted", never "it is 14:00 ET now".
+LOOKBACK_DAYS = 2
+
+ET = ZoneInfo("America/New_York")
 
 ACTIONS = ("cut", "hold", "hike")
 STANCES = ("hawkish", "dovish", "neutral")
@@ -43,6 +53,26 @@ class StatementVerdict:
     dissents: str = ""              # dissent description, or ""
     sep: bool = False               # was this a Summary-of-Economic-Projections mtg
     why: str = ""                   # fallback reason
+    has_text: bool = True           # False when the Fed page had no statement yet
+    # ⛑ DID THE MODEL ACTUALLY ANSWER? Default False, set True only by `_parse`
+    # on the success path.
+    #
+    # Codex P1, 2026-09-21: every analysis failure -- SDK missing, no API key,
+    # an API exception, a parse error -- returned this dataclass with its
+    # DEFAULTS and only `why` set. Defaults are `action="hold"`,
+    # `stance="neutral"`, `target_range=""`, and `has_text` defaults to True,
+    # so the only guard on the post path (`if not verdict.has_text`) waved them
+    # through. The lane would have posted "HOLD · target —" to
+    # #macro-and-markets as a real Fed decision and then RECORDED it in the
+    # ledger, which permanently suppresses the correct repost.
+    #
+    # This is `contaminated-value-in-a-shared-collection`: the code knows the
+    # value is invalid (`why` is populated) and publishes it anyway. It is also
+    # `store-the-answer-not-an-inferred-value` -- "did the analysis succeed"
+    # must be recorded, never inferred from whether the fields look default,
+    # because a genuine HOLD at a neutral meeting is indistinguishable from a
+    # total failure by inspection.
+    analysed: bool = False
 
 
 def statement_url(decision_date: date) -> str:
@@ -106,7 +136,8 @@ def analyze_statement(
     a minimal fallback verdict on any API/parse error."""
     iso = decision_date.isoformat()
     if not current_text:
-        return StatementVerdict(decision_date=iso, sep=sep, why="statement text unavailable")
+        return StatementVerdict(decision_date=iso, sep=sep, has_text=False,
+                                why="statement text unavailable")
 
     if client is None:
         try:
@@ -181,17 +212,36 @@ def _parse(raw: str, iso: str, sep: bool) -> StatementVerdict:
     if not isinstance(p, dict):
         raise ValueError("expected JSON object")
 
+    # COERCION IS WHAT MAKES A FABRICATION LOOK REAL. Codex P1 round 2,
+    # 2026-09-21: these two fields used to fall back to "hold" / "neutral" when
+    # missing or invalid, so `_parse("{}")` returned a complete, plausible
+    # "HOLD, neutral" verdict -- and after round 1 it also carried
+    # `analysed=True`, which is precisely the flag that tells the CLI to post
+    # and then record it. The round-1 fix made the round-2 defect reachable.
+    #
+    # A missing field is not a hold. Reject, and let the caller's handler turn
+    # it into a failure verdict that retries.
+    #
+    # ⚑ `target_range` stays OPTIONAL on purpose. The genuine 2026-09-16
+    # analysis rendered "target —" -- the Fed's own statement did not restate
+    # the range in the form the prompt asks for -- so requiring it would reject
+    # a real, correct read. Required is what the model must DECIDE (action,
+    # stance) and what makes the post worth sending (summary); everything else
+    # is allowed to be absent.
     action = str(p.get("action", "")).strip().lower()
     if action not in ACTIONS:
-        action = "hold"
+        raise ValueError(f"action {p.get('action')!r} not one of {ACTIONS}")
     stance = str(p.get("stance", "")).strip().lower()
     if stance not in STANCES:
-        stance = "neutral"
+        raise ValueError(f"stance {p.get('stance')!r} not one of {STANCES}")
+    if not str(p.get("summary", "") or "").strip():
+        raise ValueError("summary is empty")
     changes_raw = p.get("changes") or []
     changes = tuple(
         str(c).strip()[:160] for c in changes_raw[:5] if str(c).strip()
     ) if isinstance(changes_raw, list) else ()
     return StatementVerdict(
+        analysed=True,
         decision_date=iso,
         target_range=str(p.get("target_range", "") or "").strip()[:80],
         action=action,
@@ -213,6 +263,20 @@ def latest_meeting_on_or_before(today: date) -> "fomc.FOMCMeeting | None":
     recent statement)."""
     past = [m for m in fomc.all_meetings() if m.end <= today]
     return past[-1] if past else None
+
+
+def _now_et() -> datetime:
+    return datetime.now(ET)
+
+
+def due_meeting(today: date, lookback_days: int = LOOKBACK_DAYS) -> "fomc.FOMCMeeting | None":
+    """The decision owed a post on `today`: the latest meeting whose decision
+    day is on/before today and at most `lookback_days` old. No clock-hour test:
+    a late run must still post (2026-09-16 ran at 17:13 ET and was skipped)."""
+    m = latest_meeting_on_or_before(today)
+    if m is None or today - m.end > timedelta(days=lookback_days):
+        return None
+    return m
 
 
 def build_statement_report(
