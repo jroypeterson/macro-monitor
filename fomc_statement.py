@@ -54,6 +54,25 @@ class StatementVerdict:
     sep: bool = False               # was this a Summary-of-Economic-Projections mtg
     why: str = ""                   # fallback reason
     has_text: bool = True           # False when the Fed page had no statement yet
+    # ⛑ DID THE MODEL ACTUALLY ANSWER? Default False, set True only by `_parse`
+    # on the success path.
+    #
+    # Codex P1, 2026-09-21: every analysis failure -- SDK missing, no API key,
+    # an API exception, a parse error -- returned this dataclass with its
+    # DEFAULTS and only `why` set. Defaults are `action="hold"`,
+    # `stance="neutral"`, `target_range=""`, and `has_text` defaults to True,
+    # so the only guard on the post path (`if not verdict.has_text`) waved them
+    # through. The lane would have posted "HOLD · target —" to
+    # #macro-and-markets as a real Fed decision and then RECORDED it in the
+    # ledger, which permanently suppresses the correct repost.
+    #
+    # This is `contaminated-value-in-a-shared-collection`: the code knows the
+    # value is invalid (`why` is populated) and publishes it anyway. It is also
+    # `store-the-answer-not-an-inferred-value` -- "did the analysis succeed"
+    # must be recorded, never inferred from whether the fields look default,
+    # because a genuine HOLD at a neutral meeting is indistinguishable from a
+    # total failure by inspection.
+    analysed: bool = False
 
 
 def statement_url(decision_date: date) -> str:
@@ -204,6 +223,7 @@ def _parse(raw: str, iso: str, sep: bool) -> StatementVerdict:
         str(c).strip()[:160] for c in changes_raw[:5] if str(c).strip()
     ) if isinstance(changes_raw, list) else ()
     return StatementVerdict(
+        analysed=True,
         decision_date=iso,
         target_range=str(p.get("target_range", "") or "").strip()[:80],
         action=action,

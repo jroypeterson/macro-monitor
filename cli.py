@@ -1164,6 +1164,25 @@ def cmd_fomc_statement(args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 1
 
+    # ⛑ A FAILED ANALYSIS IS NOT A DECISION. Codex P1, 2026-09-21: only the
+    # missing-text case was guarded, so an SDK/API-key/API/parse failure --
+    # each of which returns the verdict DEFAULTS, i.e. a plausible-looking
+    # "hold / neutral" -- was posted to #macro-and-markets as a real Fed
+    # decision and then written to the ledger, permanently suppressing the
+    # repost that would have corrected it.
+    #
+    # Returning 1 WITHOUT recording is the whole point: the next scheduled run
+    # finds no ledger row, retries, and posts the real verdict once the
+    # transient cause clears. Posting a wrong rate decision to a markets
+    # channel is worse than posting nothing, and silently recording it is
+    # worse than both.
+    if not verdict.analysed:
+        reason = verdict.why or "no reason given"
+        print(f"  ⚠️ FOMC {period}: analysis did not complete ({reason}); NOT "
+              f"posting and NOT recording, so the next run retries.",
+              file=sys.stderr)
+        return 1
+
     print(f"  FOMC {verdict.decision_date}: {verdict.action.upper()} · "
           f"target {verdict.target_range or '—'} · {verdict.stance}")
     if verdict.why:
