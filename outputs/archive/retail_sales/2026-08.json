@@ -4,9 +4,9 @@
   "family_display_name": "Retail Sales",
   "period": "2026-08",
   "period_label": "August 2026",
-  "posted_at": "2026-09-28T23:27:22.949070+00:00",
+  "posted_at": "2026-09-29T16:48:26.451490+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-09-28T23:27:21.681701+00:00",
+  "source_fetched_at": "2026-09-29T16:48:25.116753+00:00",
   "latest_observation_period": "2026-08",
   "expected_observation_period": "2026-08",
   "is_stale": false,
@@ -19,18 +19,18 @@
       "label": "Headline (Retail trade + food services)",
       "primary": {
         "transform": "mom_pct",
-        "value": 1.2407418550562266,
-        "raw_value": 773947.0
+        "value": 1.127425850332675,
+        "raw_value": 737763.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 6.014763635267806
+          "value": 5.361901579222472
         }
       ],
       "prior_primary": {
         "transform": "mom_pct",
-        "value": -0.5366991635299634
+        "value": -0.4584539731313231
       },
       "display_unit": null,
       "definition": "Retail Sales (RSAFS): total monthly receipts at retail stores, online sellers, and food services -- the consumer-spending pulse, in nominal dollars (not inflation-adjusted)."
@@ -58,13 +58,13 @@
   "context": {
     "anchor_series": "RSAFS",
     "anchor_transform": "mom_pct",
-    "zscore": 1.1955983513666713,
+    "zscore": 1.0447424422760223,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": [
       {
         "label": "3mo annualized",
-        "value": 4.1104760313127375,
+        "value": 3.5170847122381277,
         "window_months": 3,
         "stat": "annualized_mom",
         "transform": "annualized_mom",
