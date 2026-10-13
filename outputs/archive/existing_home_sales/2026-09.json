@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.2",
+  "family_id": "existing_home_sales",
+  "family_display_name": "Existing Home Sales",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-13T22:20:26.006857+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-10-13T22:20:14.621293+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "EXHOSLUSM495S",
+      "label": "Existing home sales (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": -2.2058823529411797,
+        "raw_value": 3990000.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 1.526717557251911
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": null
+      },
+      "display_unit": null,
+      "definition": "Existing Home Sales (EXHOSLUSM495S): closed sales of previously- owned homes, annualized -- the bulk of housing turnover; rate- and inventory-sensitive."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "EXHOSLUSM495S",
+    "anchor_transform": "yoy_pct",
+    "zscore": null,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "existing_home_sales_10y_2026-09.png"
+  },
+  "agency_pdf_url": null
+}
