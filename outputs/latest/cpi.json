@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "cpi",
   "family_display_name": "CPI",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-10-13T22:18:43.247207+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-14T15:42:10.312019+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-13T22:18:38.271185+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-10-14T15:42:06.583236+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "Headline",
       "primary": {
         "transform": "annualized_mom",
-        "value": 4.857104899806686,
-        "raw_value": 334.131
+        "value": 8.066271732847285,
+        "raw_value": 336.298
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 3.353016322755642
+          "value": 3.7172508442689933
         },
         {
           "transform": "mom_pct",
-          "value": 0.3960181843858157
+          "value": 0.6485480245771891
         }
       ],
       "prior_primary": {
         "transform": "annualized_mom",
-        "value": 0.8876204570154034
+        "value": 4.857104899806686
       },
       "display_unit": null,
       "definition": "Consumer Price Index, All Items (CPIAUCSL): the average change in prices urban consumers pay for a full basket of goods and services -- the headline inflation number."
@@ -44,22 +44,22 @@
       "label": "Core",
       "primary": {
         "transform": "annualized_mom",
-        "value": 3.533515006346155,
-        "raw_value": 337.765
+        "value": 4.0930119363005835,
+        "raw_value": 338.896
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 2.4461631786472537
+          "value": 2.565840844021827
         },
         {
           "transform": "mom_pct",
-          "value": 0.2897956881014574
+          "value": 0.3348481932704761
         }
       ],
       "prior_primary": {
         "transform": "annualized_mom",
-        "value": 2.616067152126078
+        "value": 3.533515006346155
       },
       "display_unit": null,
       "definition": "Core CPI (CPILFESL): CPI excluding food and energy -- the less- volatile underlying inflation trend, watched more closely than headline for policy signal."
@@ -70,14 +70,14 @@
       "id": "CUSR0000SAH1",
       "label": "Shelter",
       "transform": "yoy_pct",
-      "value": 3.034809785537229,
+      "value": 3.2230618848913206,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.16494803224574
+        "value": 3.034809785537229
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.353947873627483
+        "value": 3.2579804858535732
       },
       "tags": [],
       "definition": null
@@ -86,14 +86,14 @@
       "id": "CUSR0000SAM2",
       "label": "Medical care services",
       "transform": "yoy_pct",
-      "value": 2.4780118200677714,
+      "value": 2.527560373134685,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.65441799758388
+        "value": 2.4780118200677714
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.5589894686042456
+        "value": 2.9185365614786685
       },
       "tags": [
         "healthcare"
@@ -104,14 +104,14 @@
       "id": "CUSR0000SAM1",
       "label": "Medical care commodities (drugs/equipment)",
       "transform": "yoy_pct",
-      "value": -2.685969749544659,
+      "value": -3.2748978920501104,
       "prior": {
         "transform": "yoy_pct",
-        "value": -2.71373863092389
+        "value": -2.685969749544659
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": -1.8029529017209667
+        "value": -2.0597497455546954
       },
       "tags": [
         "healthcare"
@@ -122,14 +122,14 @@
       "id": "CUSR0000SEMD",
       "label": "Hospital & related services",
       "transform": "yoy_pct",
-      "value": 5.530616942909772,
+      "value": 5.384388414570296,
       "prior": {
         "transform": "yoy_pct",
-        "value": 5.431686757386567
+        "value": 5.530616942909772
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 5.780279728396498
+        "value": 5.469081101907158
       },
       "tags": [
         "healthcare"
@@ -140,14 +140,14 @@
       "id": "CUUR0000SEMC",
       "label": "Professional services (physicians/dental)",
       "transform": "yoy_pct",
-      "value": 3.1691706832522426,
+      "value": 3.416394080028584,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.441449707016897
+        "value": 3.1691706832522426
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 4.5398219345321955
+        "value": 3.763161848053187
       },
       "tags": [
         "healthcare"
@@ -158,14 +158,14 @@
       "id": "CPIUFDSL",
       "label": "Food",
       "transform": "yoy_pct",
-      "value": 2.633598968709716,
+      "value": 2.4528919628397317,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.9391775598647696
+        "value": 2.633598968709716
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.0779321306806384
+        "value": 2.987321338093718
       },
       "tags": [],
       "definition": null
@@ -174,14 +174,14 @@
       "id": "CPIENGSL",
       "label": "Energy",
       "transform": "yoy_pct",
-      "value": 16.049347026386364,
+      "value": 20.35411471321695,
       "prior": {
         "transform": "yoy_pct",
-        "value": 14.445333818446414
+        "value": 16.049347026386364
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 22.972869920145843
+        "value": 15.45137005619075
       },
       "tags": [],
       "definition": null
@@ -191,13 +191,13 @@
   "context": {
     "anchor_series": "CPIAUCSL",
     "anchor_transform": "annualized_mom",
-    "zscore": 0.952910697125169,
+    "zscore": 0.7624103043926505,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": [
       {
         "label": "3mo annualized",
-        "value": 0.18217169162264568,
+        "value": 4.562342321211887,
         "window_months": 3,
         "stat": "annualized_mom",
         "transform": "annualized_mom",
@@ -205,7 +205,7 @@
       },
       {
         "label": "6mo annualized",
-        "value": 4.1158924155549,
+        "value": 3.669219713434102,
         "window_months": 6,
         "stat": "annualized_mom",
         "transform": "annualized_mom",
@@ -214,10 +214,10 @@
     ]
   },
   "charts": {
-    "main": "cpi_5y_2026-08.png",
-    "long_history": "cpi_25y_2026-08.png",
-    "component_trends": "cpi_components_2026-08.png",
-    "hc_cpi_detail": "cpi_hc_detail_2026-08.png"
+    "main": "cpi_5y_2026-09.png",
+    "long_history": "cpi_25y_2026-09.png",
+    "component_trends": "cpi_components_2026-09.png",
+    "hc_cpi_detail": "cpi_hc_detail_2026-09.png"
   },
   "agency_pdf_url": "https://www.bls.gov/news.release/pdf/cpi.pdf"
 }
