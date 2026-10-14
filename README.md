@@ -60,7 +60,7 @@ See Appendix B of the plan for the full table. Highlights:
 |---|---|
 | Slack `#macro` | Sunday week-ahead preview (this week + next 4 weeks); per-release main post with chart; threaded long-history + components + HC employment subplots; REVISED posts on revision; annual benchmark summary; quarterly Annual Macro Calendar HTML |
 | Slack `#status-reports` | Daily Tier B heartbeat; operator alerts on failure |
-| Google Calendar (`floridabusinessman@gmail.com`) | Tier A release events on the dedicated "Macro Calendar" (shared earnings-agent service account; no user OAuth) |
+| Google Calendar (`floridabusinessman@gmail.com`) | Release events split by tier: Tier A on the "Macro Calendar" (`GOOGLE_CALENDAR_ID`), Tier B/C on a second calendar (`GOOGLE_CALENDAR_ID_OTHER`; unset = all on one). Shared earnings-agent service account; no user OAuth |
 | Local: `outputs/archive/<family>/<period>.{json,html}` | Per-period structured snapshot + browsable HTML report |
 | Local: `outputs/dashboard/index.html` (Phase 1.5) | Static "US current state" page, regenerated each release |
 | Local: `outputs/calendar/<year>_macro_calendar.html` | Annual schedule grid |
@@ -188,7 +188,8 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 | `SLACK_BOT_TOKEN` | `release_polling`, `weekly_preview`, `annual_calendar` (file uploads need bot) |
 | `SLACK_MACRO_CHANNEL_ID` | All `#macro` posts |
 | `SLACK_WEBHOOK_STATUS_REPORTS` | `heartbeat`, operator alerts |
-| `GOOGLE_CALENDAR_ID` | `calendar_backfill` (the Macro Calendar in floridabusinessman@gmail.com) |
+| `GOOGLE_CALENDAR_ID` | `calendar_backfill` (the Tier A Macro Calendar in floridabusinessman@gmail.com) |
+| `GOOGLE_CALENDAR_ID_OTHER` | `calendar_backfill` (Tier B/C macro calendar; optional) |
 | `GOOGLE_CREDENTIALS_JSON` | `calendar_backfill` — paste the full `credentials.json` content; the workflow writes it to disk per run |
 | `ANTHROPIC_API_KEY` | `research_digest` — Haiku 4.5 read-worthiness scorer |
 | `GMAIL_TOKEN_JSON` | `research_digest` — default-account (jroypeterson) Gmail OAuth token |
