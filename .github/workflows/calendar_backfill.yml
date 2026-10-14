@@ -1,7 +1,7 @@
 name: Google Calendar backfill
 
-# Refresh the next 90 days of Tier A release events on the dedicated
-# "Macro Calendar" in floridabusinessman@gmail.com. Idempotent via
+# Refresh the next 90 days of release events in floridabusinessman@gmail.com:
+# Tier A on GOOGLE_CALENDAR_ID, Tier B/C on GOOGLE_CALENDAR_ID_OTHER. Idempotent via
 # stable client-generated event IDs — re-runs upsert, never duplicate.
 #
 # Runs weekly (Sunday evening) to keep the rolling 90-day window fresh
@@ -52,6 +52,7 @@ jobs:
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          GOOGLE_CALENDAR_ID_OTHER: ${{ secrets.GOOGLE_CALENDAR_ID_OTHER }}
           GOOGLE_CREDENTIALS_PATH: ".secrets/credentials.json"
           SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
           PYTHONUTF8: "1"

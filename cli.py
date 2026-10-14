@@ -1687,7 +1687,8 @@ def cmd_heartbeat(args: argparse.Namespace) -> int:
 
 
 def cmd_backfill_calendar(args: argparse.Namespace) -> int:
-    """Push Tier A release events into the Google Calendar."""
+    """Push release events into Google Calendar (Tier A and Tier B/C on
+    separate calendars when GOOGLE_CALENDAR_ID_OTHER is set)."""
     from datetime import date, timedelta
 
     path = Path(args.config) if args.config else default_config_path()
@@ -1722,11 +1723,17 @@ def cmd_backfill_calendar(args: argparse.Namespace) -> int:
         print("\n=== CALENDAR BACKFILL (DRY-RUN) ===", file=sys.stderr)
         for ev in events:
             print(
-                f"  {ev.release_date} {ev.release_time_et} ET — {ev.display_name} "
+                f"  {ev.release_date} {ev.release_time_et} ET — [{ev.tier}] "
+                f"{ev.display_name} -> {publisher.calendar_for(ev)} "
                 f"(id={ev.google_event_id[:14]}…)",
                 file=sys.stderr,
             )
-        print(f"\n  {len(events)} events would be upserted to {publisher.calendar_id}")
+        n_a = sum(1 for ev in events if publisher.calendar_for(ev) == publisher.calendar_id)
+        other = publisher.other_calendar_id or "(same calendar; GOOGLE_CALENDAR_ID_OTHER unset)"
+        print(
+            f"\n  {len(events)} events would be upserted: {n_a} to "
+            f"{publisher.calendar_id}, {len(events) - n_a} to {other}"
+        )
         print("  Use --post to actually publish.", file=sys.stderr)
         return 0
 
@@ -1734,7 +1741,7 @@ def cmd_backfill_calendar(args: argparse.Namespace) -> int:
     counts = publisher.upsert_events(events)
     print(
         f"  created={counts['created']} updated={counts['updated']} "
-        f"errors={len(counts['errors'])}",
+        f"removed_from_tier_a={counts['removed']} errors={len(counts['errors'])}",
         file=sys.stderr,
     )
     for err in counts["errors"][:10]:

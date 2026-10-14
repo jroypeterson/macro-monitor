@@ -1,6 +1,14 @@
 """Google Calendar publisher — creates release events on the dedicated
-"Macro Calendar" in floridabusinessman@gmail.com. Scope is every family
-with a FRED release_calendar_id (all tiers); see config.calendar_families.
+calendars in floridabusinessman@gmail.com. Scope is every family with a
+FRED release_calendar_id (all tiers); see config.calendar_families.
+
+Routing by tier:
+  - Tier A   -> GOOGLE_CALENDAR_ID       (the "Tier 1" macro calendar)
+  - Tier B/C -> GOOGLE_CALENDAR_ID_OTHER (the "other" macro calendar)
+If GOOGLE_CALENDAR_ID_OTHER is unset, every tier goes to GOOGLE_CALENDAR_ID
+(the original single-calendar behaviour). When it IS set, non-Tier-A
+events are also deleted from the Tier A calendar so events created before
+the split don't linger there.
 
 Auth: SERVICE ACCOUNT (shared with earnings-agent). NOT user OAuth.
 The calendar is shared with the earnings-agent service account at
@@ -34,6 +42,7 @@ class CalendarEvent:
 
     family_id: str
     display_name: str
+    tier: str
     release_date: date
     release_time_et: str
     fred_release_id: int
@@ -62,6 +71,7 @@ def build_events_from_schedule(
             CalendarEvent(
                 family_id=r.family_id,
                 display_name=r.display_name,
+                tier=r.tier,
                 release_date=r.release_date,
                 release_time_et=r.release_time_et,
                 fred_release_id=r.fred_release_id,
@@ -76,10 +86,14 @@ class GoogleCalendarPublisher:
         self,
         *,
         calendar_id: str | None = None,
+        other_calendar_id: str | None = None,
         credentials_path: str | None = None,
         dry_run: bool = True,
     ):
         self.calendar_id = calendar_id or os.environ.get("GOOGLE_CALENDAR_ID")
+        self.other_calendar_id = (
+            other_calendar_id or os.environ.get("GOOGLE_CALENDAR_ID_OTHER") or None
+        )
         # Allow quoted paths in .env
         cp = credentials_path or os.environ.get("GOOGLE_CREDENTIALS_PATH")
         if cp:
@@ -111,27 +125,51 @@ class GoogleCalendarPublisher:
         )
         return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
+    def calendar_for(self, ev: CalendarEvent) -> str | None:
+        """Tier A -> main calendar; everything else -> the "other" calendar
+        when configured, else the main calendar."""
+        if ev.tier == "A" or not self.other_calendar_id:
+            return self.calendar_id
+        return self.other_calendar_id
+
     def upsert_events(self, events: list[CalendarEvent]) -> dict[str, int]:
-        """Upsert events into the calendar. Returns counts dict:
-          {"created": N, "updated": M, "skipped": K, "errors": [...]}
+        """Upsert events into the calendar(s). Returns counts dict:
+          {"created": N, "updated": M, "removed": R, "skipped": K, "errors": [...]}
         """
         if self.dry_run:
-            return {"created": 0, "updated": 0, "skipped": len(events), "errors": []}
+            return {
+                "created": 0, "updated": 0, "removed": 0,
+                "skipped": len(events), "errors": [],
+            }
 
         svc = self._service()
-        counts = {"created": 0, "updated": 0, "skipped": 0, "errors": []}
+        counts = {"created": 0, "updated": 0, "removed": 0, "skipped": 0, "errors": []}
 
         for ev in events:
             body = self._event_body(ev)
+            target = self.calendar_for(ev)
+            if target != self.calendar_id:
+                # Clear any pre-split copy off the Tier A calendar. A 404/410
+                # just means it was never there or is already deleted.
+                try:
+                    svc.events().delete(
+                        calendarId=self.calendar_id, eventId=ev.google_event_id
+                    ).execute()
+                    counts["removed"] += 1
+                except Exception as e:  # noqa: BLE001
+                    if not any(c in str(e) for c in ("404", "410")):
+                        counts["errors"].append(
+                            f"{ev.family_id} {ev.release_date} (remove from tier A): {e}"
+                        )
             try:
-                svc.events().insert(calendarId=self.calendar_id, body=body).execute()
+                svc.events().insert(calendarId=target, body=body).execute()
                 counts["created"] += 1
             except Exception as e:  # noqa: BLE001
                 # If the event id collides (already exists), update.
                 if "already exists" in str(e).lower() or "409" in str(e):
                     try:
                         svc.events().update(
-                            calendarId=self.calendar_id,
+                            calendarId=target,
                             eventId=ev.google_event_id,
                             body=body,
                         ).execute()
@@ -155,7 +193,7 @@ class GoogleCalendarPublisher:
             "id": ev.google_event_id,
             "summary": f"📊 {ev.display_name}",
             "description": (
-                f"Macro release scheduled by FRED.\n"
+                f"Macro release scheduled by FRED (Tier {ev.tier}).\n"
                 f"FRED release_id: {ev.fred_release_id}\n"
                 f"family_id: {ev.family_id}\n"
                 f"\nManaged by macro_monitor — events with id prefix `mm` are "
