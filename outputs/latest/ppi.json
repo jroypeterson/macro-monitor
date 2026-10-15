@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "ppi",
   "family_display_name": "PPI",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-10-14T19:43:05.002458+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-15T15:30:44.117316+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-14T19:43:02.581639+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-10-15T15:30:38.760152+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "Headline (Final Demand)",
       "primary": {
         "transform": "annualized_mom",
-        "value": 4.905933108421556,
-        "raw_value": 157.411
+        "value": 17.366627256888513,
+        "raw_value": 159.78
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 5.413622452737954
+          "value": 6.346301041632008
         },
         {
           "transform": "mom_pct",
-          "value": 0.3999132564547425
+          "value": 1.3433801423297975
         }
       ],
       "prior_primary": {
         "transform": "annualized_mom",
-        "value": 0.8998584404679377
+        "value": 5.79178377899201
       },
       "display_unit": null,
       "definition": "Producer Price Index, Final Demand (PPIFIS): prices received by domestic producers -- upstream/pipeline inflation that often shows up in consumer prices later."
@@ -44,22 +44,22 @@
       "label": "Core (Final Demand less Food & Energy)",
       "primary": {
         "transform": "annualized_mom",
-        "value": 1.957945754770618,
-        "raw_value": 154.842
+        "value": 8.490696854083613,
+        "raw_value": 156.172
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 4.622266065769831
+          "value": 4.9775823939449015
         },
         {
           "transform": "mom_pct",
-          "value": 0.16171600082799387
+          "value": 0.6814299068433005
         }
       ],
       "prior_primary": {
         "transform": "annualized_mom",
-        "value": 3.2300861509689582
+        "value": 2.987106177039278
       },
       "display_unit": null,
       "definition": "Core PPI (PPIFES): producer prices excluding food and energy -- the underlying pipeline-inflation trend."
@@ -70,14 +70,14 @@
       "id": "PCU622622",
       "label": "Hospitals PPI",
       "transform": "yoy_pct",
-      "value": 3.5165660805723142,
+      "value": 3.303399090522463,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.3010918901631436
+        "value": 3.1025161495806364
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.0202337129727974
+        "value": 3.3913746475867645
       },
       "tags": [
         "healthcare"
@@ -88,14 +88,14 @@
       "id": "PCU621111621111",
       "label": "Physician offices PPI",
       "transform": "yoy_pct",
-      "value": 1.2144488916830953,
+      "value": 1.290310533490202,
       "prior": {
         "transform": "yoy_pct",
-        "value": 1.1625880654235976
+        "value": 1.2959931278750503
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 1.334047816361239
+        "value": 1.38182814992025
       },
       "tags": [
         "healthcare"
@@ -106,14 +106,14 @@
       "id": "PCU325412325412",
       "label": "Pharma preparation mfg PPI",
       "transform": "yoy_pct",
-      "value": 1.1849770779567281,
+      "value": 1.145824602956047,
       "prior": {
         "transform": "yoy_pct",
-        "value": 1.4882041789909817
+        "value": 1.1771367591170812
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 1.4331582849781421
+        "value": 1.2381278221870406
       },
       "tags": [
         "healthcare"
@@ -124,14 +124,14 @@
       "id": "PCU339112339112",
       "label": "Surgical & medical instruments PPI",
       "transform": "yoy_pct",
-      "value": 4.095284815973388,
+      "value": 2.5859095213903505,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.9424399938847277
+        "value": 4.095284815973388
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 4.02990111492445
+        "value": 4.010695187165769
       },
       "tags": [
         "healthcare"
@@ -142,10 +142,10 @@
       "id": "PCU621210621210",
       "label": "Dentist offices PPI",
       "transform": "yoy_pct",
-      "value": 3.4652832065951378,
+      "value": 3.2326011872256144,
       "prior": {
         "transform": "yoy_pct",
-        "value": 4.013031456965477
+        "value": 3.4460948049179096
       },
       "prior_3m": {
         "transform": "yoy_pct",
@@ -161,13 +161,13 @@
   "context": {
     "anchor_series": "PPIFIS",
     "anchor_transform": "annualized_mom",
-    "zscore": 0.7074046638590541,
+    "zscore": 1.90799563681327,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": [
       {
         "label": "3mo annualized",
-        "value": 1.4021517248256732,
+        "value": 8.14393145423804,
         "window_months": 3,
         "stat": "annualized_mom",
         "transform": "annualized_mom",
@@ -175,7 +175,7 @@
       },
       {
         "label": "6mo annualized",
-        "value": 5.567429517947131,
+        "value": 7.10003717350014,
         "window_months": 6,
         "stat": "annualized_mom",
         "transform": "annualized_mom",
@@ -184,9 +184,9 @@
     ]
   },
   "charts": {
-    "main": "ppi_5y_2026-08.png",
-    "long_history": "ppi_25y_2026-08.png",
-    "hc_ppi_detail": "ppi_hc_detail_2026-08.png"
+    "main": "ppi_5y_2026-09.png",
+    "long_history": "ppi_25y_2026-09.png",
+    "hc_ppi_detail": "ppi_hc_detail_2026-09.png"
   },
   "agency_pdf_url": "https://www.bls.gov/news.release/pdf/ppi.pdf"
 }
