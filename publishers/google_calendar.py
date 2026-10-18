@@ -48,6 +48,18 @@ class CalendarEvent:
     fred_release_id: int
     google_event_id: str  # stable, deterministic — for idempotent upsert
     cadence: str = ""  # weekly / monthly / quarterly / per_meeting
+    healthcare: tuple[str, ...] = ()  # labels of tags=[healthcare] series
+
+
+def healthcare_labels(fam: FamilyConfig | None) -> tuple[str, ...]:
+    """The family's healthcare-tagged series, computed totals first — the
+    same set and order the Slack release post renders as HC context."""
+    if fam is None:
+        return ()
+    return tuple(
+        [c.label for c in fam.computed if "healthcare" in c.tags]
+        + [c.label for c in fam.components if "healthcare" in c.tags]
+    )
 
 
 _FREQUENCY = {"per_meeting": "Per FOMC meeting"}
@@ -103,6 +115,7 @@ def build_events_from_schedule(
                 fred_release_id=r.fred_release_id,
                 google_event_id=_stable_event_id(r.family_id, r.release_date),
                 cadence=r.cadence,
+                healthcare=healthcare_labels(families.get(r.family_id)),
             )
         )
     return out
@@ -221,6 +234,7 @@ class GoogleCalendarPublisher:
             "summary": f"📊 {ev.display_name}",
             "description": (
                 (f"Frequency: {frequency_label(ev.cadence)}\n" if ev.cadence else "")
+                + (f"Healthcare read: {'; '.join(ev.healthcare)}\n" if ev.healthcare else "")
                 + f"Macro release scheduled by FRED (Tier {ev.tier}).\n"
                 f"FRED release_id: {ev.fred_release_id}\n"
                 f"family_id: {ev.family_id}\n"

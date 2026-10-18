@@ -1746,7 +1746,41 @@ def cmd_backfill_calendar(args: argparse.Namespace) -> int:
     )
     for err in counts["errors"][:10]:
         print(f"    ⚠️ {err}", file=sys.stderr)
+    if counts["errors"] or failed:
+        # A partial sync used to exit 0: on 2026-10-12 both scheduled runs
+        # went green with 40 and 50 of 84 writes failed.
+        _alert_status_reports_about_calendar(len(events), counts["errors"], failed)
+        return 1
     return 0
+
+
+def _alert_status_reports_about_calendar(
+    n_events: int, errors: list[str], failed: list[str]
+) -> None:
+    """Post the incomplete-sync alert to #status-reports. Best-effort —
+    the non-zero exit is the real signal."""
+    import os
+    webhook = os.environ.get("SLACK_WEBHOOK_STATUS_REPORTS")
+    if not webhook:
+        return
+    lines = ["⚠️ *macro_monitor Google Calendar backfill: incomplete*"]
+    if errors:
+        lines.append(f"  • {len(errors)} of {n_events} event writes failed, e.g.:")
+        lines += [f"      • {e[:150]}" for e in errors[:5]]
+    if failed:
+        lines.append(f"  • FRED schedule fetch failed for {len(failed)} family/families:")
+        lines += [f"      • `{f.split(':')[0]}`" for f in failed[:10]]
+    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(lines)}}]
+    try:
+        from .publishers.slack import requests_post_with_retry
+        requests_post_with_retry(
+            webhook,
+            label="status-reports calendar alert",
+            json={"text": "macro_monitor calendar backfill incomplete", "blocks": blocks},
+            timeout=10,
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"  status-reports alert failed: {e}", file=sys.stderr)
 
 
 def cmd_annual_calendar(args: argparse.Namespace) -> int:

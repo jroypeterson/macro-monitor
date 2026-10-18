@@ -5,12 +5,14 @@ name: Google Calendar backfill
 # stable client-generated event IDs — re-runs upsert, never duplicate.
 #
 # Runs weekly (Sunday evening) to keep the rolling 90-day window fresh
-# without too many calendar API calls.
+# without too many calendar API calls. ONE cron line on purpose: the
+# exact hour doesn't matter for a calendar refresh, and the old EDT+EST
+# pair both fired every week (2026-10-12: two runs, both rate-limited).
+# Exits non-zero and alerts #status-reports if any write fails.
 
 on:
   schedule:
-    - cron: "0 1 * * 1"   # 21:00 ET Sunday (EDT)
-    - cron: "0 2 * * 1"   # 21:00 ET Sunday (EST)
+    - cron: "0 2 * * 1"   # Sunday 21:00 ET (EST) / 22:00 ET (EDT)
   workflow_dispatch:
     inputs:
       days:
