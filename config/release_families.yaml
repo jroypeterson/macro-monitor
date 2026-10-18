@@ -858,6 +858,31 @@ families:
       - id: JTSLDL
         label: "Layoffs & discharges"
         primary_transform: raw
+      # Healthcare cut. BLS publishes JOLTS for NAICS 62 "Health care AND
+      # social assistance" -- there is no health-care-only series -- so the
+      # label says so. Verified on FRED 2026-10-18: monthly, SA, rate,
+      # 2000-12 -> 2026-08 (Aug 2026: openings 5.4, hires 2.9, quits 2.0).
+      - id: JTS6200JOR
+        label: "Health care & social assistance openings rate"
+        primary_transform: raw
+        also_display: [mom_chg, yoy_chg]
+        display_unit: "%"
+        basis: "rate"
+        tags: [healthcare]
+      - id: JTS6200HIR
+        label: "Health care & social assistance hires rate"
+        primary_transform: raw
+        also_display: [mom_chg, yoy_chg]
+        display_unit: "%"
+        basis: "rate"
+        tags: [healthcare]
+      - id: JTS6200QUR
+        label: "Health care & social assistance quits rate"
+        primary_transform: raw
+        also_display: [mom_chg, yoy_chg]
+        display_unit: "%"
+        basis: "rate"
+        tags: [healthcare]
 
     # === Context ===
     # Z-score on JTSJOR (the rate) per the v5 design correction.
