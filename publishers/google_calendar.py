@@ -47,6 +47,32 @@ class CalendarEvent:
     release_time_et: str
     fred_release_id: int
     google_event_id: str  # stable, deterministic — for idempotent upsert
+    cadence: str = ""  # weekly / monthly / quarterly / per_meeting
+
+
+_FREQUENCY = {"per_meeting": "Per FOMC meeting"}
+
+
+def frequency_label(cadence: str) -> str:
+    """'monthly' -> 'Monthly'; '' -> ''."""
+    return _FREQUENCY.get(cadence, cadence.replace("_", " ").capitalize())
+
+
+def _execute(request, tries: int = 6):
+    """Execute with exponential backoff on Google's rate-limit and 5xx
+    responses — a full backfill is 2-3 calls per event and trips the
+    per-calendar limit ("Rate Limit Exceeded", HTTP 403) without it."""
+    import time as _time
+
+    for n in range(tries):
+        try:
+            return request.execute()
+        except Exception as e:  # noqa: BLE001
+            status = getattr(getattr(e, "resp", None), "status", None)
+            limited = status == 429 or (status == 403 and "ateLimitExceeded" in str(e))
+            if n == tries - 1 or not (limited or (status or 0) >= 500):
+                raise
+            _time.sleep(min(2 ** n, 30))
 
 
 def _stable_event_id(family_id: str, release_date: date) -> str:
@@ -76,6 +102,7 @@ def build_events_from_schedule(
                 release_time_et=r.release_time_et,
                 fred_release_id=r.fred_release_id,
                 google_event_id=_stable_event_id(r.family_id, r.release_date),
+                cadence=r.cadence,
             )
         )
     return out
@@ -152,9 +179,9 @@ class GoogleCalendarPublisher:
                 # Clear any pre-split copy off the Tier A calendar. A 404/410
                 # just means it was never there or is already deleted.
                 try:
-                    svc.events().delete(
+                    _execute(svc.events().delete(
                         calendarId=self.calendar_id, eventId=ev.google_event_id
-                    ).execute()
+                    ))
                     counts["removed"] += 1
                 except Exception as e:  # noqa: BLE001
                     if not any(c in str(e) for c in ("404", "410")):
@@ -162,17 +189,17 @@ class GoogleCalendarPublisher:
                             f"{ev.family_id} {ev.release_date} (remove from tier A): {e}"
                         )
             try:
-                svc.events().insert(calendarId=target, body=body).execute()
+                _execute(svc.events().insert(calendarId=target, body=body))
                 counts["created"] += 1
             except Exception as e:  # noqa: BLE001
                 # If the event id collides (already exists), update.
                 if "already exists" in str(e).lower() or "409" in str(e):
                     try:
-                        svc.events().update(
+                        _execute(svc.events().update(
                             calendarId=target,
                             eventId=ev.google_event_id,
                             body=body,
-                        ).execute()
+                        ))
                         counts["updated"] += 1
                     except Exception as e2:  # noqa: BLE001
                         counts["errors"].append(f"{ev.family_id} {ev.release_date}: {e2}")
@@ -193,7 +220,8 @@ class GoogleCalendarPublisher:
             "id": ev.google_event_id,
             "summary": f"📊 {ev.display_name}",
             "description": (
-                f"Macro release scheduled by FRED (Tier {ev.tier}).\n"
+                (f"Frequency: {frequency_label(ev.cadence)}\n" if ev.cadence else "")
+                + f"Macro release scheduled by FRED (Tier {ev.tier}).\n"
                 f"FRED release_id: {ev.fred_release_id}\n"
                 f"family_id: {ev.family_id}\n"
                 f"\nManaged by macro_monitor — events with id prefix `mm` are "
