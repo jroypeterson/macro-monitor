@@ -4,9 +4,9 @@
   "family_display_name": "JOLTS",
   "period": "2026-08",
   "period_label": "August 2026",
-  "posted_at": "2026-10-16T18:50:08.359200+00:00",
+  "posted_at": "2026-10-19T17:22:09.313124+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-16T18:50:05.328899+00:00",
+  "source_fetched_at": "2026-10-19T17:21:40.492996+00:00",
   "latest_observation_period": "2026-08",
   "expected_observation_period": "2026-08",
   "is_stale": false,
@@ -112,6 +112,60 @@
         "value": 1761.0
       },
       "tags": [],
+      "definition": null
+    },
+    {
+      "id": "JTS6200JOR",
+      "label": "Health care & social assistance openings rate",
+      "transform": "raw",
+      "value": 5.4,
+      "prior": {
+        "transform": "raw",
+        "value": 5.8
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 5.9
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    },
+    {
+      "id": "JTS6200HIR",
+      "label": "Health care & social assistance hires rate",
+      "transform": "raw",
+      "value": 2.9,
+      "prior": {
+        "transform": "raw",
+        "value": 2.9
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 2.6
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    },
+    {
+      "id": "JTS6200QUR",
+      "label": "Health care & social assistance quits rate",
+      "transform": "raw",
+      "value": 2.0,
+      "prior": {
+        "transform": "raw",
+        "value": 2.0
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1.8
+      },
+      "tags": [
+        "healthcare"
+      ],
       "definition": null
     }
   ],
