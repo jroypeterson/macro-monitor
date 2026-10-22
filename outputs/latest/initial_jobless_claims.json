@@ -2,39 +2,39 @@
   "schema_version": "1.2",
   "family_id": "initial_jobless_claims",
   "family_display_name": "Initial Jobless Claims",
-  "period": "2026-10-10",
-  "period_label": "Week ending Oct 10, 2026",
-  "posted_at": "2026-10-21T20:08:39.678951+00:00",
+  "period": "2026-10-17",
+  "period_label": "Week ending Oct 17, 2026",
+  "posted_at": "2026-10-22T15:47:32.230886+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-21T20:08:07.059069+00:00",
-  "latest_observation_period": "2026-10-10",
-  "expected_observation_period": "2026-10-10",
+  "source_fetched_at": "2026-10-22T15:47:31.323836+00:00",
+  "latest_observation_period": "2026-10-17",
+  "expected_observation_period": "2026-10-17",
   "is_stale": false,
   "source_lag_minutes": null,
-  "from_fallback_cache": true,
-  "cache_age_hours": 24.535570470277776,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
   "headline": [
     {
       "id": "ICSA",
       "label": "Initial claims",
       "primary": {
         "transform": "raw",
-        "value": 199000.0,
-        "raw_value": 199000.0
+        "value": 194000.0,
+        "raw_value": 194000.0
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": -10.360360360360366
+          "value": -16.01731601731602
         },
         {
           "transform": "mom_pct_weekly",
-          "value": 0.5050505050504972
+          "value": -2.020202020202022
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 198000.0
+        "value": 200000.0
       },
       "display_unit": null,
       "definition": "Initial Jobless Claims (ICSA): people filing for unemployment insurance for the first time that week -- the fastest-turning labor-market indicator, published weekly."
@@ -48,11 +48,11 @@
       "value": null,
       "prior": {
         "transform": "raw",
-        "value": 1710000.0
+        "value": 1728000.0
       },
       "prior_3m": {
         "transform": "raw",
-        "value": 1699000.0
+        "value": 1714000.0
       },
       "tags": [],
       "definition": null
@@ -62,14 +62,14 @@
   "context": {
     "anchor_series": "ICSA",
     "anchor_transform": "raw",
-    "zscore": 0.13413757126273357,
+    "zscore": -0.5730000956385077,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "claims_2y_2026-10-10.png",
-    "claims_5y": "claims_5y_2026-10-10.png"
+    "main": "claims_2y_2026-10-17.png",
+    "claims_5y": "claims_5y_2026-10-17.png"
   },
   "agency_pdf_url": null
 }
