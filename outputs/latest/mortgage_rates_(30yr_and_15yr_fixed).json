@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "mortgage_rates_(30yr_and_15yr_fixed)",
   "family_display_name": "Mortgage Rates (30yr & 15yr fixed)",
-  "period": "2026-10-15",
-  "period_label": "Week ending Oct 15, 2026",
-  "posted_at": "2026-10-22T15:49:03.361723+00:00",
+  "period": "2026-10-22",
+  "period_label": "Week ending Oct 22, 2026",
+  "posted_at": "2026-10-22T19:46:02.596072+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-22T15:48:50.551587+00:00",
-  "latest_observation_period": "2026-10-15",
-  "expected_observation_period": "2026-10-15",
+  "source_fetched_at": "2026-10-22T19:45:49.788159+00:00",
+  "latest_observation_period": "2026-10-22",
+  "expected_observation_period": "2026-10-22",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,17 +19,17 @@
       "label": "30-year fixed mortgage rate",
       "primary": {
         "transform": "raw",
-        "value": 7.4,
-        "raw_value": 7.4
+        "value": 7.32,
+        "raw_value": 7.32
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": 18.02232854864436
+          "value": 18.25525040387721
         },
         {
           "transform": "mom_pct_weekly",
-          "value": 6.474820143884896
+          "value": 4.125177809388325
         }
       ],
       "prior_primary": {
@@ -44,22 +44,22 @@
       "label": "15-year fixed mortgage rate",
       "primary": {
         "transform": "raw",
-        "value": 6.71,
-        "raw_value": 6.71
+        "value": 6.68,
+        "raw_value": 6.68
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": 21.55797101449277
+          "value": 22.79411764705881
         },
         {
           "transform": "mom_pct_weekly",
-          "value": 7.1884984025559095
+          "value": 4.049844236760114
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 6.73
+        "value": 6.71
       },
       "display_unit": "%",
       "definition": "15-Year Fixed Mortgage Rate (MORTGAGE15US): average rate on the shorter standard loan -- mostly a refinance-demand read."
@@ -70,13 +70,13 @@
   "context": {
     "anchor_series": "MORTGAGE30US",
     "anchor_transform": "yoy_pct_weekly",
-    "zscore": 0.11469218044855699,
+    "zscore": 0.04477836204980454,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "mortgage_5y_2026-10-15.png"
+    "main": "mortgage_5y_2026-10-22.png"
   },
   "agency_pdf_url": null
 }
