@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "umich_consumer_sentiment",
   "family_display_name": "UMich Consumer Sentiment",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-10-22T19:45:43.166211+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-23T15:39:51.092944+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-22T19:45:41.628023+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-10-23T15:39:49.439746+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "Consumer Sentiment Index",
       "primary": {
         "transform": "raw",
-        "value": 51.7,
-        "raw_value": 51.7
+        "value": 48.1,
+        "raw_value": 48.1
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": -11.16838487972509
+          "value": -12.704174228675136
         },
         {
           "transform": "mom_chg",
-          "value": -3.5
+          "value": -3.6000000000000014
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 55.2
+        "value": 51.7
       },
       "display_unit": null,
       "definition": "University of Michigan Consumer Sentiment (UMCSENT): monthly survey of how households feel about their finances and the economy -- soft data, but a leading read on spending willingness."
@@ -45,14 +45,14 @@
       "id": "MICH",
       "label": "1y inflation expectations",
       "transform": "raw",
-      "value": 4.0,
+      "value": 4.6,
       "prior": {
         "transform": "raw",
-        "value": 4.2
+        "value": 4.0
       },
       "prior_3m": {
         "transform": "raw",
-        "value": 4.8
+        "value": 4.6
       },
       "tags": [],
       "definition": null
@@ -62,13 +62,13 @@
   "context": {
     "anchor_series": "UMCSENT",
     "anchor_transform": "raw",
-    "zscore": -0.7360060102300989,
+    "zscore": -0.7348567905552645,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "umich_10y_2026-08.png"
+    "main": "umich_10y_2026-09.png"
   },
   "agency_pdf_url": null
 }
