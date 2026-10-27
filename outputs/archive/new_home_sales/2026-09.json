@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.2",
+  "family_id": "new_home_sales",
+  "family_display_name": "New Home Sales",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-27T16:13:29.721172+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-10-27T16:13:29.017303+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "HSN1F",
+      "label": "New single-family home sales (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": -5.3221288515406195,
+        "raw_value": 676.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": -0.588235294117645
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": -2.5787965616045794
+      },
+      "display_unit": null,
+      "definition": "New Home Sales (HSN1F): signed contracts on newly built single- family homes, annualized -- the homebuilder demand read; leads existing-home sales because it's contract-based."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "HSN1F",
+    "anchor_transform": "yoy_pct",
+    "zscore": -0.2774404888316522,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "new_home_sales_10y_2026-09.png"
+  },
+  "agency_pdf_url": null
+}

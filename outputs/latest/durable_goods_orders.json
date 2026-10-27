@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "durable_goods_orders",
   "family_display_name": "Durable Goods Orders",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-10-26T21:39:25.819805+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-10-27T16:12:32.816831+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-26T21:39:24.568202+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-10-27T16:12:30.734898+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,18 +19,18 @@
       "label": "New orders: durable goods",
       "primary": {
         "transform": "mom_pct",
-        "value": -0.07144966046649381,
-        "raw_value": 338458.0
+        "value": 1.8442012638705707,
+        "raw_value": 345371.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 8.432167823206393
+          "value": 9.939295934705727
         }
       ],
       "prior_primary": {
         "transform": "mom_pct",
-        "value": 0.8699174159193968
+        "value": 0.12311780336580203
       },
       "display_unit": null,
       "definition": "Durable Goods Orders (DGORDER): new orders for goods built to last 3+ years (aircraft, machinery, appliances) -- a business- investment and demand signal; volatile, driven by aircraft orders."
@@ -41,14 +41,14 @@
       "id": "NEWORDER",
       "label": "Core capex (ex-defense, ex-aircraft)",
       "transform": "yoy_pct",
-      "value": 14.10566882795614,
+      "value": 13.465479243726719,
       "prior": {
         "transform": "yoy_pct",
-        "value": 13.316437744570209
+        "value": 14.096554956644013
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 10.928480321897727
+        "value": 13.423182731986039
       },
       "tags": [],
       "definition": null
@@ -58,13 +58,13 @@
   "context": {
     "anchor_series": "DGORDER",
     "anchor_transform": "mom_pct",
-    "zscore": -0.13639384055462397,
+    "zscore": 0.24941775784266815,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "durable_10y_2026-08.png"
+    "main": "durable_10y_2026-09.png"
   },
   "agency_pdf_url": null
 }
