@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "gdp",
   "family_display_name": "GDP",
-  "period": "2026-Q2",
-  "period_label": "Q2 2026",
-  "posted_at": "2026-10-28T21:35:45.131414+00:00",
+  "period": "2026-Q3",
+  "period_label": "Q3 2026",
+  "posted_at": "2026-10-29T17:19:35.310736+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-28T21:35:42.196027+00:00",
-  "latest_observation_period": "2026-Q2",
-  "expected_observation_period": "2026-Q2",
+  "source_fetched_at": "2026-10-29T17:19:31.191855+00:00",
+  "latest_observation_period": "2026-Q3",
+  "expected_observation_period": "2026-Q3",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,13 +19,13 @@
       "label": "Real GDP (inflation-adjusted)",
       "primary": {
         "transform": "raw",
-        "value": 2.2,
-        "raw_value": 2.2
+        "value": 3.4,
+        "raw_value": 3.4
       },
       "also_display": [],
       "prior_primary": {
         "transform": "raw",
-        "value": 2.5
+        "value": 2.2
       },
       "display_unit": "%",
       "definition": "Real GDP Growth (A191RL1Q225SBEA): quarter-over-quarter growth of inflation-adjusted US output, annualized -- the headline economic growth number."
@@ -35,13 +35,13 @@
       "label": "Nominal GDP (actual $)",
       "primary": {
         "transform": "raw",
-        "value": 8.5,
-        "raw_value": 8.5
+        "value": 5.6,
+        "raw_value": 5.6
       },
       "also_display": [],
       "prior_primary": {
         "transform": "raw",
-        "value": 5.8
+        "value": 8.5
       },
       "display_unit": "%",
       "definition": "Nominal GDP Growth (A191RP1Q027SBEA): annualized quarterly growth of GDP in current dollars -- real growth plus inflation."
@@ -52,14 +52,14 @@
       "id": "GDPC1",
       "label": "Real GDP (level)",
       "transform": "yoy_pct",
-      "value": 2.1915745328897174,
+      "value": 2.0657392375537764,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.639172848041582
+        "value": 2.1915745328897174
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 2.600681821276374
+        "value": 2.0460406520513175
       },
       "tags": [],
       "definition": null
@@ -68,14 +68,14 @@
       "id": "PCECC96",
       "label": "\u21b3 Consumer spending (real PCE)",
       "transform": "yoy_pct",
-      "value": 2.5055440671292395,
+      "value": 2.533810604461695,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.092019675820067
+        "value": 2.5055440671292395
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 2.6569581525472508
+        "value": 2.074610334735083
       },
       "tags": [],
       "definition": null
@@ -84,14 +84,14 @@
       "id": "GPDIC1",
       "label": "\u21b3 Private investment (real)",
       "transform": "yoy_pct",
-      "value": 3.376025692917395,
+      "value": 7.868355736787502,
       "prior": {
         "transform": "yoy_pct",
-        "value": -0.9639820369223617
+        "value": 3.376025692917395
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 1.0911499906313349
+        "value": 2.617982904042826
       },
       "tags": [],
       "definition": null
@@ -100,14 +100,14 @@
       "id": "GCEC1",
       "label": "\u21b3 Government (real)",
       "transform": "yoy_pct",
-      "value": 0.07231267087939308,
+      "value": 0.9675783564314866,
       "prior": {
         "transform": "yoy_pct",
-        "value": 0.6656447701028245
+        "value": 0.07231267087939308
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 1.6947542340950639
+        "value": -0.6466707484699352
       },
       "tags": [],
       "definition": null
@@ -116,14 +116,14 @@
       "id": "DHLCRC1Q027SBEA",
       "label": "PCE Health Services",
       "transform": "yoy_pct",
-      "value": 7.378791007959862,
+      "value": 6.744864384564364,
       "prior": {
         "transform": "yoy_pct",
-        "value": 6.789978785735928
+        "value": 7.378791007959862
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 7.6411958154321
+        "value": 7.2897630487613
       },
       "tags": [
         "healthcare"
@@ -135,16 +135,16 @@
   "context": {
     "anchor_series": "A191RL1Q225SBEA",
     "anchor_transform": "raw",
-    "zscore": -0.01939005618132267,
+    "zscore": 0.4379232688558675,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "gdp_5y_2026-Q2.png",
-    "gdp_long_history": "gdp_25y_2026-Q2.png",
-    "gdp_components": "gdp_components_2026-Q2.png",
-    "hc_pce_services": "hc_pce_services_2026-Q2.png"
+    "main": "gdp_5y_2026-Q3.png",
+    "gdp_long_history": "gdp_25y_2026-Q3.png",
+    "gdp_components": "gdp_components_2026-Q3.png",
+    "hc_pce_services": "hc_pce_services_2026-Q3.png"
   },
   "agency_pdf_url": null
 }

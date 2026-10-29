@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "initial_jobless_claims",
   "family_display_name": "Initial Jobless Claims",
-  "period": "2026-10-17",
-  "period_label": "Week ending Oct 17, 2026",
-  "posted_at": "2026-10-28T21:35:39.545135+00:00",
+  "period": "2026-10-24",
+  "period_label": "Week ending Oct 24, 2026",
+  "posted_at": "2026-10-29T17:19:26.549625+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-28T21:35:38.544505+00:00",
-  "latest_observation_period": "2026-10-17",
-  "expected_observation_period": "2026-10-17",
+  "source_fetched_at": "2026-10-29T17:19:25.593011+00:00",
+  "latest_observation_period": "2026-10-24",
+  "expected_observation_period": "2026-10-24",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -25,16 +25,16 @@
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": -16.01731601731602
+          "value": -12.217194570135748
         },
         {
           "transform": "mom_pct_weekly",
-          "value": -2.020202020202022
+          "value": -2.5125628140703515
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 200000.0
+        "value": 195000.0
       },
       "display_unit": null,
       "definition": "Initial Jobless Claims (ICSA): people filing for unemployment insurance for the first time that week -- the fastest-turning labor-market indicator, published weekly."
@@ -48,11 +48,11 @@
       "value": null,
       "prior": {
         "transform": "raw",
-        "value": 1728000.0
+        "value": 1701000.0
       },
       "prior_3m": {
         "transform": "raw",
-        "value": 1714000.0
+        "value": 1703000.0
       },
       "tags": [],
       "definition": null
@@ -62,14 +62,14 @@
   "context": {
     "anchor_series": "ICSA",
     "anchor_transform": "raw",
-    "zscore": -0.5730000956385077,
+    "zscore": -0.0745716779353396,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "claims_2y_2026-10-17.png",
-    "claims_5y": "claims_5y_2026-10-17.png"
+    "main": "claims_2y_2026-10-24.png",
+    "claims_5y": "claims_5y_2026-10-24.png"
   },
   "agency_pdf_url": null
 }
