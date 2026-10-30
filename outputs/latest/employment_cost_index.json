@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "employment_cost_index",
   "family_display_name": "Employment Cost Index",
-  "period": "2026-Q2",
-  "period_label": "Q2 2026",
-  "posted_at": "2026-10-29T21:57:10.815463+00:00",
+  "period": "2026-Q3",
+  "period_label": "Q3 2026",
+  "posted_at": "2026-10-30T16:57:19.054862+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-29T21:57:09.056802+00:00",
-  "latest_observation_period": "2026-Q2",
-  "expected_observation_period": "2026-Q2",
+  "source_fetched_at": "2026-10-30T16:57:17.600295+00:00",
+  "latest_observation_period": "2026-Q3",
+  "expected_observation_period": "2026-Q3",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,18 +19,18 @@
       "label": "Total compensation (All Civilian)",
       "primary": {
         "transform": "yoy_pct",
-        "value": 3.3831252188119887,
-        "raw_value": 177.178
+        "value": 3.370149115495047,
+        "raw_value": 178.574
       },
       "also_display": [
         {
           "transform": "qoq_pct_saar",
-          "value": 3.6007912429142586
+          "value": 3.189076820179526
         }
       ],
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": 3.4263839811542907
+        "value": 3.3831252188119887
       },
       "display_unit": null,
       "definition": "Employment Cost Index (ECIALLCIV): quarterly change in total compensation (wages plus benefits) for civilian workers -- the cleanest wage-inflation measure because it holds the job mix constant."
@@ -41,14 +41,14 @@
       "id": "ECIWAG",
       "label": "Wages & salaries (Private Industry)",
       "transform": "yoy_pct",
-      "value": 3.1383416972511347,
+      "value": 3.1174977707661533,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.3166472642607525
+        "value": 3.1383416972511347
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.580817051509766
+        "value": 3.3624633431085016
       },
       "tags": [],
       "definition": null
@@ -57,14 +57,14 @@
       "id": "ECIBEN",
       "label": "Benefits (Private Industry)",
       "transform": "yoy_pct",
-      "value": 3.778705382677572,
+      "value": 3.9130828429153386,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.560661764705886
+        "value": 3.778705382677572
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.4821986258588566
+        "value": 3.414498141263933
       },
       "tags": [],
       "definition": null
@@ -74,14 +74,14 @@
   "context": {
     "anchor_series": "ECIALLCIV",
     "anchor_transform": "yoy_pct",
-    "zscore": -0.23371334304061042,
+    "zscore": -0.0046584602798469795,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "eci_10y_2026-Q2.png",
-    "wages_vs_benefits": "eci_split_2026-Q2.png"
+    "main": "eci_10y_2026-Q3.png",
+    "wages_vs_benefits": "eci_split_2026-Q3.png"
   },
   "agency_pdf_url": "https://www.bls.gov/news.release/pdf/eci.pdf"
 }
