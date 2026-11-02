@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "construction_spending",
   "family_display_name": "Construction Spending",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-10-30T21:25:22.789826+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-11-02T20:40:01.801604+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-10-30T21:25:21.554160+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-11-02T20:39:49.254061+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,18 +19,18 @@
       "label": "Total construction spending (annualized)",
       "primary": {
         "transform": "yoy_pct",
-        "value": -1.7348163980403397,
-        "raw_value": 2203129.0
+        "value": -2.6562483997900066,
+        "raw_value": 2186145.0
       },
       "also_display": [
         {
           "transform": "mom_pct",
-          "value": 0.853981324566
+          "value": -1.8510137947197025
         }
       ],
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": -2.593335601500557
+        "value": -0.653427438778531
       },
       "display_unit": null,
       "definition": "Total Construction Spending (TTLCONS): dollar value of all construction put in place -- residential, nonresidential (incl. the data-center/manufacturing buildout), and public works."
@@ -41,14 +41,14 @@
       "id": "TLPRVCONS",
       "label": "Private construction",
       "transform": "yoy_pct",
-      "value": -3.0519699962925806,
+      "value": -3.8160728010936618,
       "prior": {
         "transform": "yoy_pct",
-        "value": -4.128532206227575
+        "value": -1.5885073641683345
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": -4.720040549007276
+        "value": -3.618227460304224
       },
       "tags": [],
       "definition": null
@@ -57,14 +57,14 @@
       "id": "TLNRESCONS",
       "label": "Nonresidential construction",
       "transform": "yoy_pct",
-      "value": 0.5025388079315629,
+      "value": 1.7976162396268425,
       "prior": {
         "transform": "yoy_pct",
-        "value": -0.24526474006543175
+        "value": 1.1672141623316312
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": -2.7990682923498267
+        "value": -0.8762300184291916
       },
       "tags": [],
       "definition": null
@@ -74,13 +74,13 @@
   "context": {
     "anchor_series": "TTLCONS",
     "anchor_transform": "yoy_pct",
-    "zscore": 0.9620315865440299,
+    "zscore": -1.5219517444838677,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "construction_10y_2026-08.png"
+    "main": "construction_10y_2026-09.png"
   },
   "agency_pdf_url": null
 }
