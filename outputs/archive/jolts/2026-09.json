@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.2",
+  "family_id": "jolts",
+  "family_display_name": "JOLTS",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-11-03T18:14:51.049403+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-03T18:14:47.685574+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "JTSJOL",
+      "label": "Job openings",
+      "primary": {
+        "transform": "raw",
+        "value": 7523.0,
+        "raw_value": 7523.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 4.937927186497415
+        },
+        {
+          "transform": "mom_chg",
+          "value": 333.0
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 7190.0
+      },
+      "display_unit": null,
+      "definition": "Job Openings (JTSJOL): total unfilled job openings from the BLS JOLTS survey -- the labor-demand side; openings per unemployed worker is the tightness read."
+    },
+    {
+      "id": "JTSQUR",
+      "label": "Quits rate",
+      "primary": {
+        "transform": "raw",
+        "value": 2.1,
+        "raw_value": 2.1
+      },
+      "also_display": [
+        {
+          "transform": "mom_chg",
+          "value": 0.20000000000000018
+        },
+        {
+          "transform": "yoy_chg",
+          "value": 0.20000000000000018
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 1.9
+      },
+      "display_unit": "%",
+      "definition": "Quits Rate (JTSQUR): the share of workers voluntarily quitting each month, from JOLTS -- workers quit more when confident they can find something better, so a falling quits rate = cooling labor market."
+    }
+  ],
+  "components": [
+    {
+      "id": "JTSJOR",
+      "label": "Job openings rate (z-score anchor)",
+      "transform": "raw",
+      "value": 4.5,
+      "prior": {
+        "transform": "raw",
+        "value": 4.3
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 4.3
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "JTSHIR",
+      "label": "Hires",
+      "transform": "raw",
+      "value": 3.4,
+      "prior": {
+        "transform": "raw",
+        "value": 3.3
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 3.4
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "JTSLDL",
+      "label": "Layoffs & discharges",
+      "transform": "raw",
+      "value": 1641.0,
+      "prior": {
+        "transform": "raw",
+        "value": 1768.0
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1785.0
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "JTS6200JOR",
+      "label": "Health care & social assistance openings rate",
+      "transform": "raw",
+      "value": 5.8,
+      "prior": {
+        "transform": "raw",
+        "value": 5.9
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 5.5
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    },
+    {
+      "id": "JTS6200HIR",
+      "label": "Health care & social assistance hires rate",
+      "transform": "raw",
+      "value": 2.9,
+      "prior": {
+        "transform": "raw",
+        "value": 2.9
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 3.0
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    },
+    {
+      "id": "JTS6200QUR",
+      "label": "Health care & social assistance quits rate",
+      "transform": "raw",
+      "value": 2.0,
+      "prior": {
+        "transform": "raw",
+        "value": 1.9
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1.9
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "JTSJOR",
+    "anchor_transform": "raw",
+    "zscore": 1.0673374812177059,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "jolts_5y_2026-09.png",
+    "openings_rate_5y": "jolts_rates_5y_2026-09.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/jolts.pdf"
+}

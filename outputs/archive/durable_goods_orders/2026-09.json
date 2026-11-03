@@ -4,9 +4,9 @@
   "family_display_name": "Durable Goods Orders",
   "period": "2026-09",
   "period_label": "September 2026",
-  "posted_at": "2026-11-02T20:39:08.542457+00:00",
+  "posted_at": "2026-11-03T18:15:40.301206+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-02T20:39:07.518167+00:00",
+  "source_fetched_at": "2026-11-03T18:15:38.504582+00:00",
   "latest_observation_period": "2026-09",
   "expected_observation_period": "2026-09",
   "is_stale": false,
@@ -19,18 +19,18 @@
       "label": "New orders: durable goods",
       "primary": {
         "transform": "mom_pct",
-        "value": 1.8442012638705707,
-        "raw_value": 345371.0
+        "value": 1.912525612866145,
+        "raw_value": 345672.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 9.939295934705727
+          "value": 10.035110951242565
         }
       ],
       "prior_primary": {
         "transform": "mom_pct",
-        "value": 0.12311780336580203
+        "value": 0.14319456746383352
       },
       "display_unit": null,
       "definition": "Durable Goods Orders (DGORDER): new orders for goods built to last 3+ years (aircraft, machinery, appliances) -- a business- investment and demand signal; volatile, driven by aircraft orders."
@@ -41,10 +41,10 @@
       "id": "NEWORDER",
       "label": "Core capex (ex-defense, ex-aircraft)",
       "transform": "yoy_pct",
-      "value": 13.465479243726719,
+      "value": 13.6536453970177,
       "prior": {
         "transform": "yoy_pct",
-        "value": 14.096554956644013
+        "value": 14.074421269171689
       },
       "prior_3m": {
         "transform": "yoy_pct",
@@ -58,7 +58,7 @@
   "context": {
     "anchor_series": "DGORDER",
     "anchor_transform": "mom_pct",
-    "zscore": 0.24941775784266815,
+    "zscore": 0.25649715343820984,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
