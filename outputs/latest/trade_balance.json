@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "trade_balance",
   "family_display_name": "Trade Balance",
-  "period": "2026-08",
-  "period_label": "August 2026",
-  "posted_at": "2026-11-03T23:28:29.937909+00:00",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-11-04T18:28:51.003172+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-03T23:28:28.422600+00:00",
-  "latest_observation_period": "2026-08",
-  "expected_observation_period": "2026-08",
+  "source_fetched_at": "2026-11-04T18:28:50.353139+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "Trade balance (goods & services, $M)",
       "primary": {
         "transform": "raw",
-        "value": -105572.0,
-        "raw_value": -105572.0
+        "value": -105047.0,
+        "raw_value": -105047.0
       },
       "also_display": [
         {
           "transform": "mom_chg",
-          "value": -12746.0
+          "value": 690.0
         },
         {
           "transform": "yoy_chg",
-          "value": -45930.0
+          "value": -45655.0
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": -92826.0
+        "value": -105737.0
       },
       "display_unit": null,
       "definition": "Trade Balance, Goods & Services (BOPGSTB): US exports minus imports -- negative = trade deficit; swings in the gap feed directly into the GDP arithmetic."
@@ -45,13 +45,13 @@
   "context": {
     "anchor_series": "BOPGSTB",
     "anchor_transform": "raw",
-    "zscore": -0.8461968444655575,
+    "zscore": 0.08329524851460873,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "trade_10y_2026-08.png"
+    "main": "trade_10y_2026-09.png"
   },
   "agency_pdf_url": null
 }

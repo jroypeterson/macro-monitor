@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.2",
+  "family_id": "adp_national_employment_report",
+  "family_display_name": "ADP National Employment Report",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-04T18:29:19.693898+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-04T18:29:18.654510+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ADPMNUSNERSA",
+      "label": "Private payrolls change (ADP)",
+      "primary": {
+        "transform": "mom_chg",
+        "value": 86000.0,
+        "raw_value": 132971000.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 0.6227865726306847
+        }
+      ],
+      "prior_primary": {
+        "transform": "mom_chg",
+        "value": 86000.0
+      },
+      "display_unit": null,
+      "definition": "ADP Private Payrolls (ADPMNUSNERSA): private-sector jobs added per ADP's actual payroll records -- the mid-week preview of the official BLS number; the two often diverge month to month."
+    }
+  ],
+  "components": [
+    {
+      "id": "ADPMINDEDHLTNERSA",
+      "label": "Education & Health Services (ADP)",
+      "transform": "mom_chg",
+      "value": 28000.0,
+      "prior": {
+        "transform": "mom_chg",
+        "value": 60000.0
+      },
+      "prior_3m": {
+        "transform": "mom_chg",
+        "value": 36000.0
+      },
+      "tags": [
+        "healthcare"
+      ],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "ADPMNUSNERSA",
+    "anchor_transform": "mom_chg",
+    "zscore": 0.07611216910980823,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo avg change",
+        "value": 69333.33333333333,
+        "window_months": 3,
+        "stat": "mean",
+        "transform": "mom_chg",
+        "display_unit": null
+      },
+      {
+        "label": "6mo avg change",
+        "value": 78166.66666666667,
+        "window_months": 6,
+        "stat": "mean",
+        "transform": "mom_chg",
+        "display_unit": null
+      }
+    ]
+  },
+  "charts": {
+    "main": "adp_5y_2026-10.png",
+    "adp_hc_employment": "adp_hc_2026-10.png"
+  },
+  "agency_pdf_url": null
+}
