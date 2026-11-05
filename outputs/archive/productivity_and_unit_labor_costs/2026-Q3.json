@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.2",
+  "family_id": "productivity_and_unit_labor_costs",
+  "family_display_name": "Productivity & Unit Labor Costs",
+  "period": "2026-Q3",
+  "period_label": "Q3 2026",
+  "posted_at": "2026-11-05T18:32:20.980666+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-05T18:32:18.868834+00:00",
+  "latest_observation_period": "2026-Q3",
+  "expected_observation_period": "2026-Q3",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "OPHNFB",
+      "label": "Output per hour (nonfarm business)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.057523605437628,
+        "raw_value": 121.922
+      },
+      "also_display": [
+        {
+          "transform": "qoq_pct_saar",
+          "value": 3.5545549214065053
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 2.2867298578199025
+      },
+      "display_unit": null,
+      "definition": "Nonfarm Labor Productivity (OPHNFB): output per hour worked -- how much each hour of labor produces; the long-run driver of real wages and corporate margins."
+    },
+    {
+      "id": "ULCNFB",
+      "label": "Unit labor costs",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.386126063838545,
+        "raw_value": 124.393
+      },
+      "also_display": [
+        {
+          "transform": "qoq_pct_saar",
+          "value": -0.6628723351301158
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 2.572545791315095
+      },
+      "display_unit": null,
+      "definition": "Unit Labor Costs (ULCNFB): labor cost per unit of output, i.e. compensation growth minus productivity growth -- rising unit labor costs squeeze margins or get passed on as inflation."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "OPHNFB",
+    "anchor_transform": "yoy_pct",
+    "zscore": -0.3812265933553001,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "productivity_15y_2026-Q3.png"
+  },
+  "agency_pdf_url": "https://www.bls.gov/news.release/pdf/prod2.pdf"
+}
