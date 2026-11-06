@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.2",
+  "family_id": "consumer_credit",
+  "family_display_name": "Consumer Credit",
+  "period": "2026-09",
+  "period_label": "September 2026",
+  "posted_at": "2026-11-06T22:44:04.130507+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-06T22:44:02.554287+00:00",
+  "latest_observation_period": "2026-09",
+  "expected_observation_period": "2026-09",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "TOTALSL",
+      "label": "Total consumer credit",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 3.0057898110673165,
+        "raw_value": 5224415.99
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.5357108741281147
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 2.7261659702414676
+      },
+      "display_unit": null,
+      "definition": "Total Consumer Credit (TOTALSL): outstanding consumer borrowing excluding mortgages (credit cards, auto loans, student loans) -- whether households are leveraging up or paying down."
+    }
+  ],
+  "components": [
+    {
+      "id": "REVOLSL",
+      "label": "Revolving credit (credit cards)",
+      "transform": "yoy_pct",
+      "value": 4.246119738062881,
+      "prior": {
+        "transform": "yoy_pct",
+        "value": 3.3510923032235906
+      },
+      "prior_3m": {
+        "transform": "yoy_pct",
+        "value": 4.046621799766448
+      },
+      "tags": [],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "TOTALSL",
+    "anchor_transform": "yoy_pct",
+    "zscore": 0.5115228083636093,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "credit_10y_2026-09.png"
+  },
+  "agency_pdf_url": null
+}
