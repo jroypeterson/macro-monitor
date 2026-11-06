@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "employment_situation",
   "family_display_name": "Employment Situation",
-  "period": "2026-09",
-  "period_label": "September 2026",
-  "posted_at": "2026-11-05T23:49:17.109918+00:00",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-06T17:48:45.756049+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-05T23:49:12.056958+00:00",
-  "latest_observation_period": "2026-09",
-  "expected_observation_period": "2026-09",
+  "source_fetched_at": "2026-11-06T17:48:41.406421+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,18 +19,18 @@
       "label": "Nonfarm payrolls",
       "primary": {
         "transform": "mom_chg",
-        "value": 29.0,
-        "raw_value": 159044.0
+        "value": 165.0,
+        "raw_value": 159293.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": 0.3128390140525239
+          "value": 0.5586839048532966
         }
       ],
       "prior_primary": {
         "transform": "mom_chg",
-        "value": 133.0
+        "value": 60.0
       },
       "display_unit": "K",
       "definition": "Nonfarm Payrolls (PAYEMS): total US jobs added or lost in the month across all employers except farms -- the headline jobs number from the BLS Employment Situation."
@@ -40,22 +40,22 @@
       "label": "Unemployment rate (U-3)",
       "primary": {
         "transform": "raw",
-        "value": 4.2,
-        "raw_value": 4.2
+        "value": 4.1,
+        "raw_value": 4.1
       },
       "also_display": [
         {
           "transform": "mom_chg",
-          "value": 0.10000000000000053
+          "value": -0.10000000000000053
         },
         {
           "transform": "yoy_chg",
-          "value": -0.20000000000000018
+          "value": null
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 4.1
+        "value": 4.2
       },
       "display_unit": "%",
       "definition": "U-3 Unemployment Rate (UNRATE): the official/headline unemployment rate \u2014 people with no job who actively looked for work in the prior 4 weeks, as a % of the civilian labor force."
@@ -65,22 +65,22 @@
       "label": "Underemployment rate (U-6)",
       "primary": {
         "transform": "raw",
-        "value": 7.6,
-        "raw_value": 7.6
+        "value": 7.9,
+        "raw_value": 7.9
       },
       "also_display": [
         {
           "transform": "mom_chg",
-          "value": -0.10000000000000053
+          "value": 0.3000000000000007
         },
         {
           "transform": "yoy_chg",
-          "value": -0.5
+          "value": null
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 7.7
+        "value": 7.6
       },
       "display_unit": "%",
       "definition": "U-6 Underemployment Rate (U6RATE): the broadest BLS labor-underutilization measure \u2014 the U-3 unemployed PLUS marginally attached workers (want a job, looked in the past year but not the past 4 weeks, incl. discouraged workers) PLUS people working part-time for economic reasons (want full-time work but can't get the hours), as a % of the labor force plus the marginally attached."
@@ -91,14 +91,14 @@
       "id": "CES0500000003",
       "label": "Avg hourly earnings (private)",
       "transform": "yoy_pct",
-      "value": 3.0245231607629375,
+      "value": 3.1207598371777445,
       "prior": {
         "transform": "yoy_pct",
-        "value": 3.1130529765155623
+        "value": 3.1607629427792716
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 3.3828382838283932
+        "value": 3.208116259939686
       },
       "tags": [],
       "definition": null
@@ -107,14 +107,14 @@
       "id": "CES6562100001",
       "label": "Ambulatory health care services",
       "transform": "yoy_pct",
-      "value": 2.356099015806734,
+      "value": 2.1923932433325355,
       "prior": {
         "transform": "yoy_pct",
-        "value": 2.46954595791804
+        "value": 2.297555533463669
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 2.661296603286556
+        "value": 2.346648357124659
       },
       "tags": [
         "healthcare"
@@ -125,14 +125,14 @@
       "id": "CES6562200001",
       "label": "Hospitals",
       "transform": "yoy_pct",
-      "value": 1.8999244248378622,
+      "value": 2.210818600400688,
       "prior": {
         "transform": "yoy_pct",
-        "value": 1.936256805088199
+        "value": 1.9385907868604724
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 2.0403472480065243
+        "value": 1.870016230329541
       },
       "tags": [
         "healthcare"
@@ -143,14 +143,14 @@
       "id": "CES6562300001",
       "label": "Nursing & residential care",
       "transform": "yoy_pct",
-      "value": 1.4655423088107078,
+      "value": 1.5012486207096831,
       "prior": {
         "transform": "yoy_pct",
-        "value": 1.7984460029683014
+        "value": 1.4626344867694208
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 2.201303826702139
+        "value": 1.9834903596534614
       },
       "tags": [
         "healthcare"
@@ -161,14 +161,14 @@
       "id": "USPBS",
       "label": "Professional & business services",
       "transform": "yoy_pct",
-      "value": 0.5501140480343558,
+      "value": 1.2043877322587937,
       "prior": {
         "transform": "yoy_pct",
-        "value": 0.5184357541899498
+        "value": 0.782682588666761
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": 0.3702216869619468
+        "value": 0.41512297460162273
       },
       "tags": [
         "white_collar"
@@ -179,14 +179,14 @@
       "id": "USINFO",
       "label": "Information",
       "transform": "yoy_pct",
-      "value": -4.197271773347322,
+      "value": -4.171048019628465,
       "prior": {
         "transform": "yoy_pct",
-        "value": -3.8811188811188835
+        "value": -4.337180832458898
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": -3.4928396786587546
+        "value": -3.2855644879412838
       },
       "tags": [
         "white_collar"
@@ -197,14 +197,14 @@
       "id": "USFIRE",
       "label": "Financial activities",
       "transform": "yoy_pct",
-      "value": -1.1644357383828519,
+      "value": -1.0779616724738705,
       "prior": {
         "transform": "yoy_pct",
-        "value": -1.0451823625476364
+        "value": -1.2079660463597763
       },
       "prior_3m": {
         "transform": "yoy_pct",
-        "value": -1.04302477183833
+        "value": -1.151673185571489
       },
       "tags": [
         "white_collar"
@@ -224,16 +224,16 @@
       ],
       "transformed": {
         "transform": "yoy_pct",
-        "value": 2.044902044902064,
-        "raw_value": 18553.600000000002
+        "value": 2.067481361924539,
+        "raw_value": 18592.0
       },
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": 2.175590611943412
+        "value": 2.027302027302036
       },
       "prior_3m_primary": {
         "transform": "yoy_pct",
-        "value": 2.3797793486744823
+        "value": 2.1289155164233797
       },
       "tags": [
         "healthcare"
@@ -251,16 +251,16 @@
       ],
       "transformed": {
         "transform": "yoy_pct",
-        "value": -0.3022640741709548,
-        "raw_value": 34303.0
+        "value": 0.14837658559292422,
+        "raw_value": 34423.0
       },
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": -0.2643811737361945
+        "value": -0.17438311971401665
       },
       "prior_3m_primary": {
         "transform": "yoy_pct",
-        "value": -0.3276691990952818
+        "value": -0.3104328652663302
       },
       "tags": [
         "white_collar"
@@ -271,13 +271,13 @@
   "context": {
     "anchor_series": "PAYEMS",
     "anchor_transform": "mom_chg",
-    "zscore": -0.5208575688545878,
+    "zscore": 0.6354356734683507,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": [
       {
         "label": "3mo avg change",
-        "value": 50.666666666666664,
+        "value": 137.0,
         "window_months": 3,
         "stat": "mean",
         "transform": "mom_chg",
@@ -285,7 +285,7 @@
       },
       {
         "label": "6mo avg change",
-        "value": 65.66666666666667,
+        "value": 82.5,
         "window_months": 6,
         "stat": "mean",
         "transform": "mom_chg",
@@ -294,11 +294,11 @@
     ]
   },
   "charts": {
-    "main": "payrolls_5y_2026-09.png",
-    "unemployment_5y": "unrate_5y_2026-09.png",
-    "long_history": "payrolls_25y_2026-09.png",
-    "hc_employment": "hc_employment_2026-09.png",
-    "white_collar_employment": "white_collar_employment_2026-09.png"
+    "main": "payrolls_5y_2026-10.png",
+    "unemployment_5y": "unrate_5y_2026-10.png",
+    "long_history": "payrolls_25y_2026-10.png",
+    "hc_employment": "hc_employment_2026-10.png",
+    "white_collar_employment": "white_collar_employment_2026-10.png"
   },
   "agency_pdf_url": "https://www.bls.gov/news.release/pdf/empsit.pdf"
 }

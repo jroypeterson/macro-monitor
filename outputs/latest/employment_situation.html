@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Employment Situation — September 2026</title>
+<title>Employment Situation — October 2026</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
           max-width: 900px; margin: 2em auto; padding: 0 1em; color: #222; }
@@ -28,20 +28,20 @@
 </head>
 <body>
 
-<h1>Employment Situation <span class="period-label">— September 2026</span></h1>
+<h1>Employment Situation <span class="period-label">— October 2026</span></h1>
 
 <div class="freshness">
   <strong>Source:</strong> fred ·
-  <strong>Fetched:</strong> 2026-11-05T23:49:12.056958+00:00 ·
-  <strong>Latest observation:</strong> 2026-09 ·
-  <strong>Expected:</strong> 2026-09 ·
+  <strong>Fetched:</strong> 2026-11-06T17:48:41.406421+00:00 ·
+  <strong>Latest observation:</strong> 2026-10 ·
+  <strong>Expected:</strong> 2026-10 ·
   <strong>Stale:</strong> no
 </div>
 
 <h2>Headline</h2>
-<table><thead><tr><th>Series</th><th>Primary</th><th>Also</th><th>Prior</th></tr></thead><tbody><tr><td><strong>Nonfarm payrolls</strong> <small style='color:#888'>(PAYEMS)</small></td><td class='num'>+29.0</td><td>yoy_pct 0.31%</td><td class='num'>+133.0</td></tr>
-<tr><td><strong>Unemployment rate (U-3)</strong> <small style='color:#888'>(UNRATE)</small></td><td class='num'>4.20%</td><td>MoM +0.1pp · YoY -0.2pp</td><td class='num'>4.10%</td></tr>
-<tr><td><strong>Underemployment rate (U-6)</strong> <small style='color:#888'>(U6RATE)</small></td><td class='num'>7.60%</td><td>MoM -0.1pp · YoY -0.5pp</td><td class='num'>7.70%</td></tr></tbody></table>
+<table><thead><tr><th>Series</th><th>Primary</th><th>Also</th><th>Prior</th></tr></thead><tbody><tr><td><strong>Nonfarm payrolls</strong> <small style='color:#888'>(PAYEMS)</small></td><td class='num'>+165.0</td><td>yoy_pct 0.56%</td><td class='num'>+60.0</td></tr>
+<tr><td><strong>Unemployment rate (U-3)</strong> <small style='color:#888'>(UNRATE)</small></td><td class='num'>4.10%</td><td>MoM -0.1pp · yoy_chg —</td><td class='num'>4.20%</td></tr>
+<tr><td><strong>Underemployment rate (U-6)</strong> <small style='color:#888'>(U6RATE)</small></td><td class='num'>7.90%</td><td>MoM +0.3pp · yoy_chg —</td><td class='num'>7.60%</td></tr></tbody></table>
 
 <div class='freshness'><strong>Definitions</strong><ul style='margin:0.4em 0 0 1.2em; padding:0'><li>Nonfarm Payrolls (PAYEMS): total US jobs added or lost in the month across all employers except farms -- the headline jobs number from the BLS Employment Situation.</li>
 <li>U-3 Unemployment Rate (UNRATE): the official/headline unemployment rate — people with no job who actively looked for work in the prior 4 weeks, as a % of the civilian labor force.</li>
@@ -49,31 +49,31 @@
 <li>Health Care Employment (HC_TOTAL, computed): sum of the Ambulatory Care + Hospitals + Nursing &amp; Residential Care payroll series (NAICS 621+622+623) -- total healthcare jobs, a direct staffing/capacity read for provider names.</li>
 <li>White-Collar Employment (WC_TOTAL, computed): sum of the Professional &amp; Business Services (USPBS) + Information (USINFO) + Financial Activities (USFIRE) payroll supersectors — a proxy for office/knowledge-worker jobs, shown as YoY % change plus whether that growth rate is accelerating or decelerating vs the prior month and vs 3 months ago.</li></ul></div>
 
-<h2>Context</h2><p><strong>Anchor:</strong> PAYEMS (mom_chg) · <strong>delta z-score vs 5y:</strong> -0.52σ</p><table><thead><tr><th>Trend</th><th>Stat</th><th>Value</th></tr></thead><tbody><tr><td>3mo avg change</td><td>mean</td><td class='num'>+50.7K</td></tr>
-<tr><td>6mo avg change</td><td>mean</td><td class='num'>+65.7K</td></tr></tbody></table>
+<h2>Context</h2><p><strong>Anchor:</strong> PAYEMS (mom_chg) · <strong>delta z-score vs 5y:</strong> +0.64σ</p><table><thead><tr><th>Trend</th><th>Stat</th><th>Value</th></tr></thead><tbody><tr><td>3mo avg change</td><td>mean</td><td class='num'>+137.0K</td></tr>
+<tr><td>6mo avg change</td><td>mean</td><td class='num'>+82.5K</td></tr></tbody></table>
 
-<h2>Components (thread)</h2><table><thead><tr><th>Series</th><th>Transform</th><th>Value</th></tr></thead><tbody><tr><td><strong>Health Care employment (NAICS 621+622+623)</strong> <small style='color:#888'>(HC_TOTAL, computed)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.04%</td></tr>
-<tr><td><strong>White-collar employment (Prof &amp; Business + Info + Financial)</strong> <small style='color:#888'>(WC_TOTAL, computed)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-0.30%</td></tr>
-<tr><td>Avg hourly earnings (private) <small style='color:#888'>(CES0500000003)</small> </td><td>yoy_pct</td><td class='num'>3.02%</td></tr>
-<tr><td>Ambulatory health care services <small style='color:#888'>(CES6562100001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.36%</td></tr>
-<tr><td>Hospitals <small style='color:#888'>(CES6562200001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>1.90%</td></tr>
-<tr><td>Nursing &amp; residential care <small style='color:#888'>(CES6562300001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>1.47%</td></tr>
-<tr><td>Professional &amp; business services <small style='color:#888'>(USPBS)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>0.55%</td></tr>
-<tr><td>Information <small style='color:#888'>(USINFO)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-4.20%</td></tr>
-<tr><td>Financial activities <small style='color:#888'>(USFIRE)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-1.16%</td></tr></tbody></table>
+<h2>Components (thread)</h2><table><thead><tr><th>Series</th><th>Transform</th><th>Value</th></tr></thead><tbody><tr><td><strong>Health Care employment (NAICS 621+622+623)</strong> <small style='color:#888'>(HC_TOTAL, computed)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.07%</td></tr>
+<tr><td><strong>White-collar employment (Prof &amp; Business + Info + Financial)</strong> <small style='color:#888'>(WC_TOTAL, computed)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>0.15%</td></tr>
+<tr><td>Avg hourly earnings (private) <small style='color:#888'>(CES0500000003)</small> </td><td>yoy_pct</td><td class='num'>3.12%</td></tr>
+<tr><td>Ambulatory health care services <small style='color:#888'>(CES6562100001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.19%</td></tr>
+<tr><td>Hospitals <small style='color:#888'>(CES6562200001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>2.21%</td></tr>
+<tr><td>Nursing &amp; residential care <small style='color:#888'>(CES6562300001)</small> <span class='tag'>healthcare</span></td><td>yoy_pct</td><td class='num'>1.50%</td></tr>
+<tr><td>Professional &amp; business services <small style='color:#888'>(USPBS)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>1.20%</td></tr>
+<tr><td>Information <small style='color:#888'>(USINFO)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-4.17%</td></tr>
+<tr><td>Financial activities <small style='color:#888'>(USFIRE)</small> <span class='tag'>white_collar</span></td><td>yoy_pct</td><td class='num'>-1.08%</td></tr></tbody></table>
 
 <h2>Charts</h2>
-<div class='chart'><h3 style='font-size:1em;color:#555'>main</h3><img src='../../charts/payrolls_5y_2026-09.png' alt='main'></div>
-<div class='chart'><h3 style='font-size:1em;color:#555'>unemployment_5y</h3><img src='../../charts/unrate_5y_2026-09.png' alt='unemployment_5y'></div>
-<div class='chart'><h3 style='font-size:1em;color:#555'>long_history</h3><img src='../../charts/payrolls_25y_2026-09.png' alt='long_history'></div>
-<div class='chart'><h3 style='font-size:1em;color:#555'>hc_employment</h3><img src='../../charts/hc_employment_2026-09.png' alt='hc_employment'></div>
-<div class='chart'><h3 style='font-size:1em;color:#555'>white_collar_employment</h3><img src='../../charts/white_collar_employment_2026-09.png' alt='white_collar_employment'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>main</h3><img src='../../charts/payrolls_5y_2026-10.png' alt='main'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>unemployment_5y</h3><img src='../../charts/unrate_5y_2026-10.png' alt='unemployment_5y'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>long_history</h3><img src='../../charts/payrolls_25y_2026-10.png' alt='long_history'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>hc_employment</h3><img src='../../charts/hc_employment_2026-10.png' alt='hc_employment'></div>
+<div class='chart'><h3 style='font-size:1em;color:#555'>white_collar_employment</h3><img src='../../charts/white_collar_employment_2026-10.png' alt='white_collar_employment'></div>
 
 <h2>Official release</h2><a class='agency-link' href='https://www.bls.gov/news.release/pdf/empsit.pdf' target='_blank'>View on agency site (PDF) ↗</a>
 
 <div class="footer">
   Generated by <a href="https://github.com/jroypeterson/macro-monitor">macro-monitor</a>
-  · schema 1.2 · period 2026-09
+  · schema 1.2 · period 2026-10
 </div>
 
 </body>
