@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.2",
+  "family_id": "gas_prices_(us_regular,_avg)",
+  "family_display_name": "Gas Prices (US Regular, avg)",
+  "period": "2026-11-09",
+  "period_label": "Week ending Nov 09, 2026",
+  "posted_at": "2026-11-10T18:30:46.459343+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-10T18:30:45.127865+00:00",
+  "latest_observation_period": "2026-11-09",
+  "expected_observation_period": "2026-11-09",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "GASREGW",
+      "label": "US Regular ($/gal)",
+      "primary": {
+        "transform": "raw",
+        "value": 3.995,
+        "raw_value": 3.995
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": 30.72643979057592
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": -7.758023551142934
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 4.153
+      },
+      "display_unit": null,
+      "definition": "Regular Gasoline Price (GASREGW): average US pump price per gallon, weekly -- the most visible household cost; moves consumer sentiment and headline CPI."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "GASREGW",
+    "anchor_transform": "yoy_pct_weekly",
+    "zscore": -2.21300025782943,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "gas_5y_2026-11-09.png"
+  },
+  "agency_pdf_url": null
+}
