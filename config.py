@@ -289,6 +289,11 @@ class TierBGate(BaseModel):
 
     threshold: float
     vs: Literal["trailing_5y_volatility", "consensus"]
+    # What a print UNDER the threshold does. "brief" (default) posts one line
+    # carrying the tier and how unusual the move was; "skip" stays silent.
+    # JP 2026-11-12: post every Tier B print succinctly, EXCEPT gas prices and
+    # mortgage rates, which he already sees weekly on his price-alert chart.
+    below_threshold: Literal["brief", "skip"] = "brief"
 
 
 class FamilyConfig(BaseModel):

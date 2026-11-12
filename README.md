@@ -201,7 +201,8 @@ When pushing to `jroypeterson/macro-monitor`, add these repo secrets at
 ```
 .github/workflows/
   release_polling.yml      */15 11-18 UTC Mon-Fri (covers ET morning + 14:00 FOMC)
-  weekly_preview.yml       Sunday 07:00 ET (this week + next 4 weeks)
+  weekly_preview.yml       Sunday morning ET - week-ahead table, Tier A + B (next 4 weeks in thread)
+  monthly_preview.yml      Last day of the month - next month's Tier A release table
   release_reminder.yml     Daily 13:00 UTC — "releasing tomorrow" heads-up (all tiers)
   heartbeat.yml            Daily 08:00 ET to #status-reports
   annual_calendar.yml      Jan 1 + Apr/Jul/Oct 1 (quarterly refresh)

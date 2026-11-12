@@ -575,3 +575,253 @@ def _build_blocks(
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": "_⭐ = priority release (consumer spending / employment / real hourly earnings). Tier A only in 4-week lookahead. FOMC events surface in their own family._"}]})
 
     return blocks
+
+
+# ---------------------------------------------------------------------------
+# Table posts: the Sunday week-ahead table and the month-ahead Tier A table
+# (JP 2026-11-12: "a table of upcoming releases for the week with Tier A or B
+# noted", and one for the upcoming month posted on the last day of the prior
+# month).
+#
+# The table is a Block Kit `table` block. Every table post also carries a
+# bullet-list FALLBACK, and `post_with_table_fallback` retries with it when
+# Slack rejects the blocks -- the schedule must land even if the table does
+# not. Slack places a table at the bottom of its message, so each table post
+# is built with the table LAST and the 4-week lookahead goes in the thread.
+# ---------------------------------------------------------------------------
+
+_STAR_LEGEND = (
+    "_⭐ = priority release (consumer spending / employment / real hourly earnings)._"
+)
+
+
+@dataclass(frozen=True)
+class TablePost:
+    text: str                      # notification / plain-text fallback
+    blocks: list[dict]             # with the table block
+    fallback_blocks: list[dict]    # same content as a bullet list
+    failed: list[str]
+    thread_text: str | None = None
+    thread_blocks: list[dict] | None = None
+
+
+def table_block(header: list[str], rows: list[list[str]]) -> dict:
+    """A Block Kit table: first row is the header. Cells are plain text;
+    an empty cell is sent as an en dash because Slack rejects empty text."""
+
+    def cell(v: str) -> dict:
+        return {"type": "raw_text", "text": v if v and v.strip() else "–"}
+
+    return {
+        "type": "table",
+        "column_settings": [{"is_wrapped": True} for _ in header],
+        "rows": [[cell(h) for h in header]] + [[cell(c) for c in r] for r in rows],
+    }
+
+
+def _day(d: date) -> str:
+    return f"{d.strftime('%a')} {d.month}/{d.day}"
+
+
+def _week_window(today: date) -> tuple[date, date, date]:
+    """(this_week_end, lookahead_start, lookahead_end) -- the same windows the
+    original preview used: today through Sunday, then the next 4 weeks."""
+    days = 6 if today.weekday() == 6 else 6 - today.weekday()
+    this_week_end = today + timedelta(days=days)
+    lookahead_start = this_week_end + timedelta(days=1)
+    return this_week_end, lookahead_start, lookahead_start + timedelta(days=27)
+
+
+def _notes_block(notes: list[str]) -> dict:
+    return {"type": "context", "elements": [{"type": "mrkdwn", "text": n} for n in notes]}
+
+
+def _failed_note(failed: list[str]) -> str:
+    return f"⚠️ {len(failed)} FRED calendar fetch(es) failed; see #status-reports."
+
+
+def build_weekly_post(
+    families: dict[str, FamilyConfig],
+    client: FREDClient,
+    today: date | None = None,
+    extras: dict[str, dict] | None = None,
+) -> TablePost:
+    """Week-ahead table (Tier A + B, tier in its own column); the 4-week
+    Tier A lookahead rides in the thread."""
+    if today is None:
+        today = datetime.now(ET).date()
+    this_week_end, lookahead_start, lookahead_end = _week_window(today)
+    full_window, failed = fetch_scheduled_releases(
+        families=families, client=client, start=today, end=lookahead_end
+    )
+    this_week = [r for r in full_window if today <= r.release_date <= this_week_end]
+    lookahead = [r for r in full_window if lookahead_start <= r.release_date <= lookahead_end]
+    fomc_info = fomc.week_ahead(today, this_week_end)
+
+    head: list[dict] = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"📅 THIS WEEK in macro — week of {today.month}/{today.day}",
+                "emoji": True,
+            },
+        }
+    ]
+    if fomc_info.get("this_week"):
+        head.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "\n".join(fomc_info["this_week"])},
+            }
+        )
+    notes: list[str] = []
+    if any(r.priority for r in this_week):
+        notes.append(_STAR_LEGEND)
+    if failed:
+        notes.append(_failed_note(failed))
+    notes.append("_Next 4 weeks (Tier A) in the thread._")
+
+    if this_week:
+        rows = []
+        for r in this_week:
+            info = (extras or {}).get(r.display_name) or {}
+            rows.append(
+                [
+                    _day(r.release_date),
+                    r.release_time_et,
+                    r.tier,
+                    ("⭐ " if r.priority else "") + r.display_name,
+                    info.get("covers", ""),
+                    info.get("yoy", ""),
+                ]
+            )
+        body = table_block(["Day", "ET", "Tier", "Release", "Covers", "Last"], rows)
+        bullets = "\n".join(f"• {_fmt_event_line(r, extras)}" for r in this_week)
+    else:
+        bullets = "_(no Tier A or B releases scheduled)_"
+        body = {"type": "section", "text": {"type": "mrkdwn", "text": bullets}}
+    fallback_body = {"type": "section", "text": {"type": "mrkdwn", "text": bullets}}
+
+    # Lookahead (thread): reuse the original renderer's lookahead half.
+    old = _build_blocks(
+        today, this_week_end, this_week, lookahead, lookahead_end, None, extras, fomc_info
+    )
+    cut = next(i for i, b in enumerate(old) if b.get("type") == "divider")
+    thread_blocks = old[cut + 1 : cut + 3]   # lookahead header + section
+    text = _build_text(today, this_week_end, this_week, lookahead, failed, extras, fomc_info)
+    week_text, _, look_text = text.partition("\n\n")
+
+    return TablePost(
+        text=week_text,
+        blocks=head + [_notes_block(notes), body],
+        fallback_blocks=head + [fallback_body, _notes_block(notes)],
+        failed=failed,
+        thread_text=look_text or None,
+        thread_blocks=thread_blocks,
+    )
+
+
+def next_month_window(today: date) -> tuple[date, date]:
+    """First and last day of the calendar month after `today`'s."""
+    y, m = (today.year + 1, 1) if today.month == 12 else (today.year, today.month + 1)
+    return date(y, m, 1), date(y, m, _calendar.monthrange(y, m)[1])
+
+
+def is_last_day_of_month(today: date) -> bool:
+    return (today + timedelta(days=1)).day == 1
+
+
+def build_monthly_post(
+    families: dict[str, FamilyConfig],
+    client: FREDClient,
+    today: date | None = None,
+) -> TablePost:
+    """Month-ahead table: every Tier A release (plus FOMC decision days) in
+    the calendar month after `today`'s. No "covers" column -- a period a
+    month out would be a guess (see the note above _next_period_covered)."""
+    if today is None:
+        today = datetime.now(ET).date()
+    first, last = next_month_window(today)
+    label = f"{_calendar.month_name[first.month]} {first.year}"
+    releases, failed = fetch_scheduled_releases(
+        families=families, client=client, start=first, end=last
+    )
+    tier_a = [r for r in releases if r.tier == "A"]
+
+    events: list[tuple[date, str, str]] = [
+        (r.release_date, r.release_time_et, ("⭐ " if r.priority else "") + r.display_name)
+        for r in tier_a
+    ]
+    for m in fomc.all_meetings():
+        if first <= m.end <= last:
+            sep = " + projections (dot plot)" if m.projections else ""
+            events.append((m.end, "14:00", f"🏛️ FOMC rate decision{sep}"))
+    events.sort(key=lambda e: (e[0], e[1]))
+
+    title = f"🗓️ {label} — Tier A releases"
+    head: list[dict] = [
+        {"type": "header", "text": {"type": "plain_text", "text": title, "emoji": True}}
+    ]
+    notes: list[str] = []
+    if any(r.priority for r in tier_a):
+        notes.append(_STAR_LEGEND)
+    if failed:
+        notes.append(_failed_note(failed))
+    notes.append("_Tier A only. Tier B is in the Sunday week-ahead table._")
+
+    if events:
+        body = table_block(
+            ["Date", "ET", "Release"], [[_day(d), t, name] for d, t, name in events]
+        )
+        bullets = "\n".join(f"• {_day(d)}  {t} ET — {name}" for d, t, name in events)
+    else:
+        bullets = "_(no Tier A releases on the calendar yet)_"
+        body = {"type": "section", "text": {"type": "mrkdwn", "text": bullets}}
+    return TablePost(
+        text=title + "\n" + bullets.replace("• ", "  "),
+        blocks=head + [_notes_block(notes), body],
+        fallback_blocks=head
+        + [{"type": "section", "text": {"type": "mrkdwn", "text": bullets}}, _notes_block(notes)],
+        failed=failed,
+    )
+
+
+_TABLE_REJECTIONS = {"invalid_blocks", "invalid_blocks_format", "invalid_attachments"}
+
+
+def post_with_table_fallback(slack_client, channel: str, post: TablePost) -> tuple[str, bool]:
+    """Post `post`; if Slack rejects the blocks, re-post the bullet-list
+    fallback so the schedule still lands. Returns (ts, used_table). The
+    thread part (if any) is best-effort: a lost lookahead must not fail a
+    landed table."""
+    import sys
+
+    from slack_sdk.errors import SlackApiError
+
+    used_table = True
+    try:
+        resp = slack_client.chat_postMessage(
+            channel=channel, text=post.text, blocks=post.blocks
+        )
+    except SlackApiError as e:
+        err = e.response.get("error")
+        if err not in _TABLE_REJECTIONS:
+            raise
+        print(f"  ⚠️ Slack rejected the table ({err}); posting the list fallback.", file=sys.stderr)
+        used_table = False
+        resp = slack_client.chat_postMessage(
+            channel=channel, text=post.text, blocks=post.fallback_blocks
+        )
+    ts = resp["ts"]
+    if post.thread_blocks:
+        try:
+            slack_client.chat_postMessage(
+                channel=channel,
+                thread_ts=ts,
+                text=post.thread_text or "Looking ahead",
+                blocks=post.thread_blocks,
+            )
+        except SlackApiError as e:
+            print(f"  ⚠️ lookahead thread failed: {e.response.get('error')}", file=sys.stderr)
+    return ts, used_table

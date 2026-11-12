@@ -125,11 +125,21 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
         "chart and a long-history thread. Tier A alone drives the Google Calendar events "
         "and the 4-week lookahead in the Sunday preview._"
     )
+    # Which families stay silent under the gate is config too
+    # (`tier_b_gate.below_threshold`), so it is derived, not asserted.
+    _silent = sorted(
+        f.display_name for _, f in tier_b
+        if f.tier_b_gate and f.tier_b_gate.below_threshold == "skip"
+    )
+    _silent_note = (
+        f" {', '.join(_silent)} post only when unusual (no one-liner)." if _silent else ""
+    )
     tier_b_note = (
-        "_The second ring: worth knowing, not worth a post every time. Always listed in "
-        f"the Sunday preview, but only posts when the print is unusual — {_gate} against "
+        "_The second ring: worth knowing, not worth a full post every time. Always listed "
+        "in the Sunday preview. Every new print gets one line with how unusual it was; it "
+        f"gets the full post and chart only when the print is unusual — {_gate} against "
         f"that series' own {_window} history.{_kind_note} A series without enough history "
-        "to score is skipped, not posted._"
+        f"to score still gets its line, marked as unscored.{_silent_note}_"
     )
 
     text = (
@@ -177,7 +187,7 @@ def build_overview_blocks(families: dict[str, FamilyConfig]) -> tuple[str, list[
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Tier B ({len(tier_b)} series) — posts only on a material surprise*\n"
+                    f"*Tier B ({len(tier_b)} series) — one line per print, full post on a material surprise*\n"
                     + tier_b_note + "\n"
                     + "\n".join(tier_b_lines)
                 ),

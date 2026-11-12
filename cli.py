@@ -179,6 +179,41 @@ def cmd_post_release(args: argparse.Namespace) -> int:
         verdict = tier_b_gate.evaluate(family, result)
         print(f"  gate: {'POST' if verdict.should_post else 'SKIP'} — {verdict.reason}")
 
+        # Under the gate, a NEW Tier B print still gets one succinct line
+        # (JP 2026-11-12) unless the family opts out with
+        # `tier_b_gate.below_threshold: skip`. Revisions under the gate stay
+        # silent -- a one-liner per revision would be noise.
+        brief = (
+            not verdict.should_post
+            and diff.decision == PostDecision.NEW_PERIOD
+            and family.tier_b_gate is not None
+            and family.tier_b_gate.below_threshold == "brief"
+        )
+        if brief:
+            publisher = SlackPublisher(dry_run=args.dry_run)
+            published = publisher.publish_brief(result, family.tier_b_gate.threshold)
+            if args.dry_run:
+                print(
+                    "  [DRY-RUN] would post the brief Tier B line above. "
+                    "Ledger NOT updated.",
+                    file=sys.stderr,
+                )
+                return 0
+            ledger.record_post(
+                family_id=family_id,
+                period=result.period,
+                headline_values=headline_values,
+                component_values=component_values,
+                slack_channel=published.main_channel,
+                slack_ts=published.main_ts,
+            )
+            print(
+                f"  Posted brief Tier B line: channel={published.main_channel} "
+                f"ts={published.main_ts}",
+                file=sys.stderr,
+            )
+            return 0
+
         if not verdict.should_post:
             if not args.dry_run:
                 ledger.record_post(
@@ -271,61 +306,79 @@ def cmd_post_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def _post_table_preview(label: str, post, dry_run: bool) -> int:
+    """Shared post path for the weekly / monthly table previews."""
+    from .publishers.slack import SlackPublisher
+    from .schedulers.weekly_preview import post_with_table_fallback
+
+    if post.failed:
+        print(f"\n⚠️ {len(post.failed)} FRED calendar fetch(es) failed:", file=sys.stderr)
+        for f in post.failed:
+            print(f"   {f.split(':')[0]}", file=sys.stderr)
+
+    if dry_run:
+        print(f"\n=== {label.upper()} (DRY-RUN) ===", file=sys.stderr)
+        print(post.text, file=sys.stderr)
+        if post.thread_text:
+            print("\n--- THREAD ---", file=sys.stderr)
+            print(post.thread_text, file=sys.stderr)
+        print(f"\n{len(post.blocks)} blocks. Use --post to publish.", file=sys.stderr)
+        return 0
+
+    publisher = SlackPublisher(dry_run=False)
+    from slack_sdk import WebClient
+
+    ts, used_table = post_with_table_fallback(
+        WebClient(token=publisher.bot_token), publisher.channel_id, post
+    )
+    print(
+        f"Posted {label} ts={ts} ({'table' if used_table else 'LIST FALLBACK'})",
+        file=sys.stderr,
+    )
+    if publisher.status_reports_webhook and (post.failed or not used_table):
+        problems = [f"  • {f}" for f in post.failed]
+        if not used_table:
+            problems.append("  • Slack rejected the table block; posted the list fallback")
+        publisher._alert_status_reports(f"{label}:\n" + "\n".join(problems))
+    return 0
+
+
 def cmd_weekly_preview(args: argparse.Namespace) -> int:
-    """Build + post the Sunday week-ahead preview (this week + next 4 weeks)."""
+    """Build + post the Sunday week-ahead table (lookahead in the thread)."""
     path = Path(args.config) if args.config else default_config_path()
     families = load_config(path)
     validate_all_or_raise(families)
 
     from .collectors.fred import FREDClient
-    from .publishers.slack import SlackPublisher
-    from .schedulers.weekly_preview import (
-        build_preview_payload_with_failures,
-        load_preview_extras,
-    )
+    from .schedulers.weekly_preview import build_weekly_post, load_preview_extras
 
-    client = FREDClient()
     print("Fetching release calendars from FRED…", file=sys.stderr)
-    extras = load_preview_extras(families)
-    text, blocks, failed = build_preview_payload_with_failures(
-        families=families, client=client, extras=extras
+    post = build_weekly_post(
+        families=families, client=FREDClient(), extras=load_preview_extras(families)
     )
+    return _post_table_preview("weekly-preview", post, args.dry_run)
 
-    if failed:
-        print(f"\n⚠️ {len(failed)} family/families' FRED fetch failed:", file=sys.stderr)
-        for f in failed:
-            print(f"   {f.split(':')[0]}", file=sys.stderr)
 
-    if args.dry_run:
-        print("\n=== WEEKLY PREVIEW (DRY-RUN) ===", file=sys.stderr)
-        print("\n--- TEXT FALLBACK ---", file=sys.stderr)
-        print(text, file=sys.stderr)
-        print("\n--- BLOCK COUNT ---", file=sys.stderr)
-        print(f"{len(blocks)} blocks", file=sys.stderr)
-        print("\n=== END DRY-RUN ===\n", file=sys.stderr)
+def cmd_monthly_preview(args: argparse.Namespace) -> int:
+    """Post next month's Tier A release table. Scheduled daily on the 28th-31st;
+    acts only on the LAST day of the month (New York date) unless --force."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from .collectors.fred import FREDClient
+    from .schedulers.weekly_preview import build_monthly_post, is_last_day_of_month
+
+    today = datetime.now(ZoneInfo("America/New_York")).date()
+    if not args.force and not is_last_day_of_month(today):
+        print(f"{today} is not the last day of the month; nothing to post.", file=sys.stderr)
         return 0
 
-    # Live post
-    publisher = SlackPublisher(dry_run=False)
-    from slack_sdk import WebClient
-
-    client_slack = WebClient(token=publisher.bot_token)
-    resp = client_slack.chat_postMessage(
-        channel=publisher.channel_id, text=text, blocks=blocks
-    )
-    print(
-        f"Posted weekly preview to {resp['channel']} ts={resp['ts']}",
-        file=sys.stderr,
-    )
-
-    # Surface FRED failures to #status-reports
-    if failed and publisher.status_reports_webhook:
-        publisher._alert_status_reports(
-            f"weekly-preview: {len(failed)} family/families' FRED calendar failed:\n"
-            + "\n".join(f"  • {f}" for f in failed)
-        )
-
-    return 0
+    path = Path(args.config) if args.config else default_config_path()
+    families = load_config(path)
+    validate_all_or_raise(families)
+    print("Fetching next month's release calendar from FRED…", file=sys.stderr)
+    post = build_monthly_post(families=families, client=FREDClient(), today=today)
+    return _post_table_preview("monthly-preview", post, args.dry_run)
 
 
 def cmd_release_reminder(args: argparse.Namespace) -> int:
@@ -526,6 +579,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
     sp.set_defaults(func=cmd_weekly_preview)
+
+    sp = sub.add_parser(
+        "monthly-preview",
+        help="Post next month's Tier A release table (acts only on the last day of the month)",
+    )
+    sp.add_argument("--dry-run", action="store_true", default=True)
+    sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument("--force", action="store_true", help="Run on any day")
+    sp.set_defaults(func=cmd_monthly_preview)
 
     sp = sub.add_parser(
         "release-reminder",

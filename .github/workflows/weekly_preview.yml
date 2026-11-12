@@ -1,13 +1,20 @@
 name: Weekly preview
 
-# Sunday 07:00 ET week-ahead preview to #macro (this week + next 4 weeks).
-# 07:00 EDT = 11:00 UTC, 07:00 EST = 12:00 UTC. We list both so the post
-# fires reliably across DST without per-season tuning.
+# Sunday week-ahead table to #macro-and-markets (this week, Tier A + B; the
+# next-4-weeks Tier A lookahead goes in the thread).
+#
+# ONE cron line and NO exact-hour guard. The old version listed two lines
+# (11:00 and 12:00 UTC) and let only the run that started in the 07:00 ET hour
+# post. GitHub starts scheduled runs hours late (3-6h on every Sunday checked),
+# so from 2026-08-30 to 2026-11-08 BOTH runs landed outside that hour, skipped,
+# and reported success: eleven Sundays with no preview and nothing red. A
+# single line cannot double-post, and the guard below only asks "is it still
+# Sunday in New York", which a late start cannot fail until ~18h late -- and
+# then it FAILS the run rather than skipping quietly.
 
 on:
   schedule:
-    - cron: "0 11 * * 0"   # 07:00 EDT (summer), Sunday
-    - cron: "0 12 * * 0"   # 07:00 EST (winter), Sunday
+    - cron: "0 11 * * 0"   # Sunday 07:00 EDT / 06:00 EST (starts late; see above)
   workflow_dispatch: {}
 
 jobs:
@@ -33,30 +40,22 @@ jobs:
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
 
-      # Only one of the two cron lines should actually post; the other
-      # will fire an hour off relative to ET. The Python preview itself
-      # is idempotent within a Slack day (posts a NEW message each time),
-      # so we add a coarse hour guard here.
-      - name: Skip if not the active DST cron line
-        id: dst_guard
+      - name: Refuse to post on the wrong day
+        # Manual runs always post. A scheduled run that started so late it is
+        # no longer Sunday in New York fails loudly instead of posting a stale
+        # "this week" or skipping in silence.
         run: |
-          # Manual workflow_dispatch runs always post.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger — bypassing DST guard."
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Manual trigger - posting."
             exit 0
           fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          echo "et_hour=$ET_HOUR" >> $GITHUB_OUTPUT
-          if [ "$ET_HOUR" != "07" ]; then
-            echo "Outside 07:00 ET (now $ET_HOUR ET); skipping."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
+          ET_DOW=$(TZ=America/New_York date +%u)
+          if [ "$ET_DOW" != "7" ]; then
+            echo "::error::Weekly preview started on New York weekday $ET_DOW, not Sunday; not posting."
+            exit 1
           fi
 
       - name: Post weekly preview
-        if: steps.dst_guard.outputs.skip != 'true'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

@@ -447,6 +447,45 @@ def release_title(result: ReleaseResult, decision: PostDecision) -> str:
     )
 
 
+def _brief_unusual_note(result: ReleaseResult, threshold: float | None) -> str:
+    """How unusual the print was, for the one-line Tier B post.
+
+    States the z-score with its yardstick (move vs level, lookback) so the
+    number carries its own basis. A missing score is said out loud: a family
+    that cannot be scored used to vanish silently (Existing Home Sales --
+    FRED carries 13 months, so the 5y score never computes)."""
+    ctx = result.context
+    z = ctx.zscore if ctx is not None else None
+    if z is None:
+        return "σ n/a — not enough history to score"
+    what = "level" if ctx.zscore_kind == "level" else "move"
+    window = f"{ctx.zscore_lookback_years}y" if ctx.zscore_lookback_years else "its"
+    verdict = "not unusual"
+    if threshold is not None and abs(z) >= threshold:
+        verdict = "unusual"
+    return f"{abs(z):.1f}σ {what} vs {window} history — {verdict}"
+
+
+def _brief_parts(result: ReleaseResult, threshold: float | None) -> tuple[str, str, str]:
+    title = f"{result.family_display_name} {result.period_label}"
+    tier = f" [Tier {result.tier}]" if result.tier else ""
+    values = "; ".join(_format_headline_line(h, h.display_unit) for h in result.headline)
+    return title, tier, f"{values} · " if values else ""
+
+
+def render_brief_text(result: ReleaseResult, threshold: float | None = None) -> str:
+    """One line for a Tier B print under its gate: name, period, tier, the
+    headline value(s), and how unusual it was. No chart, no thread."""
+    title, tier, values = _brief_parts(result, threshold)
+    return f"▫️ {title}{tier} · {values}{_brief_unusual_note(result, threshold)}"
+
+
+def build_brief_blocks(result: ReleaseResult, threshold: float | None = None) -> list[dict]:
+    title, tier, values = _brief_parts(result, threshold)
+    md = f"▫️ *{title}*{tier} · {values}_{_brief_unusual_note(result, threshold)}_"
+    return [{"type": "section", "text": {"type": "mrkdwn", "text": md}}]
+
+
 def render_release_text(
     result: ReleaseResult,
     decision: PostDecision = PostDecision.NEW_PERIOD,
@@ -706,6 +745,39 @@ class SlackPublisher:
         return self._live_publish(result, text, blocks, chart_paths)
 
     # ------------------------------------------------------------------
+
+    def publish_brief(
+        self, result: ReleaseResult, threshold: float | None = None
+    ) -> PublishedRelease:
+        """One-line post for a Tier B print under its gate (no chart/thread)."""
+        text = render_brief_text(result, threshold)
+        blocks = build_brief_blocks(result, threshold)
+        if self.dry_run:
+            print("=== SLACK DRY-RUN (brief Tier B line) ===", file=sys.stderr)
+            print(text, file=sys.stderr)
+            print("=== END DRY-RUN ===", file=sys.stderr)
+            return PublishedRelease(
+                main_ts=None, main_channel=self.channel_id, thread_ts=[],
+                text_payload=text, block_payload=blocks, chart_upload_errors=[],
+            )
+        from slack_sdk import WebClient
+        from slack_sdk.errors import SlackApiError
+
+        try:
+            resp = WebClient(token=self.bot_token).chat_postMessage(
+                channel=self.channel_id, text=text, blocks=blocks
+            )
+        except SlackApiError as e:
+            self._alert_status_reports(
+                f"❌ macro_monitor: brief Tier B post failed for "
+                f"{result.family_display_name} {result.period_label}: "
+                f"{e.response.get('error')}"
+            )
+            raise
+        return PublishedRelease(
+            main_ts=resp["ts"], main_channel=resp["channel"], thread_ts=[],
+            text_payload=text, block_payload=blocks, chart_upload_errors=[],
+        )
 
     def _dry_run_publish(
         self,
