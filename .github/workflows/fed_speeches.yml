@@ -6,10 +6,15 @@ name: Fed speeches digest
 # state/fed_speeches_posted.db (committed back to main) so each speech fires
 # once even across re-runs.
 
+# ONE cron line and no exact-hour guard. This used to list an EDT and an EST
+# line and let only the run that started in the target New York hour act.
+# GitHub starts scheduled runs hours late, so both runs landed outside that
+# hour, skipped, and reported success -- the lane was silently dead for
+# months (found 2026-11-12). A single line cannot double-run.
+
 on:
   schedule:
-    - cron: "0 21 * * *"  # 17:00 EDT (summer)
-    - cron: "0 22 * * *"  # 17:00 EST (winter)
+    - cron: "0 21 * * *"   # starts hours late; see note above
   workflow_dispatch:
     inputs:
       catch_up:
@@ -39,23 +44,7 @@ jobs:
           mkdir -p /tmp/pkg
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
-      - name: Skip if not the active DST cron line
-        id: dst_guard
-        run: |
-          # Manual workflow_dispatch always runs.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          if [ "$ET_HOUR" != "17" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Post Fed-speeches digest
-        if: steps.dst_guard.outputs.skip != 'true'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
@@ -72,7 +61,7 @@ jobs:
           python -m macro_monitor.cli fed-speeches --post $EXTRA
 
       - name: Commit ledger + archive + library
-        if: success() && steps.dst_guard.outputs.skip != 'true'
+        if: success()
         run: |
           git config user.name "claudebot"
           git config user.email "claudebot@users.noreply.github.com"

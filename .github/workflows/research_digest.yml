@@ -8,10 +8,15 @@ name: Fed research digest
 # The ledger is committed back to main like state/posts.db so cross-run
 # dedupe survives.
 
+# ONE cron line and no exact-hour guard. This used to list an EDT and an EST
+# line and let only the run that started in the target New York hour act.
+# GitHub starts scheduled runs hours late, so both runs landed outside that
+# hour, skipped, and reported success -- the lane was silently dead for
+# months (found 2026-11-12). A single line cannot double-run.
+
 on:
   schedule:
-    - cron: "30 12 * * *"  # 08:30 EDT (summer) — 30 min after heartbeat slot
-    - cron: "30 13 * * *"  # 08:30 EST (winter)
+    - cron: "30 12 * * *"   # starts hours late; see note above
   workflow_dispatch:
     inputs:
       catch_up:
@@ -41,23 +46,7 @@ jobs:
           mkdir -p /tmp/pkg
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
-      - name: Skip if not the active DST cron line
-        id: dst_guard
-        run: |
-          # Manual workflow_dispatch always runs.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          if [ "$ET_HOUR" != "08" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Write Gmail OAuth tokens (multi-account)
-        if: steps.dst_guard.outputs.skip != 'true'
         env:
           GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
           GMAIL_TOKEN_FLORIDABUSINESSMAN: ${{ secrets.GMAIL_TOKEN_FLORIDABUSINESSMAN }}
@@ -74,7 +63,6 @@ jobs:
           fi
 
       - name: Post research digest
-        if: steps.dst_guard.outputs.skip != 'true'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_MACRO_CHANNEL_ID: ${{ secrets.SLACK_MACRO_CHANNEL_ID }}
@@ -93,7 +81,7 @@ jobs:
           python -m macro_monitor.cli research-digest --post $EXTRA
 
       - name: Commit ledger updates
-        if: success() && steps.dst_guard.outputs.skip != 'true'
+        if: success()
         run: |
           git config user.name "claudebot"
           git config user.email "claudebot@users.noreply.github.com"

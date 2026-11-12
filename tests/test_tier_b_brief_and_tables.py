@@ -323,31 +323,22 @@ def _live_yaml(name):
 _WORKFLOWS = sorted(p.name for p in (REPO / ".github" / "workflows").glob("*.yml"))
 
 
-# Lanes that STILL carry the exact-hour guard and are therefore not posting
-# (every scheduled run checked 2026-10-18..2026-11-12 skipped). Found by the
-# test below on 2026-11-12; left in place because un-gating them resumes
-# posting with a backlog and JP has not yet said where they should post.
-# Fixing a lane means deleting it from this set -- the test fails otherwise.
-_STILL_HOUR_GATED = {
-    "fed_speeches.yml",
-    "research_digest.yml",
-    "global_macro.yml",
-    "prediction_markets.yml",
-}
-
-
-def test_the_hour_gated_set_is_exactly_the_known_one():
+def test_no_workflow_gates_on_the_exact_hour_it_started():
     """GitHub starts scheduled runs hours late, so an exact-hour guard skips
     -- and reports success. It silenced the Sunday preview (11 weeks), the
-    daily heartbeat and the 17:00 catch-up poll. Derived over every workflow
-    file so a new lane cannot reintroduce it, and a fixed lane cannot stay
-    listed as broken."""
-    gated = {n for n in _WORKFLOWS if "date +%H" in _live_yaml(n)}
-    assert gated == _STILL_HOUR_GATED
+    daily heartbeat, the 17:00 catch-up poll, Fed speeches, the research
+    digest, global macro and the prediction-market rundown. Derived over
+    every workflow file so a new lane cannot reintroduce it."""
+    gated = {n for n in _WORKFLOWS if "date +%H" in _live_yaml(n) or "skip=true" in _live_yaml(n)}
+    assert gated == set()
 
 
 @pytest.mark.parametrize(
-    "name", ["weekly_preview.yml", "monthly_preview.yml", "heartbeat.yml", "reconciliation.yml"]
+    "name",
+    [
+        "weekly_preview.yml", "monthly_preview.yml", "heartbeat.yml", "reconciliation.yml",
+        "fed_speeches.yml", "research_digest.yml", "global_macro.yml", "prediction_markets.yml",
+    ],
 )
 def test_unguarded_posting_workflows_have_one_cron_line(name):
     crons = re.findall(r"^\s*- cron:", _live_yaml(name), flags=re.M)
@@ -370,3 +361,124 @@ def test_reminder_star_legend_only_when_a_release_is_starred():
     assert "⭐" not in legend([])
     assert "⭐ = priority release" in legend([rel(True), rel(False)])
     assert "All tiers shown" in legend([rel(False)])
+
+
+# --------------------------------------------------------------------------
+# Catch-up after downtime, and the empty reminder
+# --------------------------------------------------------------------------
+
+def _post(url, iso):
+    from macro_monitor.collectors.rss import ResearchPost
+
+    return ResearchPost(
+        source_id="s", source_display="S", title=url, url=url, summary="", published_at_iso=iso
+    )
+
+
+def test_split_latest_batch_keeps_only_the_newest_day():
+    from macro_monitor.collectors.rss import split_latest_batch
+
+    posts = [
+        _post("a", "2026-11-10T14:00:00Z"), _post("b", "2026-11-12T09:00:00Z"),
+        _post("c", "2026-11-12T18:00:00Z"), _post("d", ""), _post("e", "2026-08-20T00:00:00Z"),
+    ]
+    latest, backlog = split_latest_batch(posts)
+    assert [p.url for p in latest] == ["b", "c"]
+    assert [p.url for p in backlog] == ["a", "d", "e"]
+    assert split_latest_batch([_post("d", "")]) == ([], [_post("d", "")])
+    assert split_latest_batch([]) == ([], [])
+
+
+class _MemLedger:
+    def __init__(self):
+        self.seen = []
+
+    def filter_new(self, posts):
+        return [p for p in posts if p.url not in self.seen]
+
+    def record(self, p):
+        self.seen.append(p.url)
+
+
+@pytest.mark.parametrize("lane", ["speeches", "research"])
+def test_catch_up_shows_the_newest_day_and_marks_the_rest_seen(lane, monkeypatch):
+    posts = [_post("old1", "2026-08-20T00:00:00Z"), _post("old2", "2026-10-01T00:00:00Z"),
+             _post("new", "2026-11-12T00:00:00Z")]
+    ledger = _MemLedger()
+    if lane == "speeches":
+        import macro_monitor.schedulers.fed_speeches as mod
+
+        monkeypatch.setattr(mod, "fetch_all", lambda sources: (list(posts), []))
+        payload = mod.build_speech_digest(sources=[], ledger=ledger, skip_scoring=True, catch_up=True)
+    else:
+        import macro_monitor.schedulers.research_digest as mod
+
+        monkeypatch.setattr(mod, "fetch_all", lambda sources: (list(posts), []))
+        payload = mod.build_digest(
+            sources=[], ledger=ledger, skip_gmail=True, skip_scoring=True, catch_up=True
+        )
+    assert [p.url for p in payload.new_posts] == ["new"]
+    assert {p.url for p in payload.backlog_skipped} == {"old1", "old2"}
+    mod.record_posted(payload, ledger=ledger)
+    assert set(ledger.seen) == {"old1", "old2", "new"}, "the backlog must not return next run"
+
+    # Without --catch-up nothing is held back (normal daily behaviour).
+    normal = (
+        mod.build_speech_digest(sources=[], ledger=_MemLedger(), skip_scoring=True)
+        if lane == "speeches"
+        else mod.build_digest(sources=[], ledger=_MemLedger(), skip_gmail=True, skip_scoring=True)
+    )
+    assert len(normal.new_posts) == 3 and not normal.backlog_skipped
+
+
+def _run_reminder(monkeypatch, dates, fail=False):
+    import macro_monitor.collectors.fred as fred_mod
+    import macro_monitor.publishers.slack as slack_mod
+    import slack_sdk
+
+    sent = []
+
+    class _Client:
+        def get_release_dates(self, release_id, **kw):
+            if fail:
+                raise fred_mod.FREDError("boom")
+            return [ReleaseDate(release_id=release_id, date=d) for d in dates]
+
+    class _Web:
+        def __init__(self, token=None):
+            pass
+
+        def chat_postMessage(self, **kw):
+            sent.append(kw)
+            return {"ts": "1.0", "channel": kw["channel"]}
+
+    class _Pub:
+        bot_token, channel_id, status_reports_webhook = "t", "C1", None
+
+        def __init__(self, dry_run=True):
+            pass
+
+    monkeypatch.setattr(fred_mod, "FREDClient", lambda *a, **k: _Client())
+    monkeypatch.setattr(slack_mod, "SlackPublisher", _Pub)
+    monkeypatch.setattr(slack_sdk, "WebClient", _Web)
+    rc = cli.cmd_release_reminder(argparse.Namespace(config=None, dry_run=False))
+    return rc, sent
+
+
+def test_reminder_is_not_posted_when_nothing_is_scheduled(monkeypatch):
+    rc, sent = _run_reminder(monkeypatch, dates=[])
+    assert rc == 0 and sent == []
+
+
+def test_reminder_posts_when_something_is_scheduled(monkeypatch):
+    from datetime import datetime, timedelta
+
+    tomorrow = datetime.now(wp.ET).date() + timedelta(days=1)
+    rc, sent = _run_reminder(monkeypatch, dates=[tomorrow])
+    assert rc == 0 and len(sent) == 1
+
+
+def test_reminder_still_posts_its_warning_when_the_calendar_fetch_failed(monkeypatch):
+    # "Nothing tomorrow" is unknown when FRED failed; silence must keep meaning nothing.
+    rc, sent = _run_reminder(monkeypatch, dates=[], fail=True)
+    assert rc == 0 and len(sent) == 1
