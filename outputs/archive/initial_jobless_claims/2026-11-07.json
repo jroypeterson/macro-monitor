@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.2",
+  "family_id": "initial_jobless_claims",
+  "family_display_name": "Initial Jobless Claims",
+  "period": "2026-11-07",
+  "period_label": "Week ending Nov 07, 2026",
+  "posted_at": "2026-11-12T18:41:15.708940+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-12T18:41:14.661146+00:00",
+  "latest_observation_period": "2026-11-07",
+  "expected_observation_period": "2026-11-07",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "ICSA",
+      "label": "Initial claims",
+      "primary": {
+        "transform": "raw",
+        "value": 200000.0,
+        "raw_value": 200000.0
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": -12.28070175438597
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": 0.0
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 191000.0
+      },
+      "display_unit": null,
+      "definition": "Initial Jobless Claims (ICSA): people filing for unemployment insurance for the first time that week -- the fastest-turning labor-market indicator, published weekly."
+    }
+  ],
+  "components": [
+    {
+      "id": "CCSA",
+      "label": "Continued claims (insured unemployment)",
+      "transform": "raw",
+      "value": null,
+      "prior": {
+        "transform": "raw",
+        "value": 1697000.0
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 1695000.0
+      },
+      "tags": [],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "ICSA",
+    "anchor_transform": "raw",
+    "zscore": 0.9234047113104344,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "claims_2y_2026-11-07.png",
+    "claims_5y": "claims_5y_2026-11-07.png"
+  },
+  "agency_pdf_url": null
+}
