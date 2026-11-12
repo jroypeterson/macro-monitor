@@ -315,10 +315,58 @@ def test_an_accepted_table_posts_once_then_threads_the_lookahead():
 # Schedules: one cron line, no exact-hour guard
 # --------------------------------------------------------------------------
 
-@pytest.mark.parametrize("name", ["weekly_preview.yml", "monthly_preview.yml"])
-def test_preview_workflows_cannot_skip_on_a_late_start(name):
+def _live_yaml(name):
     text = (REPO / ".github" / "workflows" / name).read_text(encoding="utf-8")
-    live = "\n".join(ln for ln in text.splitlines() if not ln.strip().startswith("#"))
-    assert len(re.findall(r"^\s*- cron:", live, flags=re.M)) == 1, "two lines double-post or need an hour guard"
-    assert "date +%H" not in live, "an exact-hour guard skips whenever GitHub starts the run late"
-    assert "skip=true" not in live
+    return "\n".join(ln for ln in text.splitlines() if not ln.strip().startswith("#"))
+
+
+_WORKFLOWS = sorted(p.name for p in (REPO / ".github" / "workflows").glob("*.yml"))
+
+
+# Lanes that STILL carry the exact-hour guard and are therefore not posting
+# (every scheduled run checked 2026-10-18..2026-11-12 skipped). Found by the
+# test below on 2026-11-12; left in place because un-gating them resumes
+# posting with a backlog and JP has not yet said where they should post.
+# Fixing a lane means deleting it from this set -- the test fails otherwise.
+_STILL_HOUR_GATED = {
+    "fed_speeches.yml",
+    "research_digest.yml",
+    "global_macro.yml",
+    "prediction_markets.yml",
+}
+
+
+def test_the_hour_gated_set_is_exactly_the_known_one():
+    """GitHub starts scheduled runs hours late, so an exact-hour guard skips
+    -- and reports success. It silenced the Sunday preview (11 weeks), the
+    daily heartbeat and the 17:00 catch-up poll. Derived over every workflow
+    file so a new lane cannot reintroduce it, and a fixed lane cannot stay
+    listed as broken."""
+    gated = {n for n in _WORKFLOWS if "date +%H" in _live_yaml(n)}
+    assert gated == _STILL_HOUR_GATED
+
+
+@pytest.mark.parametrize(
+    "name", ["weekly_preview.yml", "monthly_preview.yml", "heartbeat.yml", "reconciliation.yml"]
+)
+def test_unguarded_posting_workflows_have_one_cron_line(name):
+    crons = re.findall(r"^\s*- cron:", _live_yaml(name), flags=re.M)
+    assert len(crons) == 1, "two lines would double-post without an hour guard"
+
+
+def test_reminder_star_legend_only_when_a_release_is_starred():
+    def legend(releases):
+        blocks = wp._build_reminder_blocks(date(2026, 11, 10), releases)
+        return blocks[-1]["elements"][0]["text"]
+
+    def rel(priority):
+        return wp.ScheduledRelease(
+            family_id="x", display_name="X", tier="A", cadence="monthly",
+            release_date=date(2026, 11, 10), release_time_et="08:30",
+            fred_release_id=1, priority=priority,
+        )
+
+    assert "⭐" not in legend([rel(False)])
+    assert "⭐" not in legend([])
+    assert "⭐ = priority release" in legend([rel(True), rel(False)])
+    assert "All tiers shown" in legend([rel(False)])

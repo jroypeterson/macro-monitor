@@ -376,9 +376,17 @@ def _build_reminder_blocks(
             "elements": [
                 {
                     "type": "mrkdwn",
+                    # Star legend only when a starred release is listed (JP
+                    # 2026-11-12: "why do we have this star below?").
                     "text": (
-                        "_⭐ = priority release (consumer spending / employment "
-                        "/ real hourly earnings). All tiers shown. Each line: "
+                        "_"
+                        + (
+                            "⭐ = priority release (consumer spending / employment "
+                            "/ real hourly earnings). "
+                            if any(r.priority for r in releases)
+                            else ""
+                        )
+                        + "All tiers shown. Each line: "
                         "cadence · period covered · last YoY (when known). "
                         "FOMC events surface in their own family._"
                     ),

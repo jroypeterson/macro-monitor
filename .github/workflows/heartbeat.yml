@@ -5,10 +5,16 @@ name: Heartbeat
 # the preview's "did the Sunday post land" question is answered by the
 # heartbeat the same morning.
 
+# ONE cron line and no exact-hour guard. This used to list an EDT and an EST
+# line and let only the run that started in the target New York hour act.
+# GitHub starts scheduled runs hours late, so both runs landed outside that
+# hour, skipped, and reported success -- every run checked 2026-11-10..12.
+# (Same defect silenced the Sunday preview for 11 weeks.) A single line
+# cannot double-run, so it needs no guard.
+
 on:
   schedule:
-    - cron: "0 12 * * *"   # 08:00 EDT (summer) — covers Mon–Sun
-    - cron: "0 13 * * *"   # 08:00 EST (winter)
+    - cron: "0 12 * * *"   # 08:00 EDT / 07:00 EST, daily (starts late)
   workflow_dispatch: {}
 
 jobs:
@@ -34,26 +40,7 @@ jobs:
           ln -sf "$GITHUB_WORKSPACE" /tmp/pkg/macro_monitor
 
 
-      - name: Skip if not the active DST cron line
-        id: dst_guard
-        run: |
-          # Manual workflow_dispatch runs always post (smoke-tests the
-          # secrets path regardless of time of day).
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger — bypassing DST guard."
-            echo "skip=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          if [ "$ET_HOUR" != "08" ]; then
-            echo "Outside 08:00 ET (now $ET_HOUR ET); skipping."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Post heartbeat
-        if: steps.dst_guard.outputs.skip != 'true'
         env:
           SLACK_WEBHOOK_STATUS_REPORTS: ${{ secrets.SLACK_WEBHOOK_STATUS_REPORTS }}
           PYTHONUTF8: "1"
