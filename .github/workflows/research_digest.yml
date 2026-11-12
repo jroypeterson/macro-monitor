@@ -12,7 +12,12 @@ on:
   schedule:
     - cron: "30 12 * * *"  # 08:30 EDT (summer) — 30 min after heartbeat slot
     - cron: "30 13 * * *"  # 08:30 EST (winter)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      catch_up:
+        description: "Post only the most recent day's items; mark older unseen items as seen"
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # needed to commit ledger updates
@@ -82,7 +87,10 @@ jobs:
           GMAIL_TOKEN_PATH_FLORIDABUSINESSMAN: ".secrets/gmail_token_floridabusinessman.json"
           PYTHONUTF8: "1"
           PYTHONPATH: /tmp/pkg
-        run: python -m macro_monitor.cli research-digest --post
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.catch_up }}" = "true" ]; then EXTRA="--catch-up"; fi
+          python -m macro_monitor.cli research-digest --post $EXTRA
 
       - name: Commit ledger updates
         if: success() && steps.dst_guard.outputs.skip != 'true'

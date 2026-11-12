@@ -281,6 +281,11 @@ def build_preview_payload_with_failures(
     return text, blocks, failed
 
 
+# The reminder is not posted on a day with nothing scheduled (JP 2026-11-12);
+# the CLI recognises that case by this exact text.
+NO_RELEASES_TOMORROW = "(no scheduled macro releases tomorrow)"
+
+
 def build_reminder_payload(
     families: dict[str, FamilyConfig],
     client: FREDClient,
@@ -318,7 +323,7 @@ def _build_reminder_text(
     weekday = day.strftime("%A")
     lines = [f"🔔 RELEASING TOMORROW ({weekday} {day.month}/{day.day}) — all tiers"]
     if not releases:
-        lines.append("  (no scheduled macro releases tomorrow)")
+        lines.append(f"  {NO_RELEASES_TOMORROW}")
     else:
         for r in releases:
             lines.append(f"  {_fmt_event_line(r, extras)}")
@@ -350,7 +355,7 @@ def _build_reminder_blocks(
         }
     )
     if not releases:
-        body = "_(no scheduled macro releases tomorrow)_"
+        body = f"_{NO_RELEASES_TOMORROW}_"
     else:
         body = "\n".join(f"• {_fmt_event_line(r, extras)}" for r in releases)
     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": body}})

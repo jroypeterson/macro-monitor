@@ -408,6 +408,16 @@ def cmd_release_reminder(args: argparse.Namespace) -> int:
         for f in failed:
             print(f"   {f.split(':')[0]}", file=sys.stderr)
 
+    # Nothing scheduled tomorrow -> no post (JP 2026-11-12: 16 of the last 60
+    # channel messages were this empty reminder). A FAILED calendar fetch is
+    # different: "nothing" is then unknown, so the post -- with its warning --
+    # still goes out and silence keeps meaning "nothing tomorrow".
+    from .schedulers.weekly_preview import NO_RELEASES_TOMORROW
+
+    if NO_RELEASES_TOMORROW in text and not failed:
+        print("No macro releases scheduled tomorrow; no reminder posted.", file=sys.stderr)
+        return 0
+
     if args.dry_run:
         print("\n=== RELEASE REMINDER (DRY-RUN) ===", file=sys.stderr)
         print("\n--- TEXT FALLBACK ---", file=sys.stderr)
@@ -776,6 +786,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument(
+        "--catch-up", action="store_true",
+        help="After downtime: post only the most recent day's items and mark older unseen ones as seen",
+    )
     sp.set_defaults(func=cmd_research_digest)
 
     sp = sub.add_parser(
@@ -784,6 +798,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--dry-run", action="store_true", default=True)
     sp.add_argument("--post", action="store_false", dest="dry_run")
+    sp.add_argument(
+        "--catch-up", action="store_true",
+        help="After downtime: post only the most recent day's items and mark older unseen ones as seen",
+    )
     sp.set_defaults(func=cmd_fed_speeches)
 
     sp = sub.add_parser(
@@ -990,6 +1008,14 @@ def _alert_status_reports_about_errors(
         print(f"  status-reports alert failed: {e}", file=sys.stderr)
 
 
+def _report_backlog(payload) -> None:
+    if payload.backlog_skipped:
+        print(
+            f"  --catch-up: showing the most recent day's {len(payload.new_posts)} item(s); "
+            f"{len(payload.backlog_skipped)} older unseen item(s) will be marked seen, not posted."
+        )
+
+
 def cmd_research_digest(args: argparse.Namespace) -> int:
     """Pull all RSS sources, dedupe against the ledger, render + post."""
     from .schedulers.research_digest import (
@@ -998,7 +1024,8 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
         record_posted,
     )
 
-    payload = build_digest()
+    payload = build_digest(catch_up=getattr(args, "catch_up", False))
+    _report_backlog(payload)
 
     print(f"  Found {len(payload.new_posts)} new research item(s)")
     if payload.dropped_non_macro:
@@ -1021,6 +1048,8 @@ def cmd_research_digest(args: argparse.Namespace) -> int:
 
     if not payload.new_posts:
         print("  Nothing new since last run; no Slack post.", file=sys.stderr)
+        if payload.backlog_skipped and not args.dry_run:
+            record_posted(payload)  # --catch-up: still mark the backlog seen
         return 0
 
     if args.dry_run:
@@ -1063,7 +1092,8 @@ def cmd_fed_speeches(args: argparse.Namespace) -> int:
         record_posted,
     )
 
-    payload = build_speech_digest()
+    payload = build_speech_digest(catch_up=getattr(args, "catch_up", False))
+    _report_backlog(payload)
 
     print(f"  Found {len(payload.new_posts)} new Fed speech(es)")
     if payload.verdicts:
@@ -1089,6 +1119,8 @@ def cmd_fed_speeches(args: argparse.Namespace) -> int:
 
     if not payload.new_posts:
         print("  Nothing new since last run; no Slack post.", file=sys.stderr)
+        if payload.backlog_skipped and not args.dry_run:
+            record_posted(payload)  # --catch-up: still mark the backlog seen
         return 0
 
     if args.dry_run:

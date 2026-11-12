@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..collectors.rss import (
+    split_latest_batch,
     ResearchLedger,
     ResearchPost,
     ResearchSource,
@@ -55,6 +56,8 @@ class SpeechDigestPayload:
     verdicts: dict[str, SpeechVerdict]  # {} when scoring skipped
     bodies: dict[str, str] = None  # {url: full_text}; filled when scoring runs
     priors: dict[str, dict] = None  # {url: prior speech record by same speaker | None}
+    # --catch-up only: older unseen speeches NOT shown, but recorded as seen.
+    backlog_skipped: tuple = ()
 
 
 def build_speech_digest(
@@ -63,6 +66,7 @@ def build_speech_digest(
     skip_scoring: bool = False,
     body_fetcher=None,
     prior_lookup=None,
+    catch_up: bool = False,
 ) -> SpeechDigestPayload:
     """Pull the Fed speeches feed, dedupe, summarize+classify, render. The
     caller owns the Slack post. `skip_scoring=True` and an injectable
@@ -80,6 +84,10 @@ def build_speech_digest(
     finally:
         if own_ledger:
             ledger.close()
+
+    backlog: list[ResearchPost] = []
+    if catch_up:
+        new_posts, backlog = split_latest_batch(new_posts)
 
     verdicts: dict[str, SpeechVerdict] = {}
     bodies: dict[str, str] = {}
@@ -122,6 +130,7 @@ def build_speech_digest(
         verdicts=verdicts,
         bodies=bodies,
         priors=priors,
+        backlog_skipped=tuple(backlog),
     )
 
 
@@ -384,12 +393,13 @@ def post_speeches_to_macro(payload: SpeechDigestPayload) -> tuple[bool, str]:
 def record_posted(
     payload: SpeechDigestPayload, ledger: ResearchLedger | None = None
 ) -> None:
-    """Mark each posted speech so the next run won't repost it."""
+    """Mark each posted speech so the next run won't repost it. Under
+    --catch-up the skipped backlog is recorded too -- that is the point."""
     own_ledger = ledger is None
     if own_ledger:
         ledger = ResearchLedger(SPEECH_DB_PATH)
     try:
-        for p in payload.new_posts:
+        for p in list(payload.new_posts) + list(payload.backlog_skipped):
             ledger.record(p)
     finally:
         if own_ledger:

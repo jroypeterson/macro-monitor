@@ -25,6 +25,7 @@ from ..collectors.gmail import (
     load_gmail_senders,
 )
 from ..collectors.rss import (
+    split_latest_batch,
     ResearchLedger,
     ResearchPost,
     ResearchSource,
@@ -46,6 +47,8 @@ class DigestPayload:
     verdicts: dict[str, ScoreVerdict]
     # Items the LLM rejected as non-macro — kept for inspection/logging.
     dropped_non_macro: list[ResearchPost]
+    # --catch-up only: older unseen items NOT shown, but recorded as seen.
+    backlog_skipped: tuple = ()
 
 
 def build_digest(
@@ -54,6 +57,7 @@ def build_digest(
     ledger: ResearchLedger | None = None,
     skip_gmail: bool = False,
     skip_scoring: bool = False,
+    catch_up: bool = False,
 ) -> DigestPayload:
     """Pull RSS + Gmail sources, dedupe, score, render. Caller owns the
     Slack post. `skip_gmail=True` / `skip_scoring=True` are escape
@@ -81,6 +85,10 @@ def build_digest(
         if own_ledger:
             ledger.close()
 
+    backlog: list[ResearchPost] = []
+    if catch_up:
+        candidate_posts, backlog = split_latest_batch(candidate_posts)
+
     # Score and drop non-macro before rendering. Scoring is a single
     # batched LLM call; on any failure it returns permissive verdicts so
     # we never silently empty the digest.
@@ -107,6 +115,7 @@ def build_digest(
         errors=errors,
         verdicts=verdicts,
         dropped_non_macro=dropped,
+        backlog_skipped=tuple(backlog),
     )
 
 
@@ -417,7 +426,7 @@ def record_posted(payload: DigestPayload, ledger: ResearchLedger | None = None) 
     if own_ledger:
         ledger = ResearchLedger()
     try:
-        for p in payload.new_posts:
+        for p in list(payload.new_posts) + list(payload.backlog_skipped):
             ledger.record(p)
     finally:
         if own_ledger:

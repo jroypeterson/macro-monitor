@@ -290,3 +290,21 @@ def _newest_entry_age_days(entries: list) -> int | None:
     now_ts = time.time()
     age_seconds = max(0, now_ts - newest_ts)
     return int(age_seconds // 86400)
+
+
+def split_latest_batch(
+    posts: list[ResearchPost],
+) -> tuple[list[ResearchPost], list[ResearchPost]]:
+    """(latest, backlog): the items published on the most recent calendar date
+    among `posts`, and everything older. Used by the digests' one-off
+    `--catch-up` after a lane has been down: post the most recent day's batch
+    so the reader sees a normal-sized digest, and mark the rest seen instead
+    of flooding the channel. Undated items count as backlog -- a date we do
+    not have cannot be "the most recent"."""
+    dated = [p for p in posts if (p.published_at_iso or "")[:10]]
+    if not dated:
+        return [], list(posts)
+    newest = max(p.published_at_iso[:10] for p in dated)
+    latest = [p for p in dated if p.published_at_iso[:10] == newest]
+    keep = {id(p) for p in latest}
+    return latest, [p for p in posts if id(p) not in keep]
