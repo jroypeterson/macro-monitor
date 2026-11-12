@@ -177,6 +177,10 @@ class ReleaseResult:
     from_fallback_cache: bool = False
     cache_age_hours: float | None = None
 
+    # Family tier ("A"/"B"/"C"), shown in the post title the same way the
+    # preview shows it. Optional so a result built without it renders as before.
+    tier: str | None = None
+
     def to_dict(self) -> dict[str, Any]:
         return _to_dict(self)
 
@@ -597,6 +601,7 @@ def compute_release(
         source_lag_minutes=source_lag_minutes,
         from_fallback_cache=from_fallback_cache,
         cache_age_hours=max_cache_age_hours,
+        tier=family.tier,
     )
 
 

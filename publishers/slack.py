@@ -434,6 +434,19 @@ def _decision_word(decision: PostDecision) -> str:
     }[decision]
 
 
+def release_title(result: ReleaseResult, decision: PostDecision) -> str:
+    """Title line shared by the text fallback and the Block Kit header.
+
+    Carries the tier as `[Tier A]` -- the same form the weekly preview and
+    the release reminder use -- so the print is labelled like its preview.
+    """
+    tier = f" [Tier {result.tier}]" if result.tier else ""
+    return (
+        f"{_decision_emoji(decision)} {_decision_word(decision)} — "
+        f"{result.family_display_name} {result.period_label}{tier}"
+    )
+
+
 def render_release_text(
     result: ReleaseResult,
     decision: PostDecision = PostDecision.NEW_PERIOD,
@@ -444,10 +457,7 @@ def render_release_text(
     headline_units = {h.id: h.display_unit for h in result.headline}
 
     lines: list[str] = []
-    lines.append(
-        f"{_decision_emoji(decision)} {_decision_word(decision)} — "
-        f"{result.family_display_name} {result.period_label}"
-    )
+    lines.append(release_title(result, decision))
     for h in result.headline:
         lines.append(_format_headline_line(h, h.display_unit))
 
@@ -522,10 +532,7 @@ def build_release_blocks(
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": (
-                    f"{_decision_emoji(decision)} {_decision_word(decision)} — "
-                    f"{result.family_display_name} {result.period_label}"
-                ),
+                "text": release_title(result, decision),
                 "emoji": True,
             },
         }
