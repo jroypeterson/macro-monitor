@@ -1633,11 +1633,15 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
     if misses:
         print(f"[warn] {len(misses)} market(s) had no live data: {', '.join(misses)}", file=sys.stderr)
     print(f"HC/biotech watch: {len(hc_watch)} live market(s) auto-surfaced", file=sys.stderr)
-    _, info = post_slack(
+    ok, info = post_slack(
         RD.build_blocks(rd), f"Prediction Markets — {rd.generated:%Y-%m-%d}",
         dry_run=args.dry_run,
     )
     print(f"Slack: {info}", file=sys.stderr)
+    # A live post that did not land fails the run. It used to return 0, so a
+    # rejected post (channel_not_found) looked like a healthy weekly lane.
+    if not args.dry_run and not ok:
+        return 1
     return 0
 
 

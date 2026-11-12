@@ -482,3 +482,21 @@ def test_reminder_still_posts_its_warning_when_the_calendar_fetch_failed(monkeyp
     # "Nothing tomorrow" is unknown when FRED failed; silence must keep meaning nothing.
     rc, sent = _run_reminder(monkeypatch, dates=[], fail=True)
     assert rc == 0 and len(sent) == 1
+
+
+def test_an_empty_channel_secret_falls_back_to_the_default(monkeypatch):
+    """GitHub passes an unset secret as "", which os.environ.get(k, default)
+    keeps. The prediction-market lane then posted to channel "" and Slack
+    answered channel_not_found -- on a run that reported success."""
+    import importlib
+
+    import macro_monitor.predmarkets.config as cfg
+
+    monkeypatch.setenv("SLACK_PREDMARKET_CHANNEL_ID", "")
+    try:
+        assert importlib.reload(cfg).PREDMARKET_CHANNEL_ID == "C0BABUEU38R"
+        monkeypatch.setenv("SLACK_PREDMARKET_CHANNEL_ID", "C123")
+        assert importlib.reload(cfg).PREDMARKET_CHANNEL_ID == "C123"
+    finally:
+        monkeypatch.delenv("SLACK_PREDMARKET_CHANNEL_ID", raising=False)
+        importlib.reload(cfg)

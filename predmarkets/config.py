@@ -20,7 +20,10 @@ import os
 from dataclasses import dataclass
 
 # #prediction-markets — JP created it 2026-06-12. Env override wins (CI/.env).
-PREDMARKET_CHANNEL_ID = os.environ.get("SLACK_PREDMARKET_CHANNEL_ID", "C0BABUEU38R")
+# `or`, not a .get() default: the workflow passes an UNSET secret as an empty
+# string, which a default does not replace -- every post then failed with
+# channel_not_found while the run reported success (found 2026-11-12).
+PREDMARKET_CHANNEL_ID = os.environ.get("SLACK_PREDMARKET_CHANNEL_ID") or "C0BABUEU38R"
 
 # Liquidity bands (USD volume) → confidence flag. Thin markets are whale-sensitive.
 VOL_HIGH = 250_000
