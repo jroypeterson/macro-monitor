@@ -661,7 +661,8 @@ def tx_html(series, notes=()):
             used.setdefault(k, []).append(label)
         tag_html = f'<span class="tf">{tags}</span>' if tags else ""
         lis.append(f"<li><b>{esc(label)}.</b> {esc(note)}{tag_html}</li>")
-    out = f'<dt>Series and subsets ({len(series)})</dt><dd><ul class="tx">{"".join(lis)}</ul></dd>'
+    out = (f'<dd class="tfs"><details><summary>Series and subsets ({len(series)})</summary>'
+           f'<ul class="tx">{"".join(lis)}</ul></details></dd>')
     if notes:
         nl = "".join(f"<li><b>{esc(k)}.</b> {esc(v)}</li>" for k, v in notes)
         out += f'<dt>Notes</dt><dd><ul class="tx">{nl}</ul></dd>'
@@ -786,7 +787,8 @@ dd.hc {{ background: var(--hc-soft); padding: .45rem .65rem; border-radius: 4px;
 ul.tx {{ margin: 0; padding: 0 0 0 .8rem; list-style: none; border-left: 2px solid var(--line); font-size: .93rem; }}
 ul.tx li {{ margin: .3rem 0; }}
 ul.tx b {{ font-weight: 600; }}
-ul.tx .tf {{ display: flex; flex-wrap: wrap; gap: .25rem .35rem; margin-top: .2rem; }}
+ul.tx .tf {{ display: inline; }}
+ul.tx .tf span {{ display: inline-block; margin-left: .3rem; white-space: nowrap; }}
 ul.tx .tf span {{ font: .7rem var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 .35rem; }}
 ul.tx .on {{ display: block; color: var(--muted); font-size: .86rem; }}
 dd.tfs {{ margin-top: .5rem; }}
