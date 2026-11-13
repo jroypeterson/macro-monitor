@@ -7,8 +7,9 @@ then republish that file to the SAME artifact URL so the bookmark keeps working.
 
 Three things have to stay in step with the code, and nothing enforces it:
   * a release family added to config/release_families.yaml needs a row here,
-    with its transforms (TX) copied from that family's primary_transform /
-    also_display / context.anchor_transform;
+    with one TX series row per headline, component and computed series and
+    its transform keys copied from that family's primary_transform /
+    also_display / context.anchor_transform / context.trends;
   * a figure added to ahead_of_curve/figures.yaml needs a row in ELLIS (the
     script asserts the two id sets match, so that one does fail loudly);
   * every link points at the public site, https://jroypeterson.github.io/macro-monitor/.
@@ -162,162 +163,271 @@ REGIONS = [
     ("Japan", "Leaving decades of near-zero rates. Rising Japanese yields pull capital out of US and European bonds."),
 ]
 
-# Transformations and subsets, keyed by measure name: [(series or term, note)].
+# Transformation glossary: key -> (short tag, full name, definition). A series
+# row names the keys applied to it, so the per-entry "Transformations (N)" list
+# and its count are derived, never typed.
+T = {
+    "level": ("as published", "As published", "The figure the agency publishes, with no further arithmetic here."),
+    "mom_ann": ("MoM annualized", "Month over month, annualized", "The one-month percent change compounded to a yearly rate. It shows the current pace."),
+    "mom": ("MoM %", "Month over month, percent", "Percent change from the prior month."),
+    "yoy": ("YoY %", "Year over year, percent", "Percent change against the same month or quarter a year earlier."),
+    "qoq": ("QoQ annualized", "Quarter over quarter, annualized", "The one-quarter percent change compounded to a yearly rate."),
+    "trend": ("3m and 6m annualized", "3-month and 6-month annualized", "The percent change over the last three and six months, each scaled to a yearly rate. Separates one noisy month from a change of pace."),
+    "trend3": ("3m annualized", "3-month annualized", "The percent change over the last three months, scaled to a yearly rate."),
+    "avg36": ("3m and 6m average", "3-month and 6-month average change", "The average monthly change over the last three and six months."),
+    "mom_chg": ("change vs last month", "Change from the prior month, in units", "This month minus last month, in the series' own unit: thousands of jobs, dollars, index points, or percentage points for a rate."),
+    "yoy_chg": ("change vs a year ago", "Change from a year ago, in units", "This period minus the same period a year earlier, in the series' own unit. Percentage points for a rate."),
+    "wk": ("vs 4 and 52 weeks ago", "Change against 4 and 52 weeks ago", "Percent change against about four weeks ago and 52 weeks ago. Used for weekly series in place of month over month and year over year."),
+    "prev": ("change vs previous reading", "Change from the previous reading", "The latest value minus the one before it, with both periods named. In percentage points for a rate."),
+    "sum": ("sum", "Sum of several series", "Added together here. The agency does not publish this total as one series."),
+    "real": ("deflated", "Divided by a price index", "A dollar series divided by a price index, which removes inflation and leaves the volume."),
+    "accel": ("change in growth", "Change in growth over 12 months", "The year-over-year growth rate minus the same rate 12 months earlier, in percentage points. Above zero means growth is speeding up."),
+    "accel13": ("speeding up or slowing", "Growth against one and three months ago", "Whether the year-over-year rate is higher or lower than it was one month ago and three months ago."),
+    "sigma": ("sigma score", "Sigma score on the move", "The latest change divided by the typical change over the past five years. One or more is unusual; a Tier B release then posts in full."),
+    "sigma_level": ("sigma score on level", "Sigma score on the level", "How far the level itself sits from its five-year average, in units of its usual spread."),
+    "mavg": ("monthly average", "Monthly average", "Daily values averaged over the month."),
+    "log": ("log scale", "Log scale", "Plotted so that equal distances are equal percent moves."),
+    "ytd_bp": ("change since year-end", "Change since year-end, in basis points", "The yield minus its value on the last trading day of the prior year. One basis point is a hundredth of a percentage point."),
+    "since": ("date of last change", "Date of last change", "Stored as the dates the rate changed, so the line reads 'last changed' with the size of that move. An old date means no change, not stale data."),
+    "diff": ("sentence comparison", "Sentence-by-sentence comparison", "Each sentence is matched against the previous statement, and what was added, removed or reworded is listed."),
+}
+
+# Series, subsets and transformations, keyed by measure name.
+#   "s": [(series or subset, note, "transform keys")]  -- ONE ROW PER SERIES.
+#   "n": [(label, note)]                                -- caveats about the release as a whole.
 # US rows mirror config/release_families.yaml (primary_transform, also_display,
-# context.anchor_transform, computed); global rows mirror international/series.yaml.
+# context.anchor_transform, context.trends, computed); global rows mirror
+# international/series.yaml.
 TX = {
-    "CPI": [
-        ("Headline and core", "The lead figure is the one-month change scaled to a yearly rate (MoM annualized). Year over year and plain month over month sit beside it. Both series are seasonally adjusted."),
-        ("Trend", "3-month and 6-month annualized rates, to separate one noisy month from a change of pace."),
-        ("Sigma score", "Measured on headline CPI's annualized one-month change against five years of history. Year over year is not used because it barely moves from one month to the next."),
-        ("Core", "A subset: all items less food and energy, about 80% of the basket."),
-        ("Components", "Shelter, food, energy and the four medical lines are shown year over year only. Hospital services and physician and dental services are subsets of medical care services. Medical care goods is mostly prescription drugs. The physician and dental line is not seasonally adjusted, which year over year neutralizes."),
+    "CPI": {"s": [
+        ("Headline CPI", "The full basket, seasonally adjusted. The lead figure is the annualized one-month change, and the sigma score is measured on it.", "mom_ann yoy mom trend sigma"),
+        ("Core CPI", "Subset: all items less food and energy, about 80% of the basket.", "mom_ann yoy mom"),
+        ("Shelter", "Subset: rent and the rent-equivalent cost of owning a home. About a third of the basket.", "yoy"),
+        ("Food", "Subset: groceries and restaurants.", "yoy"),
+        ("Energy", "Subset: gasoline, electricity and gas.", "yoy"),
+        ("Medical care services", "Subset: hospitals, physicians, dentists and health insurance.", "yoy"),
+        ("Hospital services", "A subset of medical care services.", "yoy"),
+        ("Physician and dental services", "A subset of medical care services. Not seasonally adjusted, which year over year neutralizes.", "yoy"),
+        ("Medical care goods", "Subset: mostly prescription drugs, plus equipment.", "yoy"),
+    ], "n": [
         ("Charts", "Year over year, five years and 25 years, against the Fed's 2% line."),
-    ],
-    "Employment Situation (jobs report)": [
-        ("Nonfarm payrolls", "The lead figure is the change in the number of jobs from last month, in thousands. Year-over-year growth in percent is shown beside it. The trend lines are the 3-month and 6-month average monthly change. The sigma score is on the monthly change."),
-        ("Unemployment (U-3) and underemployment (U-6)", "Shown as levels in percent. Changes are in percentage points against last month and a year ago. U-6 adds people who have stopped looking and people working part time who want full time."),
-        ("Two surveys", "Payrolls come from a survey of employers; the unemployment rates come from a separate survey of households. They can disagree in a given month."),
-        ("Average hourly earnings", "All private-sector employees, in nominal dollars (not adjusted for inflation), year over year and month over month. The Ellis charts use a different wage series: production and nonsupervisory workers only, divided by CPI."),
-        ("Healthcare employment", "Computed here: ambulatory care + hospitals + nursing and residential care (industry codes 621, 622, 623), year over year. It leaves out social assistance."),
-        ("White-collar employment", "Computed here: professional and business services + information + financial activities, year over year, with whether that growth is speeding up or slowing against one and three months ago."),
-    ],
-    "Consumer spending and PCE inflation": [
-        ("Real and nominal consumer spending", "Both year over year. Real is the government's inflation-adjusted (chained-dollar) series; nominal is in current dollars. The gap between the two is inflation."),
-        ("PCE price index, headline and core", "The lead figure is the one-month change scaled to a yearly rate, with year over year and month over month beside it, plus 3-month and 6-month annualized trends. The sigma score is on the headline price index's annualized one-month change."),
-        ("Personal income", "Nominal, year over year. Real disposable income is after taxes and after inflation, so it is the figure that bounds spending."),
-        ("Saving rate", "A level: saving as a percent of after-tax income. Not transformed."),
+    ]},
+    "Employment Situation (jobs report)": {"s": [
+        ("Nonfarm payrolls", "All jobs except farms, from the survey of employers. The lead figure is the change in jobs from last month, in thousands, and the sigma score is measured on it.", "mom_chg yoy avg36 sigma"),
+        ("Unemployment rate (U-3)", "The official rate: people with no job who looked for one in the past four weeks, as a percent of the labor force. From the household survey.", "level mom_chg yoy_chg"),
+        ("Underemployment rate (U-6)", "U-3 plus people who want a job but have stopped looking, plus people working part time who want full time. The widest measure.", "level mom_chg yoy_chg"),
+        ("Average hourly earnings", "All private-sector employees, in nominal dollars (not adjusted for inflation). The Ellis charts use a different wage series: production and nonsupervisory workers only, divided by CPI.", "yoy mom"),
+        ("Ambulatory care jobs", "Subset: physician offices, outpatient centers, home health (industry code 621).", "yoy"),
+        ("Hospital jobs", "Subset: industry code 622.", "yoy"),
+        ("Nursing and residential care jobs", "Subset: industry code 623.", "yoy"),
+        ("Healthcare employment, total", "The three lines above added together. It leaves out social assistance.", "sum yoy mom_chg"),
+        ("Professional and business services jobs", "Subset.", "yoy"),
+        ("Information jobs", "Subset.", "yoy"),
+        ("Financial activities jobs", "Subset.", "yoy"),
+        ("White-collar employment, total", "The three lines above added together, a proxy for office jobs.", "sum yoy mom_chg accel13"),
+    ], "n": [
+        ("Two surveys", "Payrolls and earnings come from a survey of employers; U-3 and U-6 come from a separate survey of households. They can disagree in a given month."),
+    ]},
+    "Consumer spending and PCE inflation": {"s": [
+        ("Real consumer spending", "The government's inflation-adjusted (chained-dollar) series.", "yoy mom"),
+        ("Nominal consumer spending", "In current dollars. The gap between nominal and real is inflation.", "yoy mom"),
+        ("PCE price index, headline", "The lead figure is the annualized one-month change, and the sigma score is measured on it.", "mom_ann yoy mom trend sigma"),
+        ("PCE price index, core", "Subset: less food and energy. The inflation measure the Fed watches most closely.", "mom_ann yoy mom"),
+        ("Personal income", "Nominal, before taxes.", "yoy mom"),
+        ("Real disposable income", "After taxes and after inflation, so it is the figure that bounds spending.", "yoy mom"),
+        ("Saving rate", "Saving as a percent of after-tax income.", "level"),
+    ], "n": [
         ("Versus the Ellis charts", "Ellis's real spending is built as nominal spending divided by the PCE price index, so the history reaches back to 1959. The government's chained-dollar series used in the post starts in 2007. The two track closely."),
-    ],
-    "Initial jobless claims": [
-        ("Initial claims", "The weekly count as published, seasonally adjusted. No transformation. The change against about four weeks ago and 52 weeks ago is shown for context. The sigma score is on the week's change."),
-        ("Continued claims", "A level, and it runs one week behind initial claims."),
+    ]},
+    "Initial jobless claims": {"s": [
+        ("Initial claims", "The weekly count of new filings, seasonally adjusted. The sigma score is on the week's change.", "level wk sigma"),
+        ("Continued claims", "People still collecting benefits. Runs one week behind initial claims.", "level"),
+    ], "n": [
         ("Charts", "Two years for the recent turn, five years for the level in context."),
-    ],
-    "GDP": [
-        ("Real and nominal GDP", "As published: quarter over quarter, seasonally adjusted, at an annual rate. No further transformation."),
-        ("Components", "The real GDP level, consumer spending, private investment and government are shown year over year, a different basis from the headline. Do not compare the two directly: 2% year over year and 2% annualized quarterly growth are different statements."),
-        ("Health services spending", "Consumer spending on health care services, in nominal dollars, year over year and quarter over quarter annualized."),
+    ]},
+    "GDP": {"s": [
+        ("Real GDP growth", "Published as quarter over quarter, seasonally adjusted, at an annual rate. The sigma score is on the change in that rate from the prior quarter.", "level sigma"),
+        ("Nominal GDP growth", "The same, in current dollars: real growth plus inflation.", "level"),
+        ("Real GDP, level", "The dollar level behind the headline, shown on a different basis from it.", "yoy"),
+        ("Consumer spending (real)", "Subset of GDP.", "yoy"),
+        ("Private investment (real)", "Subset of GDP.", "yoy"),
+        ("Government (real)", "Subset of GDP.", "yoy"),
+        ("Health services spending", "Subset of consumer spending, in nominal dollars.", "yoy qoq"),
+    ], "n": [
+        ("Two bases", "The headline is annualized quarterly growth; the components are year over year. Do not compare them directly: 2% year over year and 2% annualized quarterly growth are different statements."),
         ("Three estimates", "Each quarter is published three times (advance, second, third) a month apart. The later posts are revisions of the same quarter."),
         ("Versus the Ellis charts", "Ellis plots real GDP year over year, built as nominal GDP divided by the GDP price deflator."),
-    ],
-    "JOLTS (job openings and labor turnover)": [
-        ("Job openings", "A level, in thousands, with the year-over-year percent change and the change from last month."),
-        ("Quits rate", "Quits in the month as a percent of total employment. Changes are in percentage points."),
-        ("Openings rate", "Openings as a percent of filled jobs plus openings. The sigma score is on this rate, because it adjusts for the size of the workforce."),
-        ("Hires, layoffs", "Levels as published."),
-        ("Healthcare lines", "Rates for health care and social assistance together (industry code 62), a wider group than the healthcare job count in the jobs report."),
+    ]},
+    "JOLTS (job openings and labor turnover)": {"s": [
+        ("Job openings", "The count of unfilled jobs, in thousands.", "level yoy mom_chg"),
+        ("Quits rate", "Quits in the month as a percent of total employment.", "level mom_chg yoy_chg"),
+        ("Job openings rate", "Openings as a percent of filled jobs plus openings. The sigma score is on this line, because it adjusts for the size of the workforce.", "level sigma"),
+        ("Hires", "Count, in thousands.", "level"),
+        ("Layoffs and discharges", "Count, in thousands.", "level"),
+        ("Healthcare openings rate", "Subset: health care and social assistance (industry code 62).", "level mom_chg yoy_chg"),
+        ("Healthcare hires rate", "Subset: the same group.", "level mom_chg yoy_chg"),
+        ("Healthcare quits rate", "Subset: the same group.", "level mom_chg yoy_chg"),
+    ], "n": [
+        ("Healthcare coverage", "Industry code 62 includes social assistance, so it is a wider group than the healthcare job count in the jobs report."),
         ("Timing", "Covers the month before the one in the latest jobs report."),
-    ],
-    "PPI (producer prices)": [
-        ("Headline and core", "Final demand, and final demand less food and energy. The lead figure is the one-month change scaled to a yearly rate, with year over year and month over month beside it. The sigma score is on the headline annualized change."),
-        ("Healthcare lines", "Industry price indexes (what hospitals, physician offices, dentists, drug makers and device makers receive), year over year. They are not seasonally adjusted, which year over year neutralizes."),
-        ("Drug prices", "The pharmaceutical line is a list-price measure. It does not capture rebates."),
-    ],
-    "Retail sales": [
-        ("Headline", "Month-over-month percent change, seasonally adjusted, in nominal dollars, so part of any rise is price. Year over year beside it. The sigma score is on the monthly change."),
-        ("Real retail sales", "The same series divided by CPI, year over year. This is the volume read."),
+    ]},
+    "PPI (producer prices)": {"s": [
+        ("Headline PPI", "Final demand. The lead figure is the annualized one-month change, and the sigma score is measured on it.", "mom_ann yoy mom trend sigma"),
+        ("Core PPI", "Subset: final demand less food and energy.", "mom_ann yoy mom"),
+        ("Hospitals", "Industry price index: what hospitals receive.", "yoy"),
+        ("Physician offices", "Industry price index.", "yoy"),
+        ("Dentist offices", "Industry price index.", "yoy"),
+        ("Drug makers", "Industry price index for pharmaceutical manufacturing. A list-price measure: it does not capture rebates.", "yoy"),
+        ("Medical device makers", "Industry price index for surgical and medical instruments.", "yoy"),
+    ], "n": [
+        ("Seasonal adjustment", "The five healthcare lines are not seasonally adjusted, which year over year neutralizes."),
+    ]},
+    "Retail sales": {"s": [
+        ("Retail sales", "Stores, online sellers and restaurants, seasonally adjusted, in nominal dollars, so part of any rise is price. The sigma score is on the monthly change.", "mom yoy trend3 sigma"),
+        ("Real retail sales", "The same series divided by CPI. This is the volume read.", "real yoy mom"),
+    ], "n": [
         ("Coverage", "Mostly goods plus restaurants. It leaves out most services, which are about two thirds of consumer spending."),
-    ],
-    "Employment Cost Index": [
-        ("Total compensation", "Year over year is the lead figure and the basis of the sigma score. Quarter over quarter annualized is shown beside it. Covers all civilian workers, including state and local government."),
-        ("Wages and benefits", "Shown separately, year over year, for private industry only. That is a narrower group than the headline, so the two components do not average to it."),
-    ],
-    "Industrial production and capacity utilization": [
-        ("Industrial production", "An index (2017 = 100), shown year over year with month over month beside it. The sigma score is on the year-over-year rate."),
-        ("Capacity utilization", "A level in percent. Changes are in percentage points."),
-        ("Versus the Ellis charts", "The post uses total industry (factories, mines and utilities). The Ellis charts use manufacturing only."),
-    ],
-    "Housing starts and building permits": [
-        ("Starts and permits", "Seasonally adjusted annual rates, in thousands of homes, shown year over year with month over month beside it. Single-family and apartment buildings are combined."),
+    ]},
+    "Employment Cost Index": {"s": [
+        ("Total compensation", "Wages plus benefits for all civilian workers, including state and local government. Year over year is the lead figure and the basis of the sigma score.", "yoy qoq sigma"),
+        ("Wages and salaries", "Subset: private industry only.", "yoy"),
+        ("Benefits", "Subset: private industry only.", "yoy"),
+    ], "n": [
+        ("Different groups", "The two components cover private industry, a narrower group than the headline, so they do not average to it."),
+    ]},
+    "Industrial production and capacity utilization": {"s": [
+        ("Industrial production", "An index (2017 = 100) of output at factories, mines and utilities. The sigma score is on the year-over-year rate.", "yoy mom sigma"),
+        ("Capacity utilization", "The percent of industrial capacity in use.", "level mom_chg yoy_chg"),
+    ], "n": [
+        ("Versus the Ellis charts", "The post uses total industry. The Ellis charts use manufacturing only."),
+    ]},
+    "Housing starts and building permits": {"s": [
+        ("Housing starts", "Homes begun, as a seasonally adjusted annual rate, in thousands. Single-family and apartment buildings combined.", "yoy mom sigma"),
+        ("Building permits", "Permits issued, on the same basis. Leads starts.", "yoy mom"),
+    ], "n": [
         ("Noise", "Single months swing widely with weather and apartment projects, which is why the lead figure is year over year."),
-    ],
-    "Durable goods orders": [
-        ("Headline", "Month-over-month percent change in new orders, nominal dollars, seasonally adjusted. Year over year beside it."),
-        ("Core capital goods", "A subset: non-defense capital goods excluding aircraft. Year over year, with month over month."),
-    ],
-    "Trade balance": [
-        ("Balance", "A level in millions of dollars, negative for a deficit. Changes are in dollars against last month and a year ago, not percent, because a percent change of a negative number misleads."),
-        ("Coverage", "Goods and services together, nominal dollars."),
-    ],
-    "Consumer credit": [
-        ("Total", "The outstanding balance, year over year. It is the stock of debt, not the month's new borrowing."),
-        ("Revolving credit", "A subset: mostly credit cards. Year over year."),
+    ]},
+    "Durable goods orders": {"s": [
+        ("Durable goods orders", "New orders, nominal dollars, seasonally adjusted. The sigma score is on the monthly change.", "mom yoy sigma"),
+        ("Core capital goods orders", "Subset: non-defense capital goods excluding aircraft.", "yoy mom"),
+    ]},
+    "Trade balance": {"s": [
+        ("Trade balance", "Exports minus imports, goods and services together, in millions of nominal dollars. Negative is a deficit.", "level mom_chg yoy_chg sigma"),
+    ], "n": [
+        ("Why dollars, not percent", "A percent change of a negative number misleads, so changes are given in dollars."),
+    ]},
+    "Consumer credit": {"s": [
+        ("Total consumer credit", "The outstanding balance: the stock of debt, not the month's new borrowing.", "yoy mom sigma"),
+        ("Revolving credit", "Subset: mostly credit cards.", "yoy"),
+    ], "n": [
         ("Coverage", "Excludes mortgages and other loans secured by real estate."),
-    ],
-    "Loan delinquency rates": [
-        ("Rates", "Levels: the percent of loan balances 30 or more days past due, at commercial banks only, seasonally adjusted. The year-over-year change is in percentage points."),
-        ("Subsets", "Credit cards (the lead line), all consumer loans, single-family mortgages, and all loans."),
+    ]},
+    "Loan delinquency rates": {"s": [
+        ("Credit card delinquency rate", "The lead line: the percent of card balances 30 or more days past due.", "level yoy_chg sigma_level"),
+        ("Consumer loan delinquency rate", "All consumer loans, of which cards are a subset.", "level"),
+        ("Single-family mortgage delinquency rate", "Subset: home loans.", "level"),
+        ("All-loan delinquency rate", "Every loan type, including business loans.", "level"),
+    ], "n": [
+        ("Coverage", "Commercial banks only, seasonally adjusted."),
         ("Full post rule", "This is the one release judged on its level against five years of history, not on the size of the latest move, because stress shows in how high the rate is."),
-    ],
-    "Productivity and unit labor costs": [
-        ("Both series", "Year over year is the lead figure; quarter over quarter annualized is shown beside it and is far noisier."),
+    ]},
+    "Productivity and unit labor costs": {"s": [
+        ("Productivity", "Output per hour worked. Year over year is the lead figure and the basis of the sigma score; the quarterly rate is far noisier.", "yoy qoq sigma"),
+        ("Unit labor costs", "Hourly compensation growth minus productivity growth.", "yoy qoq"),
+    ], "n": [
         ("Coverage", "The nonfarm business sector, which leaves out government, nonprofits and farms."),
-        ("Unit labor costs", "Hourly compensation growth minus productivity growth."),
-    ],
-    "University of Michigan consumer sentiment": [
-        ("Sentiment index", "A level (first quarter of 1966 = 100). The change from last month is in index points; year over year is in percent."),
-        ("Expected inflation", "The median expected price change over the next 12 months, a level in percent."),
+    ]},
+    "University of Michigan consumer sentiment": {"s": [
+        ("Sentiment index", "A level (first quarter of 1966 = 100). The change from last month is in index points.", "level yoy mom_chg sigma"),
+        ("Expected inflation", "The median expected price change over the next 12 months, in percent.", "level"),
+    ], "n": [
         ("Two readings a month", "A preliminary figure mid-month and a final one at month end."),
-    ],
-    "ADP employment report": [
-        ("Private payrolls", "The change in the number of jobs from last month, with year-over-year growth in percent. Private employers only, so no government jobs."),
-        ("Education and health services", "A subset, and wider than healthcare: it includes private schools and colleges."),
-    ],
-    "Gas prices": [
-        ("Price", "Dollars per gallon, a level. Changes are against about four weeks ago and 52 weeks ago."),
-        ("Posting rule", "Judged on the year-over-year change against five years of history. Nothing is posted in an ordinary week."),
-    ],
-    "Mortgage rates": [
-        ("Rates", "Levels in percent, the weekly average from Freddie Mac's lender survey. Changes are against about four weeks ago and 52 weeks ago."),
-        ("Posting rule", "Judged on the year-over-year change of the 30-year rate. Nothing is posted in an ordinary week."),
-    ],
-    "Existing home sales": [
-        ("Sales", "A seasonally adjusted annual rate, shown year over year with month over month beside it."),
+    ]},
+    "ADP employment report": {"s": [
+        ("Private payrolls", "Private employers only, so no government jobs. The sigma score is on the monthly change.", "mom_chg yoy avg36 sigma"),
+        ("Education and health services", "Subset, and wider than healthcare: it includes private schools and colleges.", "mom_chg yoy"),
+    ]},
+    "Gas prices": {"s": [
+        ("Regular gasoline", "The US average, in dollars per gallon.", "level wk sigma"),
+    ], "n": [
+        ("Posting rule", "Judged on the 52-week change against five years of history. Nothing is posted in an ordinary week."),
+    ]},
+    "Mortgage rates": {"s": [
+        ("30-year fixed rate", "The weekly average from Freddie Mac's lender survey, in percent.", "level wk sigma"),
+        ("15-year fixed rate", "The shorter standard loan, from the same survey.", "level wk"),
+    ], "n": [
+        ("Posting rule", "Judged on the 52-week change of the 30-year rate. Nothing is posted in an ordinary week."),
+    ]},
+    "Existing home sales": {"s": [
+        ("Existing home sales", "Closed sales of previously owned homes, as a seasonally adjusted annual rate.", "yoy mom"),
+    ], "n": [
         ("No sigma score", "The public data source carries only the last 13 months of this series, so the move cannot be compared with five years of history. It always posts as one line."),
-    ],
-    "New home sales": [
-        ("Sales", "A seasonally adjusted annual rate, shown year over year with month over month beside it. Single-family homes only."),
+    ]},
+    "New home sales": {"s": [
+        ("New home sales", "Signed contracts on new single-family homes, as a seasonally adjusted annual rate.", "yoy mom sigma"),
+    ], "n": [
         ("Revisions", "A small sample, so the first figure is often revised by a large amount."),
-    ],
-    "Construction spending": [
-        ("Total", "A seasonally adjusted annual rate in nominal dollars, year over year with month over month beside it. Rising building costs lift it without any more building."),
-        ("Subsets", "Private construction, and non-residential construction, both year over year."),
-    ],
-    "FOMC decision and statement": [
-        ("Rate", "The target range for the federal funds rate, as announced. No transformation."),
-        ("Statement comparison", "Each sentence is matched against the previous meeting's statement, and what was added, removed or reworded is listed."),
-    ],
-    "CPI and core CPI (year over year)": [
-        ("Basis", "All are the 12-month rate. The Eurozone, UK and China figures are published as a rate by the source. Japan's is computed here from its price index."),
-        ("Eurozone", "The harmonized index (HICP), which leaves out the cost of owning a home. Core excludes energy, food, alcohol and tobacco."),
-        ("United Kingdom", "CPI, with the same core definition as the Eurozone."),
-        ("China and Japan", "Headline only. No core series is collected."),
+    ]},
+    "Construction spending": {"s": [
+        ("Total construction spending", "A seasonally adjusted annual rate in nominal dollars. Rising building costs lift it without any more building.", "yoy mom sigma"),
+        ("Private construction", "Subset: excludes public works.", "yoy"),
+        ("Non-residential construction", "Subset: offices, factories, data centers, hospitals, roads.", "yoy"),
+    ]},
+    "FOMC decision and statement": {"s": [
+        ("Federal funds target range", "As announced.", "level"),
+        ("Statement text", "Compared with the previous meeting's statement.", "diff"),
+    ]},
+    "CPI and core CPI (year over year)": {"s": [
+        ("Eurozone headline", "The harmonized index (HICP), which leaves out the cost of owning a home. Published as a 12-month rate.", "level prev"),
+        ("Eurozone core", "Subset: excludes energy, food, alcohol and tobacco.", "level prev"),
+        ("United Kingdom headline", "CPI, published as a 12-month rate.", "level prev"),
+        ("United Kingdom core", "Subset: the same core definition as the Eurozone.", "level prev"),
+        ("China headline", "Published as a 12-month rate. No core series is collected.", "level prev"),
+        ("Japan headline", "The 12-month rate is computed here from Japan's price index. No core series is collected.", "yoy prev"),
+    ], "n": [
         ("Not comparable with US CPI", "US CPI includes owners' housing costs; the European measures do not."),
-    ],
-    "GDP (year over year)": [
-        ("Basis", "Real output against the same quarter a year earlier, seasonally adjusted. The US headline is quarter over quarter annualized, so do not compare the two directly."),
-        ("Coverage", "Eurozone, UK and China. Japan's GDP is not collected."),
-    ],
-    "Unemployment rate": [
-        ("Basis", "A level in percent, seasonally adjusted. Changes are in percentage points."),
-        ("Coverage", "Eurozone and UK only. The UK figure is a three-month average for people 16 and over, published about two months behind."),
-    ],
-    "Business confidence": [
-        ("Basis", "The OECD's index, already scaled so that 100 is each country's long-run average. No unit and no transformation; the change is in index points."),
-    ],
-    "Policy rate": [
-        ("Eurozone and UK", "Stored as the dates the rate changed, so the line reads 'last changed' with the size of that move in percentage points. An old date means no change, not stale data."),
-        ("Japan", "The monthly average of the overnight call rate, which follows the Bank of Japan's target closely."),
-        ("China", "Not collected."),
-    ],
-    "Government bond yields (2-year and 10-year)": [
-        ("Change", "In basis points (hundredths of a percentage point) since the last trading day of the prior year."),
-        ("Eurozone", "The ECB's curve for AAA-rated euro governments, close to German yields. It is lower than French or Italian yields."),
-        ("United Kingdom", "10-year gilt only. Japan: 10-year only, as a monthly average. Neither has a 2-year source yet."),
-        ("China", "2-year and 10-year from the official interbank curve. The source gives only the latest day, so no change since year-end is shown."),
-    ],
+    ]},
+    "GDP (year over year)": {"s": [
+        ("Eurozone", "Real output against the same quarter a year earlier, seasonally adjusted, as published.", "level prev"),
+        ("United Kingdom", "The same basis.", "level prev"),
+        ("China", "The same basis.", "level prev"),
+    ], "n": [
+        ("Not the US basis", "The US headline is quarter over quarter annualized, so do not compare the two directly."),
+        ("Coverage", "Japan's GDP is not collected."),
+    ]},
+    "Unemployment rate": {"s": [
+        ("Eurozone", "Monthly, seasonally adjusted, in percent.", "level prev"),
+        ("United Kingdom", "A three-month average for people 16 and over, published about two months behind.", "level prev"),
+    ], "n": [
+        ("Coverage", "China and Japan are not collected."),
+    ]},
+    "Business confidence": {"s": [
+        ("Eurozone", "The OECD's index, already scaled so that 100 is the long-run average. No unit; the change is in index points.", "level prev"),
+        ("United Kingdom", "The same index and scaling.", "level prev"),
+        ("China", "The same index and scaling.", "level prev"),
+        ("Japan", "The same index and scaling.", "level prev"),
+    ]},
+    "Policy rate": {"s": [
+        ("Eurozone", "The European Central Bank's main refinancing rate.", "since"),
+        ("United Kingdom", "The Bank of England's Bank Rate.", "since"),
+        ("Japan", "The overnight call rate, which follows the Bank of Japan's target closely.", "mavg prev"),
+    ], "n": [
+        ("Coverage", "China is not collected."),
+    ]},
+    "Government bond yields (2-year and 10-year)": {"s": [
+        ("Eurozone 2-year", "The ECB's curve for AAA-rated euro governments, close to German yields and lower than French or Italian yields.", "ytd_bp"),
+        ("Eurozone 10-year", "The same curve.", "ytd_bp"),
+        ("United Kingdom 10-year", "The 10-year gilt.", "ytd_bp"),
+        ("Japan 10-year", "The 10-year government bond.", "mavg ytd_bp"),
+        ("China 2-year", "From the official interbank curve. The source gives only the latest day, so no change since year-end is shown.", "level"),
+        ("China 10-year", "The same curve and the same limit.", "level"),
+    ], "n": [
+        ("Missing", "The UK and Japan have no 2-year source yet."),
+    ]},
 }
+for _name, _d in TX.items():
+    for _row in _d["s"]:
+        assert all(k in T for k in _row[2].split()), (_name, _row[0])
 
 P_PCE = "Consumer spending and PCE inflation"
 P_JOBS = "Employment Situation (jobs report)"
@@ -442,7 +552,7 @@ ELLIS = [
     ("rates_vs_bears", "Interest rates and bear markets", "",
      "The Fed's policy rate and the 10-year Treasury yield against the record of bear markets.",
      "Rising rates have come before most bear markets. In the framework they work through the consumer: higher borrowing costs and the inflation that prompts them both cut into spending.",
-     [("Fed funds rate and 10-year Treasury yield", "Levels in percent, monthly averages. Not transformed.")],
+     [("Fed funds rate", "The Fed's policy rate, a level in percent."), ("10-year Treasury yield", "A level in percent.")],
      ["FOMC decision and statement"]),
     ("real_gdp_yoy", "Economic growth and the cycle", "Fig 4-1",
      "Real GDP growth against a year earlier.",
@@ -517,6 +627,16 @@ def _figure_ids():
     return [f["id"] for f in spec["figures"]]
 
 
+# Transform keys for each Ellis series label (the note says what the line is; this says what was done to it).
+EK = {
+    "Real consumer spending": "real yoy", "Real capital spending": "real yoy", "Real hourly earnings": "real yoy",
+    "Real GDP": "real yoy", "Employment": "yoy", "Industrial production": "yoy", "CPI inflation": "yoy",
+    "Total debt": "yoy", "Change in growth": "accel", "S&P 500": "log", "Fed funds rate": "mavg",
+    "10-year Treasury yield": "mavg", "Sentiment index": "level", "Saving rate": "level", "Unemployment rate": "level",
+    "Bear markets (grey bands)": "", "Recessions (dotted red)": "",
+}
+assert {k for r in ELLIS for k, _ in r[5]} == set(EK), {k for r in ELLIS for k, _ in r[5]} ^ set(EK)
+assert all(k in T for v in EK.values() for k in v.split())
 assert [r[0] for r in ELLIS] == _figure_ids(), "ELLIS rows must match ahead_of_curve/figures.yaml, in order"
 assert set(E) == {r[0] for r in ELLIS}
 assert all(n in RELEASE_NAMES for r in ELLIS for n in r[6])
@@ -530,9 +650,33 @@ def slug(name):
     return "m-" + "".join(c if c.isalnum() else "-" for c in name.lower()).strip("-")
 
 
-def tx_html(items):
-    lis = "".join(f"<li><b>{esc(k)}.</b> {esc(v)}</li>" for k, v in items)
-    return f'<dt>Transformations and subsets</dt><dd><ul class="tx">{lis}</ul></dd>'
+def tx_html(series, notes=()):
+    """One bullet per series with its transform tags, any release-wide notes,
+    then a collapsed list of every distinct transform and the series it is applied to."""
+    used = {}
+    lis = []
+    for label, note, keys in series:
+        tags = "".join(f"<span>{esc(T[k][0])}</span>" for k in keys.split())
+        for k in keys.split():
+            used.setdefault(k, []).append(label)
+        tag_html = f'<span class="tf">{tags}</span>' if tags else ""
+        lis.append(f"<li><b>{esc(label)}.</b> {esc(note)}{tag_html}</li>")
+    out = f'<dt>Series and subsets ({len(series)})</dt><dd><ul class="tx">{"".join(lis)}</ul></dd>'
+    if notes:
+        nl = "".join(f"<li><b>{esc(k)}.</b> {esc(v)}</li>" for k, v in notes)
+        out += f'<dt>Notes</dt><dd><ul class="tx">{nl}</ul></dd>'
+    if used:
+        tl = "".join(
+            f'<li><b>{esc(T[k][1])}.</b> {esc(T[k][2])}<span class="on">Applied to: {esc(", ".join(on))}</span></li>'
+            for k, on in used.items())
+        out += (f'<dd class="tfs"><details><summary>Transformations ({len(used)})</summary>'
+                f'<ul class="tx">{tl}</ul></details></dd>')
+    return out
+
+
+def tx_text(series, notes=()):
+    words = [f"{a} {b} " + " ".join(T[k][1] for k in keys.split()) for a, b, keys in series]
+    return words + [k + " " + v for k, v in notes]
 
 
 def links_html(label, links):
@@ -547,22 +691,24 @@ def card(row, tier):
     name, source, when, what, why, hc = row
     tag = {"A": '<span class="tag a">Tier A</span>', "B": '<span class="tag b">Tier B</span>'}.get(tier, "")
     hc_html = f'<dt class="hc">Healthcare read</dt><dd class="hc">{esc(hc)}</dd>' if hc else ""
-    tx = TX.get(name, [])
+    tx = TX.get(name, {"s": [], "n": []})
+    series, notes = tx["s"], tx.get("n", [])
     links = LINKS.get(name, [])
-    text = " ".join([name, source, what, why, hc] + [k + " " + v for k, v in tx] + [t for t, _ in links]).lower()
+    text = " ".join([name, source, what, why, hc] + tx_text(series, notes) + [t for t, _ in links]).lower()
     return f'''<article class="m" id="{slug(name)}" data-text="{esc(text)}">
   <header><h3>{esc(name)}</h3><p class="meta">{tag}<span>{esc(when)}</span><span>{esc(source)}</span></p></header>
   <dl><dt>What it is</dt><dd>{esc(what)}</dd><dt>Why it matters</dt><dd class="why">{esc(why)}</dd>{hc_html}
-  {tx_html(tx) if tx else ""}{links_html("On your other charts", links) if links else ""}</dl>
+  {tx_html(series, notes) if series else ""}{links_html("On your other charts", links) if links else ""}</dl>
 </article>'''
 
 
 def ellis_card(row):
     fig_id, title, fig, what, why, built, releases = row
+    built = [(k, v, EK[k]) for k, v in built]
     fig_html = f"<span>Book {esc(fig)}</span>" if fig.startswith("Fig") else (f"<span>{esc(fig)}</span>" if fig else "")
     links = [("Open this chart", SITE + "ahead_of_curve/#" + fig_id)] + [
         ("In this guide: " + n, "#" + slug(n)) for n in releases]
-    text = " ".join([title, "ellis", fig, what, why] + [k + " " + v for k, v in built] + releases).lower()
+    text = " ".join([title, "ellis", fig, what, why] + tx_text(built) + releases).lower()
     return f'''<article class="m" id="e-{fig_id}" data-text="{esc(text)}">
   <header><h3>{esc(title)}</h3><p class="meta"><span class="tag e">Ellis chart</span>{fig_html}</p></header>
   <dl><dt>What it shows</dt><dd>{esc(what)}</dd><dt>Why it matters</dt><dd class="why">{esc(why)}</dd>
@@ -588,8 +734,8 @@ PAGE = f'''<title>Why Each Macro Measure Matters</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: one reading column; each measure is a two-column row (name and
-   schedule on the left, what / why / healthcare read / transformations /
-   links on the right). */
+   schedule on the left, what / why / healthcare read / series and subsets /
+   notes / collapsed transformations / links on the right). */
 :root {{
   --bg: #f6f8f9; --surface: #ffffff; --fg: #17232b; --muted: #5a6b76; --line: #d9e0e4;
   --accent: #0b6e69; --accent-soft: #e2f1ef; --hc: #8a4a12; --hc-soft: #fbf0e3;
@@ -640,6 +786,14 @@ dd.hc {{ background: var(--hc-soft); padding: .45rem .65rem; border-radius: 4px;
 ul.tx {{ margin: 0; padding: 0 0 0 .8rem; list-style: none; border-left: 2px solid var(--line); font-size: .93rem; }}
 ul.tx li {{ margin: .3rem 0; }}
 ul.tx b {{ font-weight: 600; }}
+ul.tx .tf {{ display: flex; flex-wrap: wrap; gap: .25rem .35rem; margin-top: .2rem; }}
+ul.tx .tf span {{ font: .7rem var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 .35rem; }}
+ul.tx .on {{ display: block; color: var(--muted); font-size: .86rem; }}
+dd.tfs {{ margin-top: .5rem; }}
+details > summary {{ cursor: pointer; font: 500 .7rem var(--mono); text-transform: uppercase; letter-spacing: .07em;
+  color: var(--accent); padding: .2rem 0; }}
+details > summary:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
+details[open] > summary {{ margin-bottom: .3rem; }}
 ul.links {{ margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: .35rem .5rem; font-size: .86rem; }}
 ul.links a {{ display: inline-block; padding: .15rem .55rem; border-radius: 4px; background: var(--accent-soft);
   color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }}
