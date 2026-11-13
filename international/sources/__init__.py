@@ -8,7 +8,7 @@ never sinks the digest. `FETCHERS` maps a source name to its fetcher.
 from __future__ import annotations
 
 from .base import SourceError
-from . import boe, boj, estat, fred, jsonstat, ons, sdmx
+from . import boe, boj, chinamoney, estat, fred, jsonstat, ons, sdmx
 
 FETCHERS = {
     "eurostat": jsonstat.fetch_eurostat,
@@ -19,6 +19,7 @@ FETCHERS = {
     "estat": estat.fetch_estat,
     "boj": boj.fetch_boj,
     "fred": fred.fetch_fred,
+    "chinamoney": chinamoney.fetch_chinamoney,
 }
 
 __all__ = ["FETCHERS", "SourceError"]

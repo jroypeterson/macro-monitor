@@ -14,7 +14,16 @@ from .config import (
     REGION_ORDER,
     YIELD_INDICATORS,
 )
-from .format import fmt_bps, fmt_change, fmt_period, fmt_value, ytd_change_bps
+from .format import (
+    fmt_bps,
+    fmt_change,
+    fmt_change_vs,
+    fmt_period,
+    fmt_value,
+    is_stale,
+    is_step_series,
+    ytd_change_bps,
+)
 from .model import IntlSeriesResult
 
 
@@ -25,15 +34,25 @@ def _ordered(results: list[IntlSeriesResult], region: str) -> list[IntlSeriesRes
     return sorted(in_region, key=lambda r: order.get(r.indicator, 99))
 
 
-def _region_lines(results: list[IntlSeriesResult], region: str) -> list[str]:
+def _region_lines(
+    results: list[IntlSeriesResult], region: str, as_of: str = ""
+) -> list[str]:
     lines: list[str] = []
     for r in _ordered(results, region):
         label = INDICATOR_LABELS.get(r.indicator, r.indicator)
-        if r.ok:
-            delta = fmt_change(r)
-            delta_str = f"  _{delta}_" if delta else ""
+        if r.ok and is_step_series(r):
+            move = fmt_change(r)
+            move_str = f" _({move} pt)_" if move else ""
             lines.append(
-                f"• {label}: *{fmt_value(r)}*  ({fmt_period(r.latest.period)}){delta_str}"
+                f"• {label}: *{fmt_value(r)}*, last changed "
+                f"{fmt_period(r.latest.period)}{move_str}"
+            )
+        elif r.ok:
+            delta = fmt_change_vs(r)
+            delta_str = f" · _{delta}_" if delta else ""
+            stale = " · ⚠️ _stale: source has stopped updating_" if is_stale(r, as_of) else ""
+            lines.append(
+                f"• {label}: *{fmt_value(r)}* in {fmt_period(r.latest.period)}{delta_str}{stale}"
             )
         else:
             why = "needs API key" if "APP_ID" in (r.error or "") else "unavailable"
@@ -56,7 +75,7 @@ def _yield_line(results: list[IntlSeriesResult], region: str) -> str | None:
         if r and r.ok:
             any_ok = True
             ytd = ytd_change_bps(r)
-            ytd_str = f" _(YTD {fmt_bps(ytd)})_" if ytd is not None else ""
+            ytd_str = f" _({fmt_bps(ytd)} since year-end)_" if ytd is not None else ""
             parts.append(f"{lab} *{fmt_value(r)}*{ytd_str}")
         else:
             parts.append(f"{lab} —")
@@ -95,7 +114,7 @@ def build_digest_blocks(
     ]
 
     for region in REGION_ORDER:
-        lines = _region_lines(results, region)
+        lines = _region_lines(results, region, as_of)
         if not lines:
             continue
         blocks.append(
@@ -114,7 +133,11 @@ def build_digest_blocks(
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": "_Δ = change vs prior reading (pp). Regenerated via `cli global-macro`._",
+                    "text": (
+                        "_Each line: latest value, the period it covers, then the change "
+                        "from the previous reading (pt = percentage points). Yields: change "
+                        "since the last trading day of the prior year, in basis points._"
+                    ),
                 }
             ],
         }

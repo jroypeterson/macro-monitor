@@ -184,3 +184,85 @@ def test_result_change_and_formatting():
     assert r.ok and r.latest.value == 2.8
     assert fmt_value(r) == "2.8%"
     assert fmt_change(r) == "▼0.5"
+
+
+# ---- 2026-11-12: dated change, stale flag, China yields -------------------
+
+def _res(periods_values, *, indicator="cpi_yoy", freq="monthly", unit="%", decimals=1):
+    from macro_monitor.international.model import IntlObservation, IntlSeriesResult
+
+    return IntlSeriesResult(
+        spec_id="x", region="eurozone", indicator=indicator, label="X", unit=unit,
+        source="eurostat", freq=freq, decimals=decimals,
+        observations=[IntlObservation(p, v) for p, v in periods_values],
+    )
+
+
+def test_change_names_its_unit_and_what_it_is_measured_against():
+    from macro_monitor.international.format import fmt_change_vs
+
+    assert fmt_change_vs(_res([("2025-11", 2.1), ("2025-12", 2.0)])) == "▼0.1 pt vs Nov 2025"
+    # An index has no percentage points.
+    assert fmt_change_vs(_res([("2026-09", 100.1), ("2026-10", 100.3)], unit="")) == "▲0.2 vs Sep 2026"
+    assert fmt_change_vs(_res([("2026-09", 2.5), ("2026-10", 2.5)])) == "unchanged vs Sep 2026"
+    assert fmt_change_vs(_res([("2026-10", 2.5)])) == ""
+
+
+def test_stale_flag_fires_on_the_frozen_eurostat_reading_and_not_on_normal_lags():
+    """The production shape: prc_hicp_manr answered Dec 2025 on 2026-11-12."""
+    from macro_monitor.international.format import is_stale
+
+    today = "2026-11-12"
+    assert is_stale(_res([("2025-11", 2.1), ("2025-12", 2.0)]), today)
+    assert not is_stale(_res([("2026-06", 4.9), ("2026-07", 4.7)]), today)  # UK unemployment lag
+    assert not is_stale(_res([("2026-Q1", 0.8), ("2026-Q2", 1.4)], freq="quarterly"), today)
+    assert is_stale(_res([("2025-Q3", 0.8), ("2025-Q4", 1.4)], freq="quarterly"), today)
+    assert is_stale(_res([("2026-08-03", 5.0)], indicator="yield_10y", freq="daily"), today)
+    # A policy rate that has not MOVED since 2025 is not a dead feed.
+    assert not is_stale(
+        _res([("2025-06-11", 2.15), ("2025-12-18", 2.4)], indicator="policy_rate", freq="daily"),
+        today,
+    )
+
+
+def test_digest_lines_say_period_base_and_staleness():
+    from macro_monitor.international.digest import build_digest_blocks
+
+    rate = _res([("2026-06-17", 2.4), ("2026-09-16", 2.65)],
+                indicator="policy_rate", freq="daily", decimals=2)
+    frozen = _res([("2025-11", 2.1), ("2025-12", 2.0)])
+    _, blocks = build_digest_blocks([frozen, rate], as_of="2026-11-12")
+    body = "\n".join(b["text"]["text"] for b in blocks if b["type"] == "section")
+    assert "*2.0%* in Dec 2025 · _▼0.1 pt vs Nov 2025_ · ⚠️ _stale" in body
+    assert "*2.65%*, last changed Sep 2026 _(▲0.25 pt)_" in body
+    _, fresh = build_digest_blocks([frozen], as_of="2026-01-20")
+    assert "stale" not in "\n".join(b["text"]["text"] for b in fresh if b["type"] == "section")
+
+
+def test_eurozone_inflation_reads_the_live_eurostat_dataset():
+    from macro_monitor.international.config import load_series
+
+    by = {s.id: s for s in load_series()}
+    for sid in ("ez_cpi", "ez_core_cpi"):
+        assert by[sid].params["dataset"] == "prc_hicp_minr", "prc_hicp_manr was retired Feb 2026"
+        assert by[sid].params["filters"]["unit"] == "RCH_A"
+
+
+def test_chinamoney_curve_parser_picks_the_maturity():
+    import pytest
+    from macro_monitor.international.sources.base import SourceError
+    from macro_monitor.international.sources.chinamoney import parse_curve
+
+    payload = {"records": [
+        {"newDateValueCN": "2026-11-12", "yearTermStr": "1.0", "maturityYieldStr": "1.1788"},
+        {"newDateValueCN": "2026-11-12", "yearTermStr": "2.0", "maturityYieldStr": "1.2261"},
+        {"newDateValueCN": "2026-11-12", "yearTermStr": "10.0", "maturityYieldStr": "1.6039"},
+        {"newDateValueCN": "2026-11-12", "yearTermStr": "20.0", "maturityYieldStr": "---"},
+    ]}
+    (obs,) = parse_curve(payload, 10.0, "cn_yield_10y")
+    assert (obs.period, obs.value) == ("2026-11-12", 1.6039)
+    assert parse_curve(payload, 2.0, "cn_yield_2y")[0].value == 1.2261
+    with pytest.raises(SourceError):
+        parse_curve(payload, 20.0, "x")
+    with pytest.raises(SourceError):
+        parse_curve({}, 10.0, "x")

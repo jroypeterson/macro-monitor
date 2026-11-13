@@ -175,11 +175,19 @@ def _section(md: str) -> dict:
     return {"type": "section", "text": {"type": "mrkdwn", "text": md[:2900]}}
 
 
+def _titled(header: str) -> list[dict]:
+    """A subsection title with a rule under it, so the lanes scan (JP
+    2026-11-12 asked for underlined titles). Slack has no underline: mrkdwn
+    lacks it and rich_text `underline` is rejected with invalid_blocks, so
+    the rule is a divider block directly beneath the bold title."""
+    return [_section(f"*{header}*"), {"type": "divider"}]
+
+
 def _section_lines(header: str, rows: list[Resolved]) -> list[dict]:
     if not rows:
         return []
-    buf = f"*{header}*\n"
-    blocks: list[dict] = []
+    buf = ""
+    blocks: list[dict] = _titled(header)
     for r in rows:
         ln = _line(r) + "\n"
         if len(buf) + len(ln) > 2900:
@@ -194,8 +202,8 @@ def _section_lines(header: str, rows: list[Resolved]) -> list[dict]:
 def _watch_section(header: str, rows: list[NewMarket]) -> list[dict]:
     if not rows:
         return []
-    buf = f"*{header}*\n"
-    blocks: list[dict] = []
+    buf = ""
+    blocks: list[dict] = _titled(header)
     for n in rows:
         ln = _watch_line(n) + "\n"
         if len(buf) + len(ln) > 2900:
@@ -217,8 +225,8 @@ def build_blocks(rd: Rundown) -> list[dict]:
     if rd.aggregated:
         blocks.append(_section("*At a glance:*  " + "   ".join(rd.aggregated)))
     if rd.movers:
-        blocks.append(_section("*📈 Notable moves*\n" + "\n".join(_move_line(m) for m in rd.movers)))
-    blocks.append({"type": "divider"})
+        blocks += _titled("📈 Notable moves")
+        blocks.append(_section("\n".join(_move_line(m) for m in rd.movers)))
     blocks += _section_lines("📊 Macro", rd.macro)
     blocks += _section_lines("🦠 Healthcare — pandemics & public health", rd.hc_pandemic)
     blocks += _section_lines("🏛️ Healthcare — policy", rd.hc_policy)
@@ -234,8 +242,8 @@ def build_blocks(rd: Rundown) -> list[dict]:
                     "Mostly thin — directional. 💊 FDA/company catalyst · 🦠 public health._"}]})
     blocks += _section_lines("📜 Legislative — law-change odds", rd.legislative)
     if rd.new_markets:
-        blocks.append(_section("*🆕 Newly-opened relevant markets*\n"
-                               + "\n".join(_new_line(n) for n in rd.new_markets)))
+        blocks += _titled("🆕 Newly-opened relevant markets")
+        blocks.append(_section("\n".join(_new_line(n) for n in rd.new_markets)))
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn",
         "text": f"data: Polymarket Gamma · {rd.live_count} live markets · {rd.generated:%Y-%m-%d %H:%M UTC}"}]})
     return blocks

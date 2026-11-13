@@ -42,7 +42,7 @@ INDICATOR_LABELS = {
 # change (in bps), handled separately from the single-value indicators above.
 YIELD_INDICATORS = ("yield_2y", "yield_10y")
 
-VALID_SOURCES = {"eurostat", "ecb", "oecd", "ons", "boe", "estat", "boj", "fred"}
+VALID_SOURCES = {"eurostat", "ecb", "oecd", "ons", "boe", "estat", "boj", "fred", "chinamoney"}
 VALID_FREQ = {"monthly", "quarterly", "annual", "daily"}
 
 

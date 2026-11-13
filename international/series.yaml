@@ -12,8 +12,14 @@ series:
     source: eurostat
     freq: monthly
     params:
-      dataset: prc_hicp_manr
-      filters: {coicop: CP00, geo: EA20}
+      # prc_hicp_minr, NOT prc_hicp_manr: Eurostat retired the old dataset in
+      # Feb 2026 (new ECOICOP v2 classification). It still answers HTTP 200
+      # with its last value, so the digest showed Dec 2025's 2.0% for ten
+      # months while the real figure reached 4.0% (found 2026-11-12).
+      # geo EA = the euro area as currently composed, so a new member cannot
+      # freeze it the way EA20 froze.
+      dataset: prc_hicp_minr
+      filters: {unit: RCH_A, coicop18: TOTAL, geo: EA}
 
   - id: ez_core_cpi
     region: eurozone
@@ -22,8 +28,8 @@ series:
     source: eurostat
     freq: monthly
     params:
-      dataset: prc_hicp_manr
-      filters: {coicop: TOT_X_NRG_FOOD, geo: EA20}
+      dataset: prc_hicp_minr
+      filters: {unit: RCH_A, coicop18: TOT_X_NRG_FOOD, geo: EA}
 
   - id: ez_gdp
     region: eurozone
@@ -163,9 +169,30 @@ series:
       key: Q..CHN.........GY.
       start: "2023-Q1"
 
+  - id: cn_yield_2y
+    region: china
+    indicator: yield_2y
+    label: 2Y China government bond
+    source: chinamoney
+    freq: daily
+    decimals: 2
+    params:
+      term: 2
+
+  - id: cn_yield_10y
+    region: china
+    indicator: yield_10y
+    label: 10Y China government bond
+    source: chinamoney
+    freq: daily
+    decimals: 2
+    params:
+      term: 10
+
   # ───────────────────────── Japan (e-Stat gated + OECD rate) ─────────────
-  # Japan CPI/GDP need ESTAT_APP_ID in .env (see sources/estat.py). Until the
-  # key is added these rows surface as "unavailable" in the digest.
+  # Japan CPI needs ESTAT_APP_ID -- in .env locally AND as a GitHub Actions
+  # secret. Without it the row shows "needs API key" (the secret was missing
+  # on GitHub until 2026-11-12 although .env had the key).
   - id: jp_cpi
     region: japan
     indicator: cpi_yoy

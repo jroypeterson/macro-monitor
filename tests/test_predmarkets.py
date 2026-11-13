@@ -480,3 +480,24 @@ def test_rundown_renders_movers_and_new_markets():
             assert len(b["text"]["text"]) <= 3000
     html = RD.render_html(rd)
     assert "Notable moves" in html and "Newly-opened" in html
+
+
+def test_every_subsection_title_has_a_rule_under_it():
+    """JP 2026-11-12: underline each subsection so the rundown scans. Slack
+    has no underline, so the rule is a divider right after the bold title."""
+    from macro_monitor.predmarkets import rundown as rd_mod
+    from macro_monitor.predmarkets.client import Resolved
+
+    def r(key, lane):
+        return Resolved(key=key, label=key, lane=lane, biotech=False, ok=True,
+                        outcomes=[("Yes", 0.4)], volume=500_000.0)
+
+    rows = [r("recession", "macro"), r("new_pandemic", "healthcare"), r("rfk_out", "healthcare")]
+    blocks = rd_mod.build_blocks(rd_mod.build(rows))
+    titles = [i for i, b in enumerate(blocks)
+              if b["type"] == "section" and b["text"]["text"].startswith("*")
+              and b["text"]["text"].endswith("*") and "\n" not in b["text"]["text"]]
+    assert len(titles) >= 3, [b.get("text", {}).get("text") for b in blocks]
+    for i in titles:
+        assert blocks[i + 1]["type"] == "divider", blocks[i]["text"]["text"]
+    assert sum(b["type"] == "divider" for b in blocks) == len(titles), "a rule only under a title"
