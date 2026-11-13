@@ -1,0 +1,241 @@
+<title>Why Each Macro Measure Matters</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each measure is a two-column row (name and
+   schedule on the left, what / why / healthcare read on the right). */
+:root {
+  --bg: #f6f8f9; --surface: #ffffff; --fg: #17232b; --muted: #5a6b76; --line: #d9e0e4;
+  --accent: #0b6e69; --accent-soft: #e2f1ef; --hc: #8a4a12; --hc-soft: #fbf0e3;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10181c; --surface: #172229; --fg: #e4ecef; --muted: #96a7b1; --line: #2a3941;
+  --accent: #5cc7bf; --accent-soft: #15332f; --hc: #e7a96a; --hc-soft: #33261a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10181c; --surface: #172229; --fg: #e4ecef; --muted: #96a7b1; --line: #2a3941;
+  --accent: #5cc7bf; --accent-soft: #15332f; --hc: #e7a96a; --hc-soft: #33261a; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--sans); }
+.wrap { max-width: 60rem; margin: 0 auto; padding-block: 2rem 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 1.9rem; line-height: 1.2; font-weight: 600; margin: 0 0 .5rem; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 42rem; margin: 0 0 1.25rem; }
+.tools { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; margin-bottom: 1rem; }
+#q { flex: 1 1 14rem; min-width: 0; font: inherit; padding: .5rem .7rem; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--surface); color: var(--fg); }
+#q:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+nav { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font: 500 .8rem var(--mono); }
+nav a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+nav a:hover { border-bottom-color: var(--accent); }
+#count { font: .8rem var(--mono); color: var(--muted); }
+.grp { margin-top: 2.5rem; }
+.grp-head { border-bottom: 2px solid var(--fg); padding-bottom: .5rem; }
+.grp-head h2 { font-size: 1.2rem; font-weight: 600; margin: 0; }
+.grp-head p { margin: .2rem 0 0; color: var(--muted); font-size: .9rem; max-width: 44rem; }
+.m { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: .5rem 2rem;
+  padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+.m h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .4rem; text-wrap: balance; }
+.meta { margin: 0; display: flex; flex-direction: column; gap: .2rem; align-items: flex-start;
+  font: .75rem/1.4 var(--mono); color: var(--muted); }
+.tag { font-weight: 500; padding: .05rem .4rem; border-radius: 3px; letter-spacing: .03em; }
+.tag.a { background: var(--accent); color: var(--bg); }
+.tag.b { border: 1px solid var(--muted); color: var(--muted); }
+dl { margin: 0; display: grid; gap: .15rem; min-width: 0; }
+dt { font: 500 .7rem var(--mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-top: .5rem; }
+dt:first-child { margin-top: 0; }
+dd { margin: 0; max-width: 40rem; }
+dd.why { font-weight: 500; }
+dt.hc { color: var(--hc); }
+dd.hc { background: var(--hc-soft); padding: .45rem .65rem; border-radius: 4px; font-size: .93rem; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1.2rem; margin-top: 1rem; }
+.note ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+.note li { margin: .25rem 0; max-width: 42rem; }
+#none { color: var(--muted); padding: 2rem 0; }
+@media (max-width: 40rem) {
+  .m { grid-template-columns: minmax(0, 1fr); }
+  .meta { flex-direction: row; flex-wrap: wrap; gap: .2rem .7rem; }
+  h1 { font-size: 1.5rem; }
+}
+</style>
+<div class="wrap">
+  <h1>Why each macro measure matters</h1>
+  <p class="lede">Every release and reading posted to #macro, with what it measures, why a markets reader should care, and what it says about healthcare where it says something specific.</p>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Filter, e.g. inflation, wages, hospitals" aria-label="Filter measures">
+    <span id="count">32 measures</span>
+  </div>
+  <nav aria-label="Sections">
+    <a href="#tier-a">US Tier A (9)</a><a href="#tier-b">US Tier B (14)</a>
+    <a href="#fed">Federal Reserve (3)</a><a href="#global">Global macro (6)</a><a href="#reading">Reading a post</a>
+  </nav>
+
+  <section id="tier-a" class="grp">
+  <div class="grp-head"><h2>US releases, Tier A</h2><p>Always posted in full the moment they are released. These move markets or bear directly on the Fed.</p></div>
+  <article class="m" data-text="cpi bureau of labor statistics price change of the basket urban consumers buy. headline covers everything; core leaves out food and energy. the inflation number markets trade on. it moves the expected path of fed rates, and rates set the discount rate on long-dated cash flows, which hits biotech and other long-duration equities hardest. the post breaks out medical care services, medical care goods (drugs and equipment), hospital services and physician and dental services. those lines show pricing power at providers and how fast drug prices are rising for consumers.">
+  <header><h3>CPI</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 8:30 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Price change of the basket urban consumers buy. Headline covers everything; core leaves out food and energy.</dd><dt>Why it matters</dt><dd class="why">The inflation number markets trade on. It moves the expected path of Fed rates, and rates set the discount rate on long-dated cash flows, which hits biotech and other long-duration equities hardest.</dd><dt class="hc">Healthcare read</dt><dd class="hc">The post breaks out medical care services, medical care goods (drugs and equipment), hospital services and physician and dental services. Those lines show pricing power at providers and how fast drug prices are rising for consumers.</dd></dl>
+</article>
+<article class="m" data-text="employment situation (jobs report) bureau of labor statistics jobs added (nonfarm payrolls), the unemployment rate (u-3), the broader underemployment rate (u-6) and average hourly earnings. employment is the other half of the fed&#x27;s mandate. strong hiring with firm wages keeps rates higher for longer; a weak report pulls rate cuts forward. it is usually the most market-moving release of the month. hiring is shown for ambulatory care, hospitals and nursing and residential care. healthcare has been one of the steadiest sources of job growth, so the pace tells you about staffing supply and wage pressure at providers. employer insurance coverage also follows employment.">
+  <header><h3>Employment Situation (jobs report)</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 8:30 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Jobs added (nonfarm payrolls), the unemployment rate (U-3), the broader underemployment rate (U-6) and average hourly earnings.</dd><dt>Why it matters</dt><dd class="why">Employment is the other half of the Fed&#x27;s mandate. Strong hiring with firm wages keeps rates higher for longer; a weak report pulls rate cuts forward. It is usually the most market-moving release of the month.</dd><dt class="hc">Healthcare read</dt><dd class="hc">Hiring is shown for ambulatory care, hospitals and nursing and residential care. Healthcare has been one of the steadiest sources of job growth, so the pace tells you about staffing supply and wage pressure at providers. Employer insurance coverage also follows employment.</dd></dl>
+</article>
+<article class="m" data-text="consumer spending and pce inflation bureau of economic analysis personal income, consumer spending (in real and nominal terms), the saving rate and the pce price index, headline and core. core pce is the measure the fed&#x27;s 2% target is written against, so it outranks cpi for policy. consumer spending is about two thirds of gdp, which makes this the best monthly read on demand. pce gives healthcare a much larger weight than cpi does, because it counts care paid for by employers, medicare and medicaid, where cpi counts only what households pay out of pocket.">
+  <header><h3>Consumer spending and PCE inflation</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 8:30 ET</span><span>Bureau of Economic Analysis</span></p></header>
+  <dl><dt>What it is</dt><dd>Personal income, consumer spending (in real and nominal terms), the saving rate and the PCE price index, headline and core.</dd><dt>Why it matters</dt><dd class="why">Core PCE is the measure the Fed&#x27;s 2% target is written against, so it outranks CPI for policy. Consumer spending is about two thirds of GDP, which makes this the best monthly read on demand.</dd><dt class="hc">Healthcare read</dt><dd class="hc">PCE gives healthcare a much larger weight than CPI does, because it counts care paid for by employers, Medicare and Medicaid, where CPI counts only what households pay out of pocket.</dd></dl>
+</article>
+<article class="m" data-text="initial jobless claims department of labor people filing for unemployment insurance for the first time that week, plus continued claims (people still collecting). the fastest labor-market signal there is. turning points in the economy tend to show up here weeks before the monthly jobs report. continued claims show how hard it is to find a new job once laid off. ">
+  <header><h3>Initial jobless claims</h3><p class="meta"><span class="tag a">Tier A</span><span>Weekly, Thursday · 8:30 ET</span><span>Department of Labor</span></p></header>
+  <dl><dt>What it is</dt><dd>People filing for unemployment insurance for the first time that week, plus continued claims (people still collecting).</dd><dt>Why it matters</dt><dd class="why">The fastest labor-market signal there is. Turning points in the economy tend to show up here weeks before the monthly jobs report. Continued claims show how hard it is to find a new job once laid off.</dd></dl>
+</article>
+<article class="m" data-text="gdp bureau of economic analysis growth in total us output, quarter over quarter at an annual rate, in real (inflation-adjusted) and nominal terms, with the main components. the broadest scorecard of the economy and the base for earnings growth across sectors. the mix matters as much as the total: growth led by consumers and investment is sturdier than growth led by inventories or trade swings. the post includes consumer spending on health services, one of the largest and steadiest pieces of consumption.">
+  <header><h3>GDP</h3><p class="meta"><span class="tag a">Tier A</span><span>Quarterly · 8:30 ET</span><span>Bureau of Economic Analysis</span></p></header>
+  <dl><dt>What it is</dt><dd>Growth in total US output, quarter over quarter at an annual rate, in real (inflation-adjusted) and nominal terms, with the main components.</dd><dt>Why it matters</dt><dd class="why">The broadest scorecard of the economy and the base for earnings growth across sectors. The mix matters as much as the total: growth led by consumers and investment is sturdier than growth led by inventories or trade swings.</dd><dt class="hc">Healthcare read</dt><dd class="hc">The post includes consumer spending on health services, one of the largest and steadiest pieces of consumption.</dd></dl>
+</article>
+<article class="m" data-text="jolts (job openings and labor turnover) bureau of labor statistics unfilled job openings, hires, layoffs and the quits rate. the demand side of the labor market. the fed watches openings per unemployed worker as its tightness gauge, and a falling quits rate means workers are less sure they can find something better, which cools wage growth. openings, hires and quits are shown for health care and social assistance. high openings with high quits mean staffing shortages, which show up as wage and contract-labor costs at hospitals and services companies.">
+  <header><h3>JOLTS (job openings and labor turnover)</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 10:00 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Unfilled job openings, hires, layoffs and the quits rate.</dd><dt>Why it matters</dt><dd class="why">The demand side of the labor market. The Fed watches openings per unemployed worker as its tightness gauge, and a falling quits rate means workers are less sure they can find something better, which cools wage growth.</dd><dt class="hc">Healthcare read</dt><dd class="hc">Openings, hires and quits are shown for health care and social assistance. High openings with high quits mean staffing shortages, which show up as wage and contract-labor costs at hospitals and services companies.</dd></dl>
+</article>
+<article class="m" data-text="ppi (producer prices) bureau of labor statistics prices that domestic producers receive, headline and core (final demand). inflation in the pipeline. cost changes here tend to reach consumer prices later, and several ppi lines feed directly into the calculation of core pce, so forecasters use this release to sharpen their pce estimate. shown for hospitals, physician offices, dentist offices, pharmaceutical manufacturing and surgical and medical instruments. these are the prices providers and manufacturers actually receive, and the health-services lines are source data for pce healthcare inflation.">
+  <header><h3>PPI (producer prices)</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 8:30 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Prices that domestic producers receive, headline and core (final demand).</dd><dt>Why it matters</dt><dd class="why">Inflation in the pipeline. Cost changes here tend to reach consumer prices later, and several PPI lines feed directly into the calculation of core PCE, so forecasters use this release to sharpen their PCE estimate.</dd><dt class="hc">Healthcare read</dt><dd class="hc">Shown for hospitals, physician offices, dentist offices, pharmaceutical manufacturing and surgical and medical instruments. These are the prices providers and manufacturers actually receive, and the health-services lines are source data for PCE healthcare inflation.</dd></dl>
+</article>
+<article class="m" data-text="retail sales census bureau receipts at stores, online sellers and restaurants, in nominal dollars, with an inflation-adjusted version. the first hard number on consumer spending each month, well ahead of the fuller pce report. it feeds straight into running estimates of gdp. ">
+  <header><h3>Retail sales</h3><p class="meta"><span class="tag a">Tier A</span><span>Monthly · 8:30 ET</span><span>Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>Receipts at stores, online sellers and restaurants, in nominal dollars, with an inflation-adjusted version.</dd><dt>Why it matters</dt><dd class="why">The first hard number on consumer spending each month, well ahead of the fuller PCE report. It feeds straight into running estimates of GDP.</dd></dl>
+</article>
+<article class="m" data-text="employment cost index bureau of labor statistics change in total compensation (wages plus benefits), holding the mix of jobs constant. the cleanest wage-inflation measure, and the one the fed trusts most, because shifts in who is employed do not distort it the way they distort average hourly earnings. labor is the largest cost line for hospitals and healthcare services. the benefits component also captures what employers pay for health insurance.">
+  <header><h3>Employment Cost Index</h3><p class="meta"><span class="tag a">Tier A</span><span>Quarterly · 8:30 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Change in total compensation (wages plus benefits), holding the mix of jobs constant.</dd><dt>Why it matters</dt><dd class="why">The cleanest wage-inflation measure, and the one the Fed trusts most, because shifts in who is employed do not distort it the way they distort average hourly earnings.</dd><dt class="hc">Healthcare read</dt><dd class="hc">Labor is the largest cost line for hospitals and healthcare services. The benefits component also captures what employers pay for health insurance.</dd></dl>
+</article>
+</section>
+  <section id="tier-b" class="grp">
+  <div class="grp-head"><h2>US releases, Tier B</h2><p>Posted as one line, or in full when the move is unusual against five years of history.</p></div>
+  <article class="m" data-text="industrial production and capacity utilization federal reserve physical output of factories, mines and utilities, and the share of industrial capacity in use. the goods-producing side of the economy, which swings harder than services through a cycle. sustained high utilization signals pressure to invest and to raise prices. ">
+  <header><h3>Industrial production and capacity utilization</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 9:15 ET</span><span>Federal Reserve</span></p></header>
+  <dl><dt>What it is</dt><dd>Physical output of factories, mines and utilities, and the share of industrial capacity in use.</dd><dt>Why it matters</dt><dd class="why">The goods-producing side of the economy, which swings harder than services through a cycle. Sustained high utilization signals pressure to invest and to raise prices.</dd></dl>
+</article>
+<article class="m" data-text="housing starts and building permits census bureau new homes begun in the month and permits issued for future building, at annual rates. housing is the most rate-sensitive part of the economy, so it is where fed policy bites first. permits lead starts, and both lead the broader cycle. ">
+  <header><h3>Housing starts and building permits</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 8:30 ET</span><span>Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>New homes begun in the month and permits issued for future building, at annual rates.</dd><dt>Why it matters</dt><dd class="why">Housing is the most rate-sensitive part of the economy, so it is where Fed policy bites first. Permits lead starts, and both lead the broader cycle.</dd></dl>
+</article>
+<article class="m" data-text="durable goods orders census bureau new orders for long-lasting goods. the line to watch is core capital goods (non-defense, excluding aircraft). core capital goods orders are the leading indicator of business investment. the headline is noisy because single aircraft orders move it. ">
+  <header><h3>Durable goods orders</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 8:30 ET</span><span>Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>New orders for long-lasting goods. The line to watch is core capital goods (non-defense, excluding aircraft).</dd><dt>Why it matters</dt><dd class="why">Core capital goods orders are the leading indicator of business investment. The headline is noisy because single aircraft orders move it.</dd></dl>
+</article>
+<article class="m" data-text="trade balance bureau of economic analysis and census bureau exports minus imports of goods and services. swings in the gap feed directly into the gdp arithmetic, and it is where tariff effects appear first, as importers pull orders forward or cut them back. pharmaceuticals are among the larger us import categories, so drug tariff changes show up in these figures.">
+  <header><h3>Trade balance</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 8:30 ET</span><span>Bureau of Economic Analysis and Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>Exports minus imports of goods and services.</dd><dt>Why it matters</dt><dd class="why">Swings in the gap feed directly into the GDP arithmetic, and it is where tariff effects appear first, as importers pull orders forward or cut them back.</dd><dt class="hc">Healthcare read</dt><dd class="hc">Pharmaceuticals are among the larger US import categories, so drug tariff changes show up in these figures.</dd></dl>
+</article>
+<article class="m" data-text="consumer credit federal reserve household borrowing outside mortgages: credit cards (revolving), auto loans and student loans. shows whether spending is being paid for out of income or with debt. fast growth in card balances while incomes are flat is a warning about how long spending can last. ">
+  <header><h3>Consumer credit</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 3:00 PM ET</span><span>Federal Reserve</span></p></header>
+  <dl><dt>What it is</dt><dd>Household borrowing outside mortgages: credit cards (revolving), auto loans and student loans.</dd><dt>Why it matters</dt><dd class="why">Shows whether spending is being paid for out of income or with debt. Fast growth in card balances while incomes are flat is a warning about how long spending can last.</dd></dl>
+</article>
+<article class="m" data-text="loan delinquency rates federal reserve share of bank loans 30 or more days past due, led by credit cards, with consumer loans and mortgages. a direct gauge of household financial stress. rising delinquencies come before cuts in spending and tighter bank lending. ">
+  <header><h3>Loan delinquency rates</h3><p class="meta"><span class="tag b">Tier B</span><span>Quarterly · 4:30 PM ET</span><span>Federal Reserve</span></p></header>
+  <dl><dt>What it is</dt><dd>Share of bank loans 30 or more days past due, led by credit cards, with consumer loans and mortgages.</dd><dt>Why it matters</dt><dd class="why">A direct gauge of household financial stress. Rising delinquencies come before cuts in spending and tighter bank lending.</dd></dl>
+</article>
+<article class="m" data-text="productivity and unit labor costs bureau of labor statistics output per hour worked, and labor cost per unit of output. productivity is what lets wages rise without inflation. when unit labor costs climb, companies either take lower margins or raise prices. ">
+  <header><h3>Productivity and unit labor costs</h3><p class="meta"><span class="tag b">Tier B</span><span>Quarterly · 8:30 ET</span><span>Bureau of Labor Statistics</span></p></header>
+  <dl><dt>What it is</dt><dd>Output per hour worked, and labor cost per unit of output.</dd><dt>Why it matters</dt><dd class="why">Productivity is what lets wages rise without inflation. When unit labor costs climb, companies either take lower margins or raise prices.</dd></dl>
+</article>
+<article class="m" data-text="university of michigan consumer sentiment university of michigan a survey of how households view their finances and the economy, plus the inflation they expect over the next year. survey data rather than hard data, but the inflation-expectations figure matters to the fed: once households expect higher inflation it becomes harder to bring down. ">
+  <header><h3>University of Michigan consumer sentiment</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 10:00 ET</span><span>University of Michigan</span></p></header>
+  <dl><dt>What it is</dt><dd>A survey of how households view their finances and the economy, plus the inflation they expect over the next year.</dd><dt>Why it matters</dt><dd class="why">Survey data rather than hard data, but the inflation-expectations figure matters to the Fed: once households expect higher inflation it becomes harder to bring down.</dd></dl>
+</article>
+<article class="m" data-text="adp employment report adp private-sector jobs added, counted from adp&#x27;s payroll records. a preview of the official jobs report two days later. the two often disagree in a given month, so it sets expectations more than it settles them. the post includes the education and health services line.">
+  <header><h3>ADP employment report</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 8:15 ET</span><span>ADP</span></p></header>
+  <dl><dt>What it is</dt><dd>Private-sector jobs added, counted from ADP&#x27;s payroll records.</dd><dt>Why it matters</dt><dd class="why">A preview of the official jobs report two days later. The two often disagree in a given month, so it sets expectations more than it settles them.</dd><dt class="hc">Healthcare read</dt><dd class="hc">The post includes the education and health services line.</dd></dl>
+</article>
+<article class="m" data-text="gas prices energy information administration average us pump price for regular gasoline. the most visible price households pay. it drives the swings in headline cpi and moves consumer sentiment. posted only when the move is unusual. ">
+  <header><h3>Gas prices</h3><p class="meta"><span class="tag b">Tier B</span><span>Weekly, Monday · 5:00 PM ET</span><span>Energy Information Administration</span></p></header>
+  <dl><dt>What it is</dt><dd>Average US pump price for regular gasoline.</dd><dt>Why it matters</dt><dd class="why">The most visible price households pay. It drives the swings in headline CPI and moves consumer sentiment. Posted only when the move is unusual.</dd></dl>
+</article>
+<article class="m" data-text="mortgage rates freddie mac average rates on 30-year and 15-year fixed mortgages. the channel through which fed policy and the 10-year treasury yield reach households. it sets housing affordability. posted only when the move is unusual. ">
+  <header><h3>Mortgage rates</h3><p class="meta"><span class="tag b">Tier B</span><span>Weekly, Thursday · 12:00 PM ET</span><span>Freddie Mac</span></p></header>
+  <dl><dt>What it is</dt><dd>Average rates on 30-year and 15-year fixed mortgages.</dd><dt>Why it matters</dt><dd class="why">The channel through which Fed policy and the 10-year Treasury yield reach households. It sets housing affordability. Posted only when the move is unusual.</dd></dl>
+</article>
+<article class="m" data-text="existing home sales national association of realtors closed sales of previously owned homes, at an annual rate. most housing turnover is existing homes. each sale also triggers spending on moving, furnishing and renovation. ">
+  <header><h3>Existing home sales</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 10:00 ET</span><span>National Association of Realtors</span></p></header>
+  <dl><dt>What it is</dt><dd>Closed sales of previously owned homes, at an annual rate.</dd><dt>Why it matters</dt><dd class="why">Most housing turnover is existing homes. Each sale also triggers spending on moving, furnishing and renovation.</dd></dl>
+</article>
+<article class="m" data-text="new home sales census bureau signed contracts on newly built single-family homes, at an annual rate. counted at contract signing rather than closing, so it reacts to rate changes a month or two before existing home sales do. it is the demand read for homebuilders. ">
+  <header><h3>New home sales</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 10:00 ET</span><span>Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>Signed contracts on newly built single-family homes, at an annual rate.</dd><dt>Why it matters</dt><dd class="why">Counted at contract signing rather than closing, so it reacts to rate changes a month or two before existing home sales do. It is the demand read for homebuilders.</dd></dl>
+</article>
+<article class="m" data-text="construction spending census bureau dollar value of construction put in place: residential, non-residential and public. the non-residential line tracks the build-out of data centers and factories, a large part of current business investment. ">
+  <header><h3>Construction spending</h3><p class="meta"><span class="tag b">Tier B</span><span>Monthly · 10:00 ET</span><span>Census Bureau</span></p></header>
+  <dl><dt>What it is</dt><dd>Dollar value of construction put in place: residential, non-residential and public.</dd><dt>Why it matters</dt><dd class="why">The non-residential line tracks the build-out of data centers and factories, a large part of current business investment.</dd></dl>
+</article>
+</section>
+  <section id="fed" class="grp">
+  <div class="grp-head"><h2>Federal Reserve</h2><p>What the Fed decides and says between data releases.</p></div>
+  <article class="m" data-text="fomc decision and statement federal reserve the policy rate decision, with a line-by-line comparison of the statement against the previous one. the policy rate anchors every other interest rate. changes in the statement&#x27;s wording are how the committee signals its next move before making it. ">
+  <header><h3>FOMC decision and statement</h3><p class="meta"><span>Eight meetings a year · 2:00 PM ET</span><span>Federal Reserve</span></p></header>
+  <dl><dt>What it is</dt><dd>The policy rate decision, with a line-by-line comparison of the statement against the previous one.</dd><dt>Why it matters</dt><dd class="why">The policy rate anchors every other interest rate. Changes in the statement&#x27;s wording are how the committee signals its next move before making it.</dd></dl>
+</article>
+<article class="m" data-text="fed speeches federal reserve and regional banks speeches by fed governors and bank presidents, each summarized and tagged by stance. between meetings, speeches are how officials move market expectations. a shift in tone across several speakers usually comes before a shift in policy. ">
+  <header><h3>Fed speeches</h3><p class="meta"><span>Daily, when given</span><span>Federal Reserve and regional banks</span></p></header>
+  <dl><dt>What it is</dt><dd>Speeches by Fed governors and bank presidents, each summarized and tagged by stance.</dd><dt>Why it matters</dt><dd class="why">Between meetings, speeches are how officials move market expectations. A shift in tone across several speakers usually comes before a shift in policy.</dd></dl>
+</article>
+<article class="m" data-text="fed research digest federal reserve and regional banks new research notes and papers from the fed system, filtered to macro topics. staff research shows what questions the fed is working on and often previews the arguments that later appear in speeches. ">
+  <header><h3>Fed research digest</h3><p class="meta"><span>Daily, when published</span><span>Federal Reserve and regional banks</span></p></header>
+  <dl><dt>What it is</dt><dd>New research notes and papers from the Fed system, filtered to macro topics.</dd><dt>Why it matters</dt><dd class="why">Staff research shows what questions the Fed is working on and often previews the arguments that later appear in speeches.</dd></dl>
+</article>
+</section>
+  <section id="global" class="grp">
+  <div class="grp-head"><h2>Global macro</h2><p>The Sunday digest. The same six readings for the Eurozone, United Kingdom, China and Japan.</p></div>
+  <article class="m" data-text="cpi and core cpi (year over year) eurostat · ons · oecd · e-stat consumer price inflation over the past 12 months in each region. core leaves out energy and food. each central bank sets rates against its own inflation. when inflation paths split from the us, interest-rate gaps move, and those gaps drive the dollar and global bond yields. ">
+  <header><h3>CPI and core CPI (year over year)</h3><p class="meta"><span>Monthly</span><span>Eurostat · ONS · OECD · e-Stat</span></p></header>
+  <dl><dt>What it is</dt><dd>Consumer price inflation over the past 12 months in each region. Core leaves out energy and food.</dd><dt>Why it matters</dt><dd class="why">Each central bank sets rates against its own inflation. When inflation paths split from the US, interest-rate gaps move, and those gaps drive the dollar and global bond yields.</dd></dl>
+</article>
+<article class="m" data-text="gdp (year over year) eurostat · ons · oecd real output compared with the same quarter a year earlier. demand outside the us. it matters for the overseas revenue of us multinationals, including large pharma and medical-device companies with big european and asian sales. ">
+  <header><h3>GDP (year over year)</h3><p class="meta"><span>Quarterly</span><span>Eurostat · ONS · OECD</span></p></header>
+  <dl><dt>What it is</dt><dd>Real output compared with the same quarter a year earlier.</dd><dt>Why it matters</dt><dd class="why">Demand outside the US. It matters for the overseas revenue of US multinationals, including large pharma and medical-device companies with big European and Asian sales.</dd></dl>
+</article>
+<article class="m" data-text="unemployment rate eurostat · ons share of the labor force without work. tight labor markets keep wage growth and services inflation high, which is what holds the ecb and the bank of england back from cutting. ">
+  <header><h3>Unemployment rate</h3><p class="meta"><span>Monthly</span><span>Eurostat · ONS</span></p></header>
+  <dl><dt>What it is</dt><dd>Share of the labor force without work.</dd><dt>Why it matters</dt><dd class="why">Tight labor markets keep wage growth and services inflation high, which is what holds the ECB and the Bank of England back from cutting.</dd></dl>
+</article>
+<article class="m" data-text="business confidence oecd an index where 100 is the long-run average for that country. above 100 means firms are more upbeat than usual. a forward-looking read on hiring and investment plans, comparable across regions because every country is scaled the same way. ">
+  <header><h3>Business confidence</h3><p class="meta"><span>Monthly</span><span>OECD</span></p></header>
+  <dl><dt>What it is</dt><dd>An index where 100 is the long-run average for that country. Above 100 means firms are more upbeat than usual.</dd><dt>Why it matters</dt><dd class="why">A forward-looking read on hiring and investment plans, comparable across regions because every country is scaled the same way.</dd></dl>
+</article>
+<article class="m" data-text="policy rate ecb · bank of england · bank of japan the central bank&#x27;s main interest rate. the gap between these rates and the fed&#x27;s rate is the main driver of exchange rates. the bank of japan matters more than its size suggests: as it raises rates, japanese investors bring money home. ">
+  <header><h3>Policy rate</h3><p class="meta"><span>Shown with the date it last changed</span><span>ECB · Bank of England · Bank of Japan</span></p></header>
+  <dl><dt>What it is</dt><dd>The central bank&#x27;s main interest rate.</dd><dt>Why it matters</dt><dd class="why">The gap between these rates and the Fed&#x27;s rate is the main driver of exchange rates. The Bank of Japan matters more than its size suggests: as it raises rates, Japanese investors bring money home.</dd></dl>
+</article>
+<article class="m" data-text="government bond yields (2-year and 10-year) ecb · bank of england · cfets · fred what governments pay to borrow. the 2-year follows expected central-bank policy; the 10-year adds growth, inflation and debt concerns. change is shown since the end of last year. bond markets are linked. a rise in japanese or uk long yields tends to pull us long yields up too, and us long yields set the discount rate for equities. ">
+  <header><h3>Government bond yields (2-year and 10-year)</h3><p class="meta"><span>Daily or monthly</span><span>ECB · Bank of England · CFETS · FRED</span></p></header>
+  <dl><dt>What it is</dt><dd>What governments pay to borrow. The 2-year follows expected central-bank policy; the 10-year adds growth, inflation and debt concerns. Change is shown since the end of last year.</dd><dt>Why it matters</dt><dd class="why">Bond markets are linked. A rise in Japanese or UK long yields tends to pull US long yields up too, and US long yields set the discount rate for equities.</dd></dl>
+</article>
+</section>
+  <div class="note" id="regions"><b>Why these four regions</b><ul><li><b>Eurozone</b> The largest developed economy outside the US and a major market for US drug and device makers.</li><li><b>United Kingdom</b> The stickiest inflation among the large economies, and a gilt market that reacts sharply to budget news.</li><li><b>China</b> Weak prices at home are exported to the rest of the world through cheaper goods. Also a large market and supplier for pharma and medical technology.</li><li><b>Japan</b> Leaving decades of near-zero rates. Rising Japanese yields pull capital out of US and European bonds.</li></ul></div>
+  <p id="none" hidden>No measure matches that filter.</p>
+
+  <section id="reading" class="grp">
+    <div class="grp-head"><h2>Reading a post</h2></div>
+    <div class="note"><ul>
+      <li><b>Tier A or Tier B</b> is shown in the title of every release post.</li>
+      <li><b>A sigma figure</b> such as "0.3σ move" compares this month's change with the typical change over the past five years. One sigma or more is unusual, and a Tier B release then posts in full.</li>
+      <li><b>MoM annualized</b> is the one-month change scaled to a yearly rate. It shows the current pace; year over year shows the past 12 months.</li>
+      <li><b>In the global digest</b> each line gives the value, the period it covers, and the change from the previous reading. "pt" means percentage points.</li>
+      <li><b>A star</b> in the daily reminder marks the three priority topics: consumer spending, employment and real hourly earnings.</li>
+    </ul></div>
+  </section>
+</div>
+<script>
+(function () {
+  var q = document.getElementById("q"), items = [].slice.call(document.querySelectorAll(".m")),
+      groups = [].slice.call(document.querySelectorAll("section.grp")), count = document.getElementById("count"),
+      none = document.getElementById("none"), regions = document.getElementById("regions");
+  q.addEventListener("input", function () {
+    var t = q.value.trim().toLowerCase(), shown = 0;
+    items.forEach(function (el) { var ok = !t || el.dataset.text.indexOf(t) !== -1; el.hidden = !ok; if (ok) shown++; });
+    groups.forEach(function (g) { var ms = g.querySelectorAll(".m"); if (ms.length) g.hidden = !g.querySelector(".m:not([hidden])"); else g.hidden = !!t; });
+    regions.hidden = !!t;
+    none.hidden = shown !== 0;
+    count.textContent = t ? shown + " of " + items.length + " measures" : items.length + " measures";
+  });
+})();
+</script>
