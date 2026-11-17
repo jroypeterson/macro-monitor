@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "industrial_production",
   "family_display_name": "Industrial Production",
-  "period": "2026-09",
-  "period_label": "September 2026",
-  "posted_at": "2026-11-17T03:24:04.569235+00:00",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-17T19:37:13.945136+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-17T03:24:03.720713+00:00",
-  "latest_observation_period": "2026-09",
-  "expected_observation_period": "2026-09",
+  "source_fetched_at": "2026-11-17T19:37:12.582929+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,18 +19,18 @@
       "label": "Industrial Production Index",
       "primary": {
         "transform": "yoy_pct",
-        "value": 2.2451508832670886,
-        "raw_value": 103.9506
+        "value": 2.1496845963475453,
+        "raw_value": 103.3954
       },
       "also_display": [
         {
           "transform": "mom_pct",
-          "value": 0.662558198988239
+          "value": -0.43371999637924485
         }
       ],
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": 1.6154537233566302
+        "value": 2.1420702679308956
       },
       "display_unit": null,
       "definition": "Industrial Production (INDPRO): physical output of US factories, mines, and utilities -- the goods-producing side of the economy."
@@ -40,22 +40,22 @@
       "label": "Capacity Utilization",
       "primary": {
         "transform": "raw",
-        "value": 76.8504,
-        "raw_value": 76.8504
+        "value": 76.3633,
+        "raw_value": 76.3633
       },
       "also_display": [
         {
           "transform": "mom_chg",
-          "value": 0.43199999999998795
+          "value": -0.40960000000001173
         },
         {
           "transform": "yoy_chg",
-          "value": 0.8042999999999978
+          "value": 0.7438999999999965
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 76.4184
+        "value": 76.7729
       },
       "display_unit": "%",
       "definition": "Capacity Utilization (TCU): the share of total industrial capacity actually in use -- persistently high utilization signals capex needs and potential inflation pressure."
@@ -66,13 +66,13 @@
   "context": {
     "anchor_series": "INDPRO",
     "anchor_transform": "yoy_pct",
-    "zscore": 0.6523107885503097,
+    "zscore": 0.03173667299399427,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "indpro_10y_2026-09.png"
+    "main": "indpro_10y_2026-10.png"
   },
   "agency_pdf_url": null
 }
