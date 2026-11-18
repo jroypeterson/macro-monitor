@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.2",
+  "family_id": "housing_starts_and_permits",
+  "family_display_name": "Housing Starts & Permits",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-18T19:15:28.872808+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-18T19:15:27.508553+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "HOUST",
+      "label": "Housing starts (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.827965435978008,
+        "raw_value": 1309.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 9.907640638119219
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": -9.704321455648223
+      },
+      "display_unit": null,
+      "definition": "Housing Starts (HOUST): new residential construction projects begun in the month, annualized -- new housing supply coming online."
+    },
+    {
+      "id": "PERMIT",
+      "label": "Building permits (annualized rate)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": -8.67418899858956,
+        "raw_value": 1295.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": -7.3676680972818325
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": -3.185595567867039
+      },
+      "display_unit": null,
+      "definition": "Building Permits (PERMIT): permits issued for future residential construction -- the forward-looking companion to housing starts."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "HOUST",
+    "anchor_transform": "yoy_pct",
+    "zscore": 1.0396631555563618,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "housing_10y_2026-10.png"
+  },
+  "agency_pdf_url": null
+}
