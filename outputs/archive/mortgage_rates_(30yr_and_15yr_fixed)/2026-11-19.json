@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.2",
+  "family_id": "mortgage_rates_(30yr_and_15yr_fixed)",
+  "family_display_name": "Mortgage Rates (30yr & 15yr fixed)",
+  "period": "2026-11-19",
+  "period_label": "Week ending Nov 19, 2026",
+  "posted_at": "2026-11-19T19:22:03.572202+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-19T19:22:01.891736+00:00",
+  "latest_observation_period": "2026-11-19",
+  "expected_observation_period": "2026-11-19",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "MORTGAGE30US",
+      "label": "30-year fixed mortgage rate",
+      "primary": {
+        "transform": "raw",
+        "value": 7.28,
+        "raw_value": 7.28
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": 16.293929712460063
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": -0.5464480874316946
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 7.11
+      },
+      "display_unit": "%",
+      "definition": "30-Year Fixed Mortgage Rate (MORTGAGE30US): the average rate on the standard US home loan -- the affordability lever for the whole housing market."
+    },
+    {
+      "id": "MORTGAGE15US",
+      "label": "15-year fixed mortgage rate",
+      "primary": {
+        "transform": "raw",
+        "value": 6.66,
+        "raw_value": 6.66
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct_weekly",
+          "value": 20.216606498194945
+        },
+        {
+          "transform": "mom_pct_weekly",
+          "value": -0.29940119760478723
+        }
+      ],
+      "prior_primary": {
+        "transform": "raw",
+        "value": 6.45
+      },
+      "display_unit": "%",
+      "definition": "15-Year Fixed Mortgage Rate (MORTGAGE15US): average rate on the shorter standard loan -- mostly a refinance-demand read."
+    }
+  ],
+  "components": [],
+  "computed": [],
+  "context": {
+    "anchor_series": "MORTGAGE30US",
+    "anchor_transform": "yoy_pct_weekly",
+    "zscore": 0.509605278215996,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": []
+  },
+  "charts": {
+    "main": "mortgage_5y_2026-11-19.png"
+  },
+  "agency_pdf_url": null
+}
