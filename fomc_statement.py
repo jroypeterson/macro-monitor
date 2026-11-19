@@ -261,7 +261,7 @@ def _parse(raw: str, iso: str, sep: bool) -> StatementVerdict:
 def latest_meeting_on_or_before(today: date) -> "fomc.FOMCMeeting | None":
     """The FOMC meeting whose decision day is on/before `today` (i.e. the most
     recent statement)."""
-    past = [m for m in fomc.all_meetings() if m.end <= today]
+    past = [m for m in fomc.decision_meetings() if m.end <= today]
     return past[-1] if past else None
 
 
@@ -294,7 +294,7 @@ def build_statement_report(
         return None, "macro-monitor: no FOMC statement to report.", []
 
     current = fetch_statement(meeting.end, fetch=fetch)
-    prior_meeting = fomc.all_meetings()
+    prior_meeting = fomc.decision_meetings()   # redline vs the last STATEMENT
     prior_txt = ""
     prev = [m for m in prior_meeting if m.end < meeting.end]
     if prev:

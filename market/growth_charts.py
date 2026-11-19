@@ -2,7 +2,8 @@
 
   • growth.html — the six-figure trailing-3-year quarterly page (PROJECT_IDEAS #31):
     real GDP · real consumer spending (PCE) · industrial production · real capex ·
-    S&P 500 EPS · unemployment — each as a % change vs the prior year, by quarter.
+    S&P 500 EPS · unemployment — each as a % change vs the prior year, by quarter,
+    except unemployment (a rate), which is a change in percentage points.
   • growth_sp500_earnings.png — S&P 500 earnings YoY with a whole-economy
     corporate-profits companion (the *actual* half of #7; the FactSet forward
     overlay is a deferred enhancement).
@@ -37,11 +38,22 @@ def _q_label(ts: pd.Timestamp) -> str:
     return f"{ts.year} Q{(ts.month - 1) // 3 + 1}"
 
 
+def _unit_text(unit: str) -> tuple[str, str, str]:
+    """(value suffix, subtitle prefix, footer phrase) for a growth unit."""
+    if unit == "pp":
+        return "pp", "change vs prior year, percentage points", "YoY change in percentage points"
+    if unit == "pct":
+        return "%", "% change vs prior year", "YoY % change"
+    raise ValueError(f"unknown growth unit {unit!r}")
+
+
 def render_growth_bar(
     series: pd.Series, label: str, source: str, out: Path,
-    quarters: int = _TRAILING_QUARTERS,
+    quarters: int = _TRAILING_QUARTERS, unit: str = "pct",
 ) -> Path:
-    """One trailing-`quarters` YoY% bar chart (green up / red down, zero line)."""
+    """One trailing-`quarters` YoY bar chart (green up / red down, zero line), in
+    `unit`: "pct" (% change) or "pp" (percentage-point change, for rates)."""
+    suffix, subtitle, footer = _unit_text(unit)
     s = series.dropna().iloc[-quarters:]
     fig, ax = plt.subplots(figsize=DEFAULT_FIGSIZE, dpi=DEFAULT_DPI)
     x = list(range(len(s)))
@@ -49,20 +61,25 @@ def render_growth_bar(
            color=[_POS if v >= 0 else _NEG for v in s.values])
     ax.axhline(0, color="#444444", lw=1, zorder=2)
     for xi, v in zip(x, s.values):
-        ax.annotate(f"{v:+.1f}", (xi, v), textcoords="offset points",
+        ax.annotate(f"{v:+.1f}{'pp' if unit == 'pp' else ''}", (xi, v), textcoords="offset points",
                     xytext=(0, 4 if v >= 0 else -12), ha="center",
                     fontsize=8, color="#333333", weight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels([_q_label(d) for d in s.index], rotation=45, ha="right", fontsize=8)
     # Integer-percent tick locations so a small range (e.g. all bars 2–3.4%)
-    # doesn't render duplicate rounded labels (+2%, +2%, +3%).
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=7, integer=True))
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:+.0f}%"))
+    # doesn't render duplicate rounded labels (+2%, +2%, +3%). A pp series moves
+    # in tenths, so it gets fractional ticks with one decimal instead.
+    if unit == "pp":
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=7))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:+.1f}{suffix}"))
+    else:
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=7, integer=True))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:+.0f}{suffix}"))
     ax.margins(y=0.18)
-    ax.set_title(f"% change vs prior year · trailing {quarters // 4} years (quarterly)",
+    ax.set_title(f"{subtitle} · trailing {quarters // 4} years (quarterly)",
                  fontsize=9.5, color="#444444", loc="left")
     fig.suptitle(label, fontsize=13, fontweight="bold", x=0.5, y=0.99)
-    fig.text(0.5, 0.005, f"Source: {source}. YoY % change of the quarterly series.",
+    fig.text(0.5, 0.005, f"Source: {source}. {footer} of the quarterly series.",
              ha="center", fontsize=7.5, color="#999999")
     fig.tight_layout(rect=[0, 0.05, 1, 0.96])
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -147,7 +164,7 @@ def build_growth_page(
         if spec.key not in series:
             continue
         path = render_growth_bar(series[spec.key], spec.label, spec.source,
-                                 out_dir / f"growth_{spec.key}.png")
+                                 out_dir / f"growth_{spec.key}.png", unit=spec.unit)
         rendered[spec.key] = dict(title=spec.label, source=spec.source, path=path)
 
     # #7 — S&P 500 earnings YoY + corporate-profits companion + FactSet forward.
@@ -188,7 +205,7 @@ def _render_growth_gallery(rendered: dict[str, dict], out_path: Path) -> Path:
 <h1>Growth — year-over-year % change (quarterly)</h1>
 <p class="meta">Real GDP · real consumer spending (PCE) · industrial production · real capital
 spending · S&amp;P 500 EPS · unemployment — each as a % change versus the prior year, by quarter
-(trailing 3 years), plus S&amp;P 500 earnings growth vs whole-economy corporate profits.
+(trailing 3 years), except the unemployment rate, shown as a change in percentage points, plus S&amp;P 500 earnings growth vs whole-economy corporate profits.
 Sources: BEA, Federal Reserve Board, BLS, S&amp;P 500 (multpl.com). ·
 <a href="index.html">← market charts</a> · <a href="../index.html">↑ workspace hub</a> · {len(cards)} charts</p>
 {''.join(cards)}

@@ -22,6 +22,7 @@ import requests
 
 from . import client, predictit
 from .config import TRACKED
+from .history import HistoryUnreadable, read_json_state, write_json_atomic
 
 SEEN_PATH = Path(__file__).resolve().parent.parent / "data" / "predmarket_seen.json"
 _KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -78,21 +79,20 @@ def _is_tracked(title: str) -> bool:
     return any(spec.match and spec.match.lower() in t for spec in TRACKED)
 
 
-def load_seen(path: Path | None = None) -> set[str]:
+class SeenUnreadable(HistoryUnreadable):
+    """The seen-set exists but cannot be read; discovery must not overwrite it."""
+
+
+def load_seen(path: Path | None = None, *, strict: bool = False) -> set[str]:
     path = path or SEEN_PATH
-    if not path.exists():
-        return set()
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return set()
+    raw = read_json_state(path, strict=strict, empty=[], exc_type=SeenUnreadable,
+                          valid=lambda d: isinstance(d, list) and all(isinstance(s, str) for s in d))
     # Migrate legacy bare Polymarket slugs to the pm: prefix.
     return {(s if ":" in s else f"pm:{s}") for s in raw}
 
 
 def _save_seen(seen: set[str], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(sorted(seen), indent=0), encoding="utf-8")
+    write_json_atomic(path, json.dumps(sorted(seen), indent=0))
 
 
 def _kget(path: str, params: dict):
@@ -150,51 +150,68 @@ def _gather_kalshi(found: dict) -> None:
 
 # ---- build a NewMarket (with odds) for a newly-seen candidate ----
 
-def _build(src: str, ref, title: str, lane: str, min_volume: float) -> NewMarket | None:
+# `_build` says WHY it returned no market, so the caller can tell a failure worth
+# retrying next week (TRANSIENT: the fetch raised) from a final answer (FINAL).
+# Low-volume and Kalshi "no live market yet" stay FINAL on purpose (marked seen,
+# never surfaced): retrying them changes the weekly post and the API-call count,
+# which is JP's call, not a bug fix (fix plan 2026-11-18, #6 part B).
+OK, FINAL, TRANSIENT = "ok", "final", "transient"
+
+
+def _build(src: str, ref, title: str, lane: str,
+           min_volume: float) -> tuple[NewMarket | None, str]:
     if src == "polymarket":
         try:
             full = client.fetch_event(ref)
         except Exception:
-            return None
+            return None, TRANSIENT
         if not full or full.get("closed"):
-            return None
+            return None, FINAL
         vol = client._vol(full)
         if vol < min_volume:
-            return None
+            return None, FINAL
         outs = client._normalize(full)
         if not outs:
-            return None
+            return None, FINAL
         return NewMarket(title, f"https://polymarket.com/event/{ref}", lane, vol,
-                         str(full.get("endDate") or "")[:10], outs[0][0], outs[0][1], "polymarket")
+                         str(full.get("endDate") or "")[:10], outs[0][0], outs[0][1],
+                         "polymarket"), OK
     if src == "predictit":
         outs = predictit._outcomes(ref)
         if not outs:
-            return None
-        return NewMarket(title, ref.get("url", ""), lane, 0.0, "", outs[0][0], outs[0][1], "predictit")
+            return None, FINAL
+        return NewMarket(title, ref.get("url", ""), lane, 0.0, "", outs[0][0], outs[0][1],
+                         "predictit"), OK
     if src == "kalshi":
         try:
             mks = _kget("/markets", {"series_ticker": ref, "status": "open", "limit": "20"}).get("markets", [])
         except Exception:
-            return None
+            return None, TRANSIENT
         if not mks:
-            return None   # listed but no live market → not a real "open" yet
+            return None, FINAL   # listed but no live market → not a real "open" yet
         m = max(mks, key=lambda x: x.get("volume", 0) or 0)
         last = m.get("last_price")
         lead_p = (last / 100.0) if isinstance(last, (int, float)) else 0.0
         sub = m.get("yes_sub_title") or m.get("title") or "Yes"
         return NewMarket(title, f"https://kalshi.com/markets/{ref}", lane,
                          float(m.get("volume", 0) or 0), str(m.get("close_time") or "")[:10],
-                         sub, lead_p, "kalshi")
-    return None
+                         sub, lead_p, "kalshi"), OK
+    return None, FINAL
 
 
 def discover_new(now: datetime, *, min_volume: float = 10_000,
                  path: Path | None = None, max_surface: int = 14) -> list[NewMarket]:
     """Sweep all sources; return markets whose source-prefixed id we've never
-    seen. Each source seeds silently on its first appearance. Always persists
-    the updated seen-set."""
+    seen. Each source seeds silently on its first appearance.
+
+    An id enters the seen-set only when it was surfaced, silently seeded, not a
+    candidate, or got a FINAL rejection. A candidate whose fetch failed, or that
+    was cut by `max_surface`, stays unseen and is retried next run -- the set used
+    to be saved BEFORE the candidates were built, losing both for good. Saved
+    once, after the loop. Raises SeenUnreadable, writing nothing, if the file
+    exists but cannot be read."""
     path = path or SEEN_PATH
-    seen = load_seen(path)
+    seen = load_seen(path, strict=True)
     seeded = {pfx: any(u.startswith(pfx) for u in seen) for pfx in ("pm:", "pi:", "kalshi:")}
 
     found: dict[str, tuple] = {}
@@ -207,17 +224,23 @@ def discover_new(now: datetime, *, min_volume: float = 10_000,
         (uid, *meta) for uid, meta in found.items()
         if seeded[pfx_of[meta[0]]] and uid not in seen
     ]
-    seen.update(found.keys())
-    _save_seen(seen, path)
+    candidate_ids = {c[0] for c in new_candidates}
+    seen.update(u for u in found if u not in candidate_ids)   # seeds + already-seen
 
-    out: list[NewMarket] = []
+    built: list[tuple[str, NewMarket]] = []
     for uid, src, ref, title, lane in new_candidates:
-        nm = _build(src, ref, title, lane, min_volume)
-        if nm:
-            out.append(nm)
+        nm, why = _build(src, ref, title, lane, min_volume)
+        if nm is not None:
+            built.append((uid, nm))
+        elif why == FINAL:
+            seen.add(uid)
+        # TRANSIENT: left unseen, retried next run.
     # Polymarket (real volume) first, then by volume desc.
-    out.sort(key=lambda m: (m.source != "polymarket", -m.volume))
-    return out[:max_surface]
+    built.sort(key=lambda t: (t[1].source != "polymarket", -t[1].volume))
+    surfaced = built[:max_surface]
+    seen.update(uid for uid, _ in surfaced)   # cut by the cap -> stays unseen
+    _save_seen(seen, path)
+    return [nm for _, nm in surfaced]
 
 
 # ---- always-on HC/biotech watch (live snapshot, NOT gated by the seen-set) ----

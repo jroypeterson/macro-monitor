@@ -1,6 +1,8 @@
 """Year-over-year growth series — the data layer for the Markets "growth" views.
 
-Six headline figures, all expressed as **YoY % change**, quarterly:
+Six headline figures, year over year, quarterly — as **% change**, except the
+unemployment rate, which is itself a rate and so changes in **percentage points**
+(4.1% -> 4.4% is +0.3pp, never "+7.3%"; see README "never a relative %-of-a-%"):
 
   • Real GDP                              — BEA (FRED GDPC1)
   • Real Consumer Spending (PCE)          — BEA (FRED PCECC96)
@@ -28,6 +30,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from ..ahead_of_curve.charts import _lagged_by_a_year
+from ..ahead_of_curve.charts import yoy_pct as _yoy_pct_aligned
 from ..collectors.fred import FREDClient
 
 _MIRROR = Path(__file__).parent / "data"
@@ -46,6 +50,7 @@ class GrowthSeries:
     source: str            # agency label shown on the chart
     fred_id: str | None    # FRED series id, or None for multpl-sourced S&P 500 EPS
     note: str = ""
+    unit: str = "pct"      # "pct" = YoY % change; "pp" = YoY change in percentage points
 
 
 # Order matches JP's #31 list.
@@ -55,8 +60,13 @@ SERIES: list[GrowthSeries] = [
     GrowthSeries("industrial_production", "Industrial Production", "Federal Reserve Board", "INDPRO"),
     GrowthSeries("real_capex", "Real Capital Spending (nonres. fixed investment)", "BEA", "PNFIC1"),
     GrowthSeries("sp500_eps", "S&P 500 Earnings per Share", "S&P 500 (multpl.com)", None),
-    GrowthSeries("unemployment", "Unemployment Rate", "BLS", "UNRATE"),
+    GrowthSeries("unemployment", "Unemployment Rate", "BLS", "UNRATE", unit="pp"),
 ]
+
+# FRED ids that are themselves rates (a percent of something). Their YoY change
+# must be in percentage points; a test pins every SERIES entry in this set to "pp".
+RATE_SERIES = frozenset({"UNRATE", "U6RATE", "CIVPART", "EMRATIO", "FEDFUNDS",
+                         "DGS10", "DGS2", "MORTGAGE30US"})
 
 # Companion series for the S&P 500 earnings view (#7).
 CORPORATE_PROFITS = GrowthSeries(
@@ -71,14 +81,43 @@ def to_quarterly(s: pd.Series) -> pd.Series:
     Monthly series (industrial production, unemployment) take the quarter's
     last monthly value so a quarterly YoY is well-defined; already-quarterly
     series (GDP, PCE, capex, profits) are unchanged in substance.
+
+    A monthly series whose latest quarter is unfinished (its final month not yet
+    published) drops that quarter: `resample().last()` would otherwise label May's
+    value as Q2 — the 2026-06 page drew "2026 Q2" from May data.
     """
-    return s.dropna().resample("QE").last().dropna()
+    s = s.dropna()
+    q = s.resample("QE").last().dropna()
+    if len(s) >= 3 and len(q):
+        median_days = float(pd.Series((s.index[1:] - s.index[:-1]).days).median())
+        last_obs = s.index[-1]
+        if median_days <= 45 and last_obs.month != q.index[-1].month:
+            q = q.iloc[:-1]
+    return q
 
 
 def yoy_pct(quarterly: pd.Series) -> pd.Series:
-    """YoY % change of a quarterly series (vs the same quarter one year = 4q ago)."""
+    """YoY % change of a quarterly series vs the same quarter one year earlier.
+
+    Aligned by DATE, not by row position (was `q / q.shift(4)`, which reaches back
+    five quarters across any gap). Shared with ahead_of_curve.charts.yoy_pct, which
+    fixed the identical defect 2026-08-17."""
+    return _yoy_pct_aligned(quarterly)
+
+
+def yoy_pp(quarterly: pd.Series) -> pd.Series:
+    """YoY change in percentage points, for a series that is itself a rate
+    (unemployment 4.1 -> 4.4 = +0.3). Date-aligned like `yoy_pct`."""
     q = quarterly.dropna()
-    return ((q / q.shift(4) - 1.0) * 100.0).dropna()
+    return (q - _lagged_by_a_year(q)).dropna()
+
+
+def yoy_change(quarterly: pd.Series, unit: str) -> pd.Series:
+    if unit == "pp":
+        return yoy_pp(quarterly)
+    if unit == "pct":
+        return yoy_pct(quarterly)
+    raise ValueError(f"unknown growth unit {unit!r}")
 
 
 def fetch_sp500_eps_multpl() -> pd.Series:
@@ -136,7 +175,7 @@ def build_growth_series(
     client: FREDClient | None = None,
     prefer_live: bool = True,
 ) -> dict[str, pd.Series]:
-    """Fetch + transform each spec to a quarterly YoY% series.
+    """Fetch + transform each spec to a quarterly YoY series in `spec.unit`.
 
     Returns {key: yoy_series}. A spec that fails to fetch is skipped with a
     warning (no silent total failure) so one dead source doesn't blank the page.
@@ -147,7 +186,7 @@ def build_growth_series(
     for spec in specs:
         try:
             raw = _raw_series(spec, client, prefer_live)
-            out[spec.key] = yoy_pct(to_quarterly(raw))
+            out[spec.key] = yoy_change(to_quarterly(raw), spec.unit)
         except Exception as exc:  # noqa: BLE001
             print(f"[WARN] growth series {spec.key} failed: {type(exc).__name__}: {exc}")
     return out

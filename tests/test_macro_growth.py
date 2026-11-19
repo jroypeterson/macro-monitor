@@ -87,3 +87,83 @@ def test_build_growth_series_skips_a_failing_source(monkeypatch):
     # Every surviving series is a YoY% series (values, not levels):
     # last quarter (116) vs 4 quarters prior (103).
     assert out["real_gdp"].iloc[-1] == pytest.approx((116 / 103 - 1) * 100, rel=1e-9)
+
+
+# ---- units: a rate changes in percentage points (Codex 2026Q4 #2) ----
+
+def _monthly(values, start="2024-01-01"):
+    idx = pd.date_range(start, periods=len(values), freq="MS")
+    return pd.Series(values, index=idx, dtype=float)
+
+
+def test_unemployment_yoy_is_percentage_points_not_relative_percent():
+    """4.1% a year ago -> 4.4% now is +0.3pp. The published chart drew it +7.3%."""
+    unrate = _monthly([4.1] * 12 + [4.4] * 12)          # Jan 2024 .. Dec 2025
+
+    class _FakeClient:
+        def get_observations(self, series_id):
+            return unrate
+
+    spec = next(s for s in G.SERIES if s.key == "unemployment")
+    out = G.build_growth_series([spec], client=_FakeClient(), prefer_live=False)
+    assert out["unemployment"].iloc[-1] == pytest.approx(0.3)
+
+
+def test_gdp_spec_still_yields_percent():
+    gdp = _quarters([100, 101, 102, 103, 110])
+
+    class _FakeClient:
+        def get_observations(self, series_id):
+            return gdp
+
+    spec = next(s for s in G.SERIES if s.key == "real_gdp")
+    out = G.build_growth_series([spec], client=_FakeClient(), prefer_live=False)
+    assert out["real_gdp"].iloc[-1] == pytest.approx(10.0)
+
+
+def test_every_rate_series_declares_pp():
+    for spec in G.SERIES:
+        if spec.fred_id in G.RATE_SERIES:
+            assert spec.unit == "pp", spec.key
+
+
+def test_yoy_is_date_aligned_across_a_gap():
+    """A missing quarter must not make the lag reach back five quarters."""
+    s = _quarters([100, 101, 102, 103, 110, 111, 112, 113])
+    gapped = s.drop(s.index[2])                          # 2023 Q3 missing
+    yoy = G.yoy_pct(gapped)
+    assert s.index[6] not in yoy.index                   # 2024 Q3 has no partner
+    assert yoy[s.index[7]] == pytest.approx((113 / 103 - 1) * 100)
+    pp = G.yoy_pp(gapped)
+    assert pp[s.index[7]] == pytest.approx(10.0) and s.index[6] not in pp.index
+
+
+def test_unfinished_quarter_of_monthly_series_is_dropped():
+    s = _monthly([1, 2, 3, 4, 5])                        # Jan..May 2024
+    q = G.to_quarterly(s)
+    assert list(q.values) == [3.0]                       # Q2 (Apr-May only) dropped
+    full = _monthly([1, 2, 3, 4, 5, 6])
+    assert list(G.to_quarterly(full).values) == [3.0, 6.0]
+    # Quarterly FRED series are dated quarter-START; never treat them as unfinished.
+    qs = pd.Series([1.0, 2.0, 3.0], index=pd.to_datetime(["2024-01-01", "2024-04-01", "2024-07-01"]))
+    assert len(G.to_quarterly(qs)) == 3
+
+
+def test_render_growth_bar_pp_labels(tmp_path, monkeypatch):
+    from macro_monitor.market import growth_charts as GC
+    seen: list[str] = []
+    real_annotate = GC.plt.Axes.annotate
+
+    def spy(self, text, *a, **k):
+        seen.append(text)
+        return real_annotate(self, text, *a, **k)
+
+    monkeypatch.setattr(GC.plt.Axes, "annotate", spy)
+    titles: list[str] = []
+    real_title = GC.plt.Axes.set_title
+    monkeypatch.setattr(GC.plt.Axes, "set_title",
+                        lambda self, t, *a, **k: (titles.append(t), real_title(self, t, *a, **k))[1])
+    GC.render_growth_bar(_quarters([0.3, -0.1]), "Unemployment Rate", "BLS",
+                         tmp_path / "u.png", unit="pp")
+    assert seen == ["+0.3pp", "-0.1pp"]
+    assert "percentage points" in titles[0]

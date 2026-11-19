@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from macro_monitor import fomc
 
@@ -20,8 +20,36 @@ def test_next_meeting():
     # Today mid-June 2026 -> next decision is the Jun 16-17 meeting (end >= today).
     m = fomc.next_meeting(date(2026, 6, 15))
     assert m.start == date(2026, 6, 16) and m.end == date(2026, 6, 17)
-    # After the last known meeting -> None.
-    assert fomc.next_meeting(date(2027, 1, 1)) is None
+    # After the last known meeting -> None. Derived from the table, not a literal:
+    # this used to assert `next_meeting(date(2027, 1, 1)) is None`, which pinned
+    # the stale-calendar defect as expected behaviour.
+    past = fomc.last_known_meeting().end + timedelta(days=1)
+    assert fomc.next_meeting(past) is None
+    assert fomc.calendar_exhausted(past) is True
+    assert fomc.calendar_exhausted(date(2026, 11, 19)) is False
+
+
+def test_2027_calendar_present():
+    # Typed from federalreserve.gov fomccalendars.htm (read 2026-11-19).
+    m = fomc.next_meeting(date(2027, 1, 1))
+    assert m is not None and (m.start, m.end) == (date(2027, 1, 26), date(2027, 1, 27))
+    ends_2027 = [m.end for m in fomc.all_meetings() if m.end.year == 2027]
+    assert len(ends_2027) == 8 and ends_2027[-1] == date(2027, 11, 17)
+    # Decision day is always the Wednesday of a Tue-Wed meeting.
+    assert all(m.start.weekday() == 1 and m.end.weekday() == 2
+               for m in fomc.all_meetings() if m.start.year >= 2027)
+
+
+def test_in_blackout_january_2027():
+    # Jan 26-27 2027 (Tue-Wed): blackout Sat 1/16 through Thu 1/28.
+    assert fomc.in_blackout(date(2027, 1, 20)) is True
+    assert fomc.in_blackout(date(2027, 1, 15)) is False
+
+
+def test_week_ahead_exhausted_calendar_is_loud():
+    past = fomc.last_known_meeting().end + timedelta(days=1)
+    info = fomc.week_ahead(past, past + timedelta(days=6))
+    assert info["this_week"] and "no meeting after" in info["this_week"][0]
 
 
 def test_blackout_window_second_saturday_to_following_thursday():
@@ -55,3 +83,12 @@ def test_week_ahead_quiet_week_only_next_line():
     assert info["this_week"] == []
     assert info["next_line"] and "3/17" in info["next_line"]
     assert "(SEP)" in info["next_line"]  # March is a projections meeting
+
+
+def test_week_ahead_strategy_meeting_has_no_rate_decision():
+    info = fomc.week_ahead(date(2027, 10, 25), date(2027, 10, 31))
+    joined = " ".join(info["this_week"])
+    assert "strategy meeting" in joined and "no policy decision" in joined
+    assert "rate decision" not in joined
+    before = fomc.week_ahead(date(2027, 9, 20), date(2027, 9, 26))
+    assert "no policy decision" in (before["next_line"] or "")

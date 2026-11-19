@@ -766,7 +766,7 @@ def build_monthly_post(
         (r.release_date, r.release_time_et, ("⭐ " if r.priority else "") + r.display_name)
         for r in tier_a
     ]
-    for m in fomc.all_meetings():
+    for m in fomc.decision_meetings():
         if first <= m.end <= last:
             sep = " + projections (dot plot)" if m.projections else ""
             events.append((m.end, "14:00", f"🏛️ FOMC rate decision{sep}"))

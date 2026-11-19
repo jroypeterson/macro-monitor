@@ -271,7 +271,7 @@ def test_history_record_roundtrip_and_same_day_overwrite(tmp_path):
 def test_movers_wow_detected_above_threshold():
     now = datetime(2026, 6, 12, tzinfo=_UTC)
     r = _resolved("recession", "macro", False, [("Yes", 0.18)])
-    hist = {"recession": [{"date": "2026-06-05", "title": "x", "volume": 1,
+    hist = {"recession": [{"date": "2026-06-05", "title": "recession", "volume": 1,
                            "outcomes": [["Yes", 0.10]]}]}
     ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
     assert len(ms) == 1 and ms[0].period == "WoW" and round(ms[0].delta_pp) == 8
@@ -282,7 +282,7 @@ def test_movers_wow_detected_above_threshold():
 def test_movers_yoy_detected():
     now = datetime(2026, 6, 12, tzinfo=_UTC)
     r = _resolved("recession", "macro", False, [("Yes", 0.18)])
-    hist = {"recession": [{"date": "2025-06-13", "title": "x", "volume": 1,
+    hist = {"recession": [{"date": "2025-06-13", "title": "recession", "volume": 1,
                            "outcomes": [["Yes", 0.50]]}]}
     ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
     assert ms and ms[0].period == "YoY" and round(ms[0].delta_pp) == -32
@@ -291,7 +291,7 @@ def test_movers_yoy_detected():
 def test_movers_multi_outcome_matches_by_label():
     now = datetime(2026, 6, 12, tzinfo=_UTC)
     r = _resolved("midterms", "macro", False, [("Dems Sweep", 0.44), ("R Sweep", 0.17)])
-    hist = {"midterms": [{"date": "2026-06-05", "title": "x", "volume": 1,
+    hist = {"midterms": [{"date": "2026-06-05", "title": "midterms", "volume": 1,
                           "outcomes": [["Dems Sweep", 0.30], ["R Sweep", 0.16]]}]}
     ms = HIST.movers([r], now, hist=hist, threshold_pp=5)
     assert len(ms) == 1 and ms[0].outcome == "Dems Sweep" and round(ms[0].delta_pp) == 14
@@ -501,3 +501,177 @@ def test_every_subsection_title_has_a_rule_under_it():
     for i in titles:
         assert blocks[i + 1]["type"] == "divider", blocks[i]["text"]["text"]
     assert sum(b["type"] == "divider" for b in blocks) == len(titles), "a rule only under a title"
+
+
+# ---- Codex 2026Q4 #4: a delta only between snapshots of the SAME contract ----
+
+def _fed(title, yes):
+    return Resolved(key="fed_meeting", label="Fed", lane="macro", biotech=False, ok=True,
+                    title=title, url="https://polymarket.com/event/x", volume=1e6,
+                    end_date="2026-12-31", outcomes=[("Yes", yes)])
+
+
+def test_movers_skip_a_rolled_contract():
+    now = datetime(2026, 7, 3, tzinfo=_UTC)
+    hist = {"fed_meeting": [{"date": "2026-06-26", "title": "Fed Decision in June?",
+                             "volume": 1, "outcomes": [["Yes", 0.10]]}]}
+    assert HIST.movers([_fed("Fed Decision in July?", 0.40)], now, hist=hist) == []
+    ms = HIST.movers([_fed("Fed Decision in June?", 0.40)], now, hist=hist)
+    assert len(ms) == 1 and round(ms[0].delta_pp) == 30
+
+
+def test_history_snapshot_stores_url(tmp_path):
+    p = tmp_path / "h.json"
+    HIST.record([_fed("Fed Decision in July?", 0.4)], datetime(2026, 7, 3, tzinfo=_UTC), path=p)
+    assert HIST.load(p)["fed_meeting"][-1]["url"] == "https://polymarket.com/event/x"
+
+
+# ---- Codex 2026Q4 #5: an unreadable state file is never overwritten ----
+
+def test_record_refuses_to_overwrite_corrupt_history(tmp_path):
+    p = tmp_path / "h.json"
+    corrupt = b'{"recession": [{"date": "2026-06-0'
+    p.write_bytes(corrupt)
+    with pytest.raises(HIST.HistoryUnreadable):
+        HIST.record([_resolved("recession", "macro", False, [("Yes", 0.2)])],
+                    datetime(2026, 6, 12, tzinfo=_UTC), path=p)
+    assert p.read_bytes() == corrupt
+    assert HIST.load(p) == {}                       # lenient read for movers still works
+
+
+def test_record_creates_missing_history(tmp_path):
+    p = tmp_path / "sub" / "h.json"
+    HIST.record([_resolved("recession", "macro", False, [("Yes", 0.2)])],
+                datetime(2026, 6, 12, tzinfo=_UTC), path=p)
+    assert HIST.load(p)["recession"][-1]["outcomes"] == [["Yes", 0.2]]
+    assert [x.name for x in p.parent.iterdir()] == ["h.json"]   # no temp left behind
+
+
+def test_discover_new_refuses_to_overwrite_corrupt_seen(tmp_path, monkeypatch):
+    p = tmp_path / "seen.json"
+    corrupt = b'["pm:a", "pm:'
+    p.write_bytes(corrupt)
+    _polymarket_is_the_only_source(monkeypatch)
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "FDA approves NewDrug Z?", "slug": "z"}])
+    with pytest.raises(DISC.SeenUnreadable):
+        DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p)
+    assert p.read_bytes() == corrupt
+
+
+def test_cmd_pred_markets_corrupt_history_posts_but_fails_red(tmp_path, monkeypatch):
+    """The rundown still goes out (it needs no history); the run is red so the
+    workflow's commit step is skipped; the corrupt file is untouched."""
+    import argparse
+
+    from macro_monitor import cli
+    from macro_monitor.predmarkets import post as POST
+    from macro_monitor.predmarkets import resolve as RESOLVE
+
+    hp, sp = tmp_path / "h.json", tmp_path / "seen.json"
+    hp.write_bytes(b"{not json")
+    monkeypatch.setattr(HIST, "HISTORY_PATH", hp)
+    monkeypatch.setattr(DISC, "SEEN_PATH", sp)
+    monkeypatch.setattr(RESOLVE, "resolve_all",
+                        lambda tracked: [_resolved("recession", "macro", False, [("Yes", 0.2)])])
+    monkeypatch.setattr(DISC, "discover_new", lambda now: [])
+    monkeypatch.setattr(DISC, "hc_watch", lambda: [])
+    monkeypatch.setattr(POST, "write_readable", lambda html: tmp_path / "out.html")
+    posted = []
+    monkeypatch.setattr(POST, "post_slack",
+                        lambda blocks, text, dry_run: (posted.append(text), (True, "ok"))[1])
+    rc = cli.cmd_pred_markets(argparse.Namespace(dry_run=False))
+    assert rc == 1
+    assert len(posted) == 1
+    assert hp.read_bytes() == b"{not json"
+
+
+# ---- Codex 2026Q4 #6: an id is seen only once surfaced or finally rejected ----
+
+def _pm_event(slug, vol=50_000, closed=False):
+    return {"title": f"FDA approves {slug}?", "slug": slug, "closed": closed,
+            "volume": vol, "endDate": "2027-12-31",
+            "markets": [{"outcomes": '["Yes","No"]', "outcomePrices": '["0.3","0.7"]'}]}
+
+
+def _seeded(tmp_path):
+    p = tmp_path / "seen.json"
+    p.write_text('["pm:already-here"]', encoding="utf-8")   # Polymarket already seeded
+    return p
+
+
+def test_discovery_retries_after_a_transient_fetch_failure(tmp_path, monkeypatch):
+    p = _seeded(tmp_path)
+    _polymarket_is_the_only_source(monkeypatch)
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "FDA approves NewDrug Z?", "slug": "newdrug-z"}])
+
+    def boom(slug):
+        raise RuntimeError("timeout")
+
+    monkeypatch.setattr(DISC.client, "fetch_event", boom)
+    assert DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p) == []
+    assert "pm:newdrug-z" not in DISC.load_seen(p)
+    monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: _pm_event(slug))
+    out = DISC.discover_new(datetime(2026, 6, 26, tzinfo=_UTC), path=p)
+    assert [m.url for m in out] == ["https://polymarket.com/event/newdrug-z"]
+    assert "pm:newdrug-z" in DISC.load_seen(p)
+
+
+def test_discovery_cap_defers_the_rest_to_next_run(tmp_path, monkeypatch):
+    p = _seeded(tmp_path)
+    _polymarket_is_the_only_source(monkeypatch)
+    slugs = [f"drug-{i:02d}" for i in range(16)]
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": f"FDA approves {s}?", "slug": s} for s in slugs])
+    vols = {s: 100_000 - i for i, s in enumerate(slugs)}
+    monkeypatch.setattr(DISC.client, "fetch_event", lambda slug: _pm_event(slug, vols[slug]))
+    run1 = DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p, max_surface=14)
+    run2 = DISC.discover_new(datetime(2026, 6, 26, tzinfo=_UTC), path=p, max_surface=14)
+    run3 = DISC.discover_new(datetime(2026, 7, 3, tzinfo=_UTC), path=p, max_surface=14)
+    u1, u2 = {m.url for m in run1}, {m.url for m in run2}
+    assert len(u1) == 14 and len(u2) == 2 and not (u1 & u2)
+    assert run3 == []
+
+
+def test_discovery_closed_market_is_never_retried(tmp_path, monkeypatch):
+    p = _seeded(tmp_path)
+    _polymarket_is_the_only_source(monkeypatch)
+    monkeypatch.setattr(DISC.client, "search_events",
+                        lambda term: [{"title": "FDA approves Old Drug?", "slug": "old"}])
+    calls = []
+    monkeypatch.setattr(DISC.client, "fetch_event",
+                        lambda slug: (calls.append(slug), _pm_event(slug, closed=True))[1])
+    DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p)
+    DISC.discover_new(datetime(2026, 6, 26, tzinfo=_UTC), path=p)
+    assert calls == ["old"]
+    assert "pm:old" in DISC.load_seen(p)
+
+
+def test_wrong_shape_state_is_unreadable_not_empty(tmp_path, monkeypatch):
+    """Codex R2: valid JSON of the wrong shape (a bare string) iterated into
+    one-character ids and was then written back."""
+    p = tmp_path / "seen.json"
+    p.write_text('"pm:foo"', encoding="utf-8")
+    _polymarket_is_the_only_source(monkeypatch)
+    monkeypatch.setattr(DISC.client, "search_events", lambda term: [])
+    with pytest.raises(DISC.SeenUnreadable):
+        DISC.discover_new(datetime(2026, 6, 19, tzinfo=_UTC), path=p)
+    assert p.read_text(encoding="utf-8") == '"pm:foo"'
+    h = tmp_path / "h.json"
+    h.write_text('["not", "a", "dict"]', encoding="utf-8")
+    with pytest.raises(HIST.HistoryUnreadable):
+        HIST.record([_resolved("recession", "macro", False, [("Yes", 0.2)])],
+                    datetime(2026, 6, 12, tzinfo=_UTC), path=h)
+
+
+def test_movers_same_title_different_url_is_a_roll():
+    """Codex R2: two contracts can share a title; the URL decides when stored."""
+    now = datetime(2026, 7, 3, tzinfo=_UTC)
+    cur = _fed("Fed decision?", 0.40)
+    hist = {"fed_meeting": [{"date": "2026-06-26", "title": "Fed decision?",
+                             "url": "https://polymarket.com/event/june", "volume": 1,
+                             "outcomes": [["Yes", 0.10]]}]}
+    assert HIST.movers([cur], now, hist=hist) == []
+    hist["fed_meeting"][0]["url"] = cur.url
+    assert len(HIST.movers([cur], now, hist=hist)) == 1

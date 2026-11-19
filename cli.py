@@ -1231,6 +1231,15 @@ def cmd_fomc_statement(args: argparse.Namespace) -> int:
 
     today = _date.fromisoformat(args.date) if args.date else fs._now_et().date()
     meeting = fs.due_meeting(today)
+    if meeting is None and fs.fomc.calendar_exhausted(today):
+        # A stale hardcoded calendar is not a quiet Fed. Before 2027 dates were
+        # added, every decision after 2026-12-09 would have printed "No FOMC
+        # decision owed" and exited 0 — a green run that never posts again.
+        last = fs.fomc.last_known_meeting()
+        print(f"::error::FOMC calendar exhausted: the last known meeting is "
+              f"{last.label()} (decision {last.end.isoformat()}) and {today} is "
+              "past it. Add the Fed's next meeting dates to fomc.py MEETINGS.")
+        return 1
     if meeting is None:
         print(f"  No FOMC decision owed on {today} (none in the last "
               f"{fs.LOOKBACK_DAYS} days).", file=sys.stderr)
@@ -1613,10 +1622,24 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
 
     now = datetime.now(timezone.utc)
     resolved = resolve_all(TRACKED)
-    HIST.record(resolved, now)                       # append today's snapshot
-    movers = HIST.movers(resolved, now)              # WoW/YoY large shifts
+    # A corrupt state file is an error that must not be followed by a write: it
+    # used to read as {} and be overwritten with one day of history. Report it,
+    # still post the rundown (it does not need history), and fail the run so the
+    # commit step is skipped and the file is left as-is for inspection.
+    state_errors: list[str] = []
+    try:
+        HIST.record(resolved, now)                   # append today's snapshot
+        movers = HIST.movers(resolved, now)          # WoW/YoY large shifts
+    except HIST.HistoryUnreadable as e:
+        print(f"::error::prediction-market history unreadable, not rewritten: {e}")
+        state_errors.append(str(e))
+        movers = []
     try:
         new_markets = DISC.discover_new(now)         # newly-opened relevant markets
+    except DISC.SeenUnreadable as e:
+        print(f"::error::prediction-market seen-set unreadable, not rewritten: {e}")
+        state_errors.append(str(e))
+        new_markets = []
     except Exception as e:                            # discovery is best-effort
         print(f"[warn] discovery failed: {type(e).__name__}: {e}", file=sys.stderr)
         new_markets = []
@@ -1641,6 +1664,8 @@ def cmd_pred_markets(args: argparse.Namespace) -> int:
     # A live post that did not land fails the run. It used to return 0, so a
     # rejected post (channel_not_found) looked like a healthy weekly lane.
     if not args.dry_run and not ok:
+        return 1
+    if state_errors:
         return 1
     return 0
 

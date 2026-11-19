@@ -37,13 +37,17 @@ class FOMCMeeting:
     start: date          # first day of the 2-day meeting
     end: date            # decision day — statement at 2:00pm ET
     projections: bool    # SEP / dot-plot meeting (quarterly: Mar/Jun/Sep/Dec)
+    # False for a meeting with no policy decision or statement (the Oct 2027
+    # strategy meeting). Decision consumers must use `decision_meetings()`.
+    decision: bool = True
 
     def label(self) -> str:
         return f"{_md(self.start)}–{_md(self.end)}"
 
 
-def _m(start: str, end: str, projections: bool) -> FOMCMeeting:
-    return FOMCMeeting(date.fromisoformat(start), date.fromisoformat(end), projections)
+def _m(start: str, end: str, projections: bool, *, decision: bool = True) -> FOMCMeeting:
+    return FOMCMeeting(date.fromisoformat(start), date.fromisoformat(end), projections,
+                       decision)
 
 
 # Source: federalreserve.gov FOMC calendars. Decision = second day, 2pm ET.
@@ -57,7 +61,28 @@ MEETINGS: list[FOMCMeeting] = [
     _m("2026-09-15", "2026-09-16", True),
     _m("2026-10-27", "2026-10-28", False),
     _m("2026-12-08", "2026-12-09", True),
-    # 2027 dates not yet published by the Fed — add here when released.
+    # 2027 — typed from federalreserve.gov/monetarypolicy/fomccalendars.htm, read
+    # directly 2026-11-19 (page "Last Update: November 18, 2026"). The page marks
+    # NO 2027 meeting with the Summary-of-Economic-Projections asterisk yet (2026
+    # meetings carry it), so `projections` is False on all eight: the page did not
+    # mark them, and inferring the usual Mar/Jun/Sep/Dec pattern is not ours to do
+    # here. Note also: the page lists no December 2027 meeting — November 16-17 is
+    # the last, and October is labelled "Monetary Policy Strategy Meeting".
+    _m("2027-01-26", "2027-01-27", False),
+    _m("2027-03-16", "2027-03-17", False),
+    _m("2027-04-27", "2027-04-28", False),
+    _m("2027-06-08", "2027-06-09", False),
+    _m("2027-07-27", "2027-07-28", False),
+    _m("2027-09-14", "2027-09-15", False),
+    # Oct 26-27: NO policy decision. Fed press release 2026-11-12
+    # (monetary20261112a.htm): decisions "as usual on the second day of each
+    # meeting, except the October 26-27 meeting. That meeting will be dedicated
+    # to the discussion of broad monetary policy strategy issues."
+    _m("2027-10-26", "2027-10-27", False, decision=False),
+    _m("2027-11-16", "2027-11-17", False),
+    # 2028 — the same page's note: "A two-day meeting is scheduled for January
+    # 25-26, 2028." Without it the calendar would be exhausted from 2027-11-18.
+    _m("2028-01-25", "2028-01-26", False),
 ]
 
 
@@ -72,6 +97,23 @@ def next_meeting(today: date) -> FOMCMeeting | None:
         if m.end >= today:
             return m
     return None
+
+
+def decision_meetings() -> list[FOMCMeeting]:
+    """Meetings that end in a policy decision + 2pm statement."""
+    return [m for m in all_meetings() if m.decision]
+
+
+def calendar_exhausted(today: date) -> bool:
+    """True when the hardcoded calendar has no meeting on/after `today`.
+
+    That is a stale table, not a quiet Fed: every caller must say so loudly
+    rather than read it as "no meeting / nothing owed / not in blackout"."""
+    return next_meeting(today) is None
+
+
+def last_known_meeting() -> FOMCMeeting:
+    return all_meetings()[-1]
 
 
 def meeting_after(meeting: FOMCMeeting) -> FOMCMeeting | None:
@@ -113,11 +155,22 @@ def week_ahead(today: date, week_end: date) -> dict:
     res: dict = {"this_week": [], "next_line": None}
     m = next_meeting(today)
     if m is None:
+        last = last_known_meeting()
+        res["this_week"].append(
+            f"⚠️ FOMC calendar has no meeting after {last.end.isoformat()} — "
+            "add the Fed's next dates to macro_monitor/fomc.py (blackout and "
+            "decision-day lines are missing until then)"
+        )
         return res
 
     # Meeting overlapping this week?
     meeting_this_week = m.start <= week_end and m.end >= today
-    if meeting_this_week:
+    if meeting_this_week and not m.decision:
+        res["this_week"].append(
+            f"🏛️ *FOMC strategy meeting* {_wd(m.start)} {_md(m.start)}–{_wd(m.end)} {_md(m.end)} "
+            f"— no policy decision or statement"
+        )
+    elif meeting_this_week:
         sep = " + Summary of Economic Projections (dot plot)" if m.projections else ""
         res["this_week"].append(
             f"🏛️ *FOMC meeting* {_wd(m.start)} {_md(m.start)}–{_wd(m.end)} {_md(m.end)} "
@@ -144,6 +197,8 @@ def week_ahead(today: date, week_end: date) -> dict:
     nxt = meeting_after(m) if meeting_this_week else m
     if nxt is not None:
         sep = " (SEP)" if nxt.projections else ""
+        if not nxt.decision:
+            sep = " (strategy meeting, no policy decision)"
         res["next_line"] = (
             f"🏛️ Next FOMC meeting: {_wd(nxt.start)} {_md(nxt.start)}–{_md(nxt.end)}{sep}"
         )

@@ -286,3 +286,34 @@ def test_analysed_is_false_by_default_so_a_new_failure_path_is_inert(harness):
         "has_text defaulting True is exactly why it could not serve as this "
         "guard -- the two fields answer different questions"
     )
+
+
+def test_exhausted_calendar_fails_red_without_post(harness):
+    """Past the last hardcoded meeting (+ lookback) is a stale table, not a quiet
+    Fed. It used to print "No FOMC decision owed" and exit 0 -- after 2026-12-09
+    every decision would have been skipped on a green run."""
+    last = fs.fomc.last_known_meeting()
+    past = last.end + _dt.timedelta(days=fs.LOOKBACK_DAYS + 5)
+    harness["now"] = _dt.datetime(past.year, past.month, past.day, 15, 0, tzinfo=ET)
+    assert cli.cmd_fomc_statement(_args()) == 1
+    assert harness["posts"] == []
+
+
+def test_january_2027_decision_is_owed():
+    """The first decision the 2026-only calendar would have missed."""
+    m = fs.due_meeting(_dt.date(2027, 1, 27))
+    assert m is not None and m.end == _dt.date(2027, 1, 27)
+
+
+def test_strategy_meeting_is_not_a_decision(monkeypatch):
+    """Codex R1: Oct 26-27 2027 has no policy decision or statement (Fed press
+    release 2026-11-12). It must not be owed a post, nor be the redline base."""
+    assert fs.due_meeting(_dt.date(2027, 10, 27)) is None
+    assert fs.latest_meeting_on_or_before(_dt.date(2027, 10, 28)).end == _dt.date(2027, 9, 15)
+    fetched: list = []
+    monkeypatch.setattr(fs, "fetch_statement", lambda d, fetch=None: (fetched.append(d), "text")[1])
+    monkeypatch.setattr(fs, "analyze_statement",
+                        lambda cur, prior, d, sep=False, client=None, model=None:
+                        fs.StatementVerdict(decision_date=d.isoformat(), sep=sep, has_text=True))
+    fs.build_statement_report(on_date=_dt.date(2027, 11, 17))
+    assert fetched == [_dt.date(2027, 11, 17), _dt.date(2027, 9, 15)]

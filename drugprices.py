@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .ahead_of_curve.charts import yoy_pct as _yoy_pct_aligned
 from .collectors.fred import FREDClient
 from .market import charts as C
 
@@ -32,7 +33,16 @@ PPI_PHARMA_MED = "PCU32543254"             # producer: pharmaceutical & medicine
 
 
 def _yoy(s: pd.Series) -> pd.Series:
-    return (s.dropna().pct_change(12) * 100).dropna()
+    """12-month % change paired by DATE. Was `dropna().pct_change(12)`, which
+    lags by ROWS: BLS published no October 2025 CPI, so for the twelve prints
+    after the gap the CPI line was a 13-month change (off by up to 1.2pp, sign
+    flipped in March 2026 on the sibling CUSR0000SAM1). A point with no partner
+    a year earlier is dropped, so the CPI line can end before the PPI lines."""
+    return _yoy_pct_aligned(s)
+
+
+def _latest(label: str, s: pd.Series) -> str:
+    return f"{label} {s.iloc[-1]:+.1f}% ({s.index[-1]:%b %Y})"
 
 
 def build(out_dir: Path = _OUT) -> dict[str, Path]:
@@ -46,7 +56,7 @@ def build(out_dir: Path = _OUT) -> dict[str, Path]:
     rendered["drug_inflation"] = dict(
         title="Drug Price Inflation — Consumer vs Producer (YoY)",
         sub="Consumer drug+supply prices (CPI) vs producer pharma prices (PPI), year-over-year. "
-            f"Latest: CPI commodities {cpi.iloc[-1]:+.1f}%, PPI pharma prep {ppi_prep.iloc[-1]:+.1f}%.",
+            f"Latest: {_latest('CPI commodities', cpi)}, {_latest('PPI pharma prep', ppi_prep)}.",
         path=C.render_line(
             {"CPI Medical care commodities": cpi,
              "PPI Pharmaceutical preparation mfg": ppi_prep,

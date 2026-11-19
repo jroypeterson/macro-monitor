@@ -165,7 +165,8 @@ python -m macro_monitor.cli market-charts
 
 # YoY growth views -> readable/market/growth.html:
 #  • six trailing-3yr quarterly bar charts (real GDP/PCE/IP/capex [BEA], industrial
-#    production [FRB], unemployment [BLS], S&P 500 EPS [multpl.com]) — each % change vs prior year
+#    production [FRB], unemployment [BLS], S&P 500 EPS [multpl.com]) — each % change vs prior year,
+#    except unemployment (a rate): change vs prior year in percentage points
 #  • S&P 500 earnings: reported-TTM EPS YoY (multpl.com) + corporate-profits YoY (BEA, FRED CP)
 #    companion + FactSet Earnings Insight forward-consensus overlay
 python -m macro_monitor.cli growth
