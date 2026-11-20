@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "umich_consumer_sentiment",
   "family_display_name": "UMich Consumer Sentiment",
-  "period": "2026-09",
-  "period_label": "September 2026",
-  "posted_at": "2026-11-20T02:02:23.652149+00:00",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-20T18:59:16.157875+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-20T02:02:22.737848+00:00",
-  "latest_observation_period": "2026-09",
-  "expected_observation_period": "2026-09",
+  "source_fetched_at": "2026-11-20T18:59:14.888101+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "Consumer Sentiment Index",
       "primary": {
         "transform": "raw",
-        "value": 48.1,
-        "raw_value": 48.1
+        "value": 48.0,
+        "raw_value": 48.0
       },
       "also_display": [
         {
           "transform": "yoy_pct",
-          "value": -12.704174228675136
+          "value": -10.447761194029848
         },
         {
           "transform": "mom_chg",
-          "value": -3.6000000000000014
+          "value": -0.10000000000000142
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 51.7
+        "value": 48.1
       },
       "display_unit": null,
       "definition": "University of Michigan Consumer Sentiment (UMCSENT): monthly survey of how households feel about their finances and the economy -- soft data, but a leading read on spending willingness."
@@ -45,14 +45,14 @@
       "id": "MICH",
       "label": "1y inflation expectations",
       "transform": "raw",
-      "value": 4.6,
+      "value": 4.7,
       "prior": {
         "transform": "raw",
-        "value": 4.0
+        "value": 4.6
       },
       "prior_3m": {
         "transform": "raw",
-        "value": 4.6
+        "value": 4.2
       },
       "tags": [],
       "definition": null
@@ -62,13 +62,13 @@
   "context": {
     "anchor_series": "UMCSENT",
     "anchor_transform": "raw",
-    "zscore": -0.7348567905552645,
+    "zscore": 0.06800454265742917,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "umich_10y_2026-09.png"
+    "main": "umich_10y_2026-10.png"
   },
   "agency_pdf_url": null
 }
