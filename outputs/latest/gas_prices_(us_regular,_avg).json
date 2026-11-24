@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "gas_prices_(us_regular,_avg)",
   "family_display_name": "Gas Prices (US Regular, avg)",
-  "period": "2026-11-16",
-  "period_label": "Week ending Nov 16, 2026",
-  "posted_at": "2026-11-24T05:09:20.159057+00:00",
+  "period": "2026-11-23",
+  "period_label": "Week ending Nov 23, 2026",
+  "posted_at": "2026-11-24T21:02:31.731461+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-24T05:09:19.102326+00:00",
-  "latest_observation_period": "2026-11-16",
-  "expected_observation_period": "2026-11-16",
+  "source_fetched_at": "2026-11-24T21:02:31.049066+00:00",
+  "latest_observation_period": "2026-11-23",
+  "expected_observation_period": "2026-11-23",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,22 +19,22 @@
       "label": "US Regular ($/gal)",
       "primary": {
         "transform": "raw",
-        "value": 3.805,
-        "raw_value": 3.805
+        "value": 3.642,
+        "raw_value": 3.642
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": 24.265186152841302
+          "value": 18.980725253185238
         },
         {
           "transform": "mom_pct_weekly",
-          "value": -11.181139122315587
+          "value": -14.687280393534785
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 3.995
+        "value": 3.805
       },
       "display_unit": null,
       "definition": "Regular Gasoline Price (GASREGW): average US pump price per gallon, weekly -- the most visible household cost; moves consumer sentiment and headline CPI."
@@ -45,13 +45,13 @@
   "context": {
     "anchor_series": "GASREGW",
     "anchor_transform": "yoy_pct_weekly",
-    "zscore": -2.063785142185587,
+    "zscore": -1.6675952534327108,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "gas_5y_2026-11-16.png"
+    "main": "gas_5y_2026-11-23.png"
   },
   "agency_pdf_url": null
 }

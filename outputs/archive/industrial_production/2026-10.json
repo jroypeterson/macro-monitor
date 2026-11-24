@@ -4,9 +4,9 @@
   "family_display_name": "Industrial Production",
   "period": "2026-10",
   "period_label": "October 2026",
-  "posted_at": "2026-11-24T05:08:44.017817+00:00",
+  "posted_at": "2026-11-24T21:01:46.532045+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-24T05:08:42.065776+00:00",
+  "source_fetched_at": "2026-11-24T21:01:42.731994+00:00",
   "latest_observation_period": "2026-10",
   "expected_observation_period": "2026-10",
   "is_stale": false,
@@ -19,18 +19,18 @@
       "label": "Industrial Production Index",
       "primary": {
         "transform": "yoy_pct",
-        "value": 2.1496845963475453,
-        "raw_value": 103.3954
+        "value": 1.6593883857727532,
+        "raw_value": 102.2421
       },
       "also_display": [
         {
           "transform": "mom_pct",
-          "value": -0.43371999637924485
+          "value": -0.4250159478371818
         }
       ],
       "prior_primary": {
         "transform": "yoy_pct",
-        "value": 2.1420702679308956
+        "value": 1.67265244931889
       },
       "display_unit": null,
       "definition": "Industrial Production (INDPRO): physical output of US factories, mines, and utilities -- the goods-producing side of the economy."
@@ -40,22 +40,22 @@
       "label": "Capacity Utilization",
       "primary": {
         "transform": "raw",
-        "value": 76.3633,
-        "raw_value": 76.3633
+        "value": 76.7608,
+        "raw_value": 76.7608
       },
       "also_display": [
         {
           "transform": "mom_chg",
-          "value": -0.40960000000001173
+          "value": -0.4358000000000004
         },
         {
           "transform": "yoy_chg",
-          "value": 0.7438999999999965
+          "value": 0.22440000000000282
         }
       ],
       "prior_primary": {
         "transform": "raw",
-        "value": 76.7729
+        "value": 77.1966
       },
       "display_unit": "%",
       "definition": "Capacity Utilization (TCU): the share of total industrial capacity actually in use -- persistently high utilization signals capex needs and potential inflation pressure."
@@ -66,7 +66,7 @@
   "context": {
     "anchor_series": "INDPRO",
     "anchor_transform": "yoy_pct",
-    "zscore": 0.03173667299399427,
+    "zscore": 0.01998930067570385,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
