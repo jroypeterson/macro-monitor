@@ -4,9 +4,9 @@
   "family_display_name": "Housing Starts & Permits",
   "period": "2026-10",
   "period_label": "October 2026",
-  "posted_at": "2026-11-25T03:57:12.863422+00:00",
+  "posted_at": "2026-11-25T20:25:25.280764+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-25T03:57:11.926362+00:00",
+  "source_fetched_at": "2026-11-25T20:25:24.177357+00:00",
   "latest_observation_period": "2026-10",
   "expected_observation_period": "2026-10",
   "is_stale": false,
@@ -40,13 +40,13 @@
       "label": "Building permits (annualized rate)",
       "primary": {
         "transform": "yoy_pct",
-        "value": -8.67418899858956,
-        "raw_value": 1295.0
+        "value": -8.53314527503526,
+        "raw_value": 1297.0
       },
       "also_display": [
         {
           "transform": "mom_pct",
-          "value": -7.3676680972818325
+          "value": -7.224606580829763
         }
       ],
       "prior_primary": {

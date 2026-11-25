@@ -2,13 +2,13 @@
   "schema_version": "1.2",
   "family_id": "initial_jobless_claims",
   "family_display_name": "Initial Jobless Claims",
-  "period": "2026-11-14",
-  "period_label": "Week ending Nov 14, 2026",
-  "posted_at": "2026-11-25T03:56:35.837539+00:00",
+  "period": "2026-11-21",
+  "period_label": "Week ending Nov 21, 2026",
+  "posted_at": "2026-11-25T20:23:35.423444+00:00",
   "source": "fred",
-  "source_fetched_at": "2026-11-25T03:56:34.918339+00:00",
-  "latest_observation_period": "2026-11-14",
-  "expected_observation_period": "2026-11-14",
+  "source_fetched_at": "2026-11-25T20:23:34.104707+00:00",
+  "latest_observation_period": "2026-11-21",
+  "expected_observation_period": "2026-11-21",
   "is_stale": false,
   "source_lag_minutes": null,
   "from_fallback_cache": false,
@@ -19,17 +19,17 @@
       "label": "Initial claims",
       "primary": {
         "transform": "raw",
-        "value": 203000.0,
-        "raw_value": 203000.0
+        "value": 189000.0,
+        "raw_value": 189000.0
       },
       "also_display": [
         {
           "transform": "yoy_pct_weekly",
-          "value": -8.558558558558559
+          "value": -13.30275229357798
         },
         {
           "transform": "mom_pct_weekly",
-          "value": 4.10256410256411
+          "value": -3.076923076923077
         }
       ],
       "prior_primary": {
@@ -48,11 +48,11 @@
       "value": null,
       "prior": {
         "transform": "raw",
-        "value": 1763000.0
+        "value": 1697000.0
       },
       "prior_3m": {
         "transform": "raw",
-        "value": 1717000.0
+        "value": 1693000.0
       },
       "tags": [],
       "definition": null
@@ -62,14 +62,14 @@
   "context": {
     "anchor_series": "ICSA",
     "anchor_transform": "raw",
-    "zscore": 0.10991873681737829,
+    "zscore": -1.3055564454553974,
     "zscore_kind": "delta",
     "zscore_lookback_years": 5,
     "trends": []
   },
   "charts": {
-    "main": "claims_2y_2026-11-14.png",
-    "claims_5y": "claims_5y_2026-11-14.png"
+    "main": "claims_2y_2026-11-21.png",
+    "claims_5y": "claims_5y_2026-11-21.png"
   },
   "agency_pdf_url": null
 }

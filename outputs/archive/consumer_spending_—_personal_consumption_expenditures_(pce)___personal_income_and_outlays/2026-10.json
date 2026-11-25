@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.2",
+  "family_id": "consumer_spending_\u2014_personal_consumption_expenditures_(pce)___personal_income_and_outlays",
+  "family_display_name": "Consumer Spending \u2014 Personal Consumption Expenditures (PCE) / Personal Income & Outlays",
+  "period": "2026-10",
+  "period_label": "October 2026",
+  "posted_at": "2026-11-25T20:22:32.790902+00:00",
+  "source": "fred",
+  "source_fetched_at": "2026-11-25T20:22:28.288121+00:00",
+  "latest_observation_period": "2026-10",
+  "expected_observation_period": "2026-10",
+  "is_stale": false,
+  "source_lag_minutes": null,
+  "from_fallback_cache": false,
+  "cache_age_hours": null,
+  "headline": [
+    {
+      "id": "PCEC96",
+      "label": "Real consumer spending \u2014 Real Personal Consumption Expenditures (real PCE)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 2.5036623522248336,
+        "raw_value": 17003.0
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": -0.03409999529654373
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 2.725032613422229
+      },
+      "display_unit": null,
+      "definition": "Real Personal Consumption Expenditures (PCEC96): inflation- adjusted consumer spending -- the volume of what households actually bought, the biggest block of GDP."
+    },
+    {
+      "id": "PCE",
+      "label": "Nominal consumer spending \u2014 Personal Consumption Expenditures (nominal PCE)",
+      "primary": {
+        "transform": "yoy_pct",
+        "value": 6.44354701741805,
+        "raw_value": 22562.2
+      },
+      "also_display": [
+        {
+          "transform": "mom_pct",
+          "value": 0.2840214593991641
+        }
+      ],
+      "prior_primary": {
+        "transform": "yoy_pct",
+        "value": 6.493266750289917
+      },
+      "display_unit": null,
+      "definition": "Personal Consumption Expenditures (PCE): consumer spending in current dollars -- nominal outlays, before stripping out inflation."
+    },
+    {
+      "id": "PCEPI",
+      "label": "Headline PCE price index \u2014 Personal Consumption Expenditures inflation (PCEPI)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 3.8772551676500955,
+        "raw_value": 132.703
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.844588778464675
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.3175011150336804
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 6.166577322811739
+      },
+      "display_unit": null,
+      "definition": "PCE Price Index (PCEPI): the Fed's preferred headline inflation gauge -- broader than CPI and re-weights as spending patterns shift."
+    },
+    {
+      "id": "PCEPILFE",
+      "label": "Core PCE price index \u2014 ex food & energy (PCEPILFE)",
+      "primary": {
+        "transform": "annualized_mom",
+        "value": 3.567330573314065,
+        "raw_value": 131.312
+      },
+      "also_display": [
+        {
+          "transform": "yoy_pct",
+          "value": 3.26111744583808
+        },
+        {
+          "transform": "mom_pct",
+          "value": 0.29252495627400954
+        }
+      ],
+      "prior_primary": {
+        "transform": "annualized_mom",
+        "value": 3.969127283231977
+      },
+      "display_unit": null,
+      "definition": "Core PCE Price Index (PCEPILFE): PCE inflation excluding food and energy -- the specific number the Fed's 2% inflation target refers to."
+    }
+  ],
+  "components": [
+    {
+      "id": "PI",
+      "label": "Personal income (PI)",
+      "transform": "yoy_pct",
+      "value": 4.812281946995034,
+      "prior": {
+        "transform": "yoy_pct",
+        "value": 4.143221737349134
+      },
+      "prior_3m": {
+        "transform": "yoy_pct",
+        "value": 4.3728750601711
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "PSAVERT",
+      "label": "Personal saving rate (PSAVERT)",
+      "transform": "raw",
+      "value": 4.1,
+      "prior": {
+        "transform": "raw",
+        "value": 3.6
+      },
+      "prior_3m": {
+        "transform": "raw",
+        "value": 4.4
+      },
+      "tags": [],
+      "definition": null
+    },
+    {
+      "id": "DSPIC96",
+      "label": "Real disposable personal income (real DPI)",
+      "transform": "yoy_pct",
+      "value": 1.6066356971444762,
+      "prior": {
+        "transform": "yoy_pct",
+        "value": 0.9608249462696561
+      },
+      "prior_3m": {
+        "transform": "yoy_pct",
+        "value": 1.3756310486982226
+      },
+      "tags": [],
+      "definition": null
+    }
+  ],
+  "computed": [],
+  "context": {
+    "anchor_series": "PCEPI",
+    "anchor_transform": "annualized_mom",
+    "zscore": -0.7922524131716906,
+    "zscore_kind": "delta",
+    "zscore_lookback_years": 5,
+    "trends": [
+      {
+        "label": "3mo annualized",
+        "value": 4.709538516517009,
+        "window_months": 3,
+        "stat": "annualized_mom",
+        "transform": "annualized_mom",
+        "display_unit": null
+      },
+      {
+        "label": "6mo annualized",
+        "value": 3.1327042446896103,
+        "window_months": 6,
+        "stat": "annualized_mom",
+        "transform": "annualized_mom",
+        "display_unit": null
+      }
+    ]
+  },
+  "charts": {
+    "main": "pce_consumer_spending_2026-10.png",
+    "inflation": "pce_inflation_2026-10.png",
+    "long_history": "pce_25y_2026-10.png",
+    "consumer_capacity": "consumer_capacity_2026-10.png"
+  },
+  "agency_pdf_url": null
+}
